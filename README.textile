@@ -1,0 +1,17 @@
+h1. Welcome to the %{color:blue}AtectBase% project !
+
+
+The aim of this project is to create a *database* that:
+* can contain hierarchical structured object data
+* automatically manages cascaded copy and delete
+* can store calculation terms in a natural way like a spreadsheet, calculation terms 
+   can use fields of different objects and results get automatically updated
+* allows UNDO / REDO as a database feature
+* has high reliability in storing data and keeping the network connections
+* has multi user facilities to allow a group of people use the same data at the same time
+* automatically notifies clients about commited data changes, so there are live updates
+* provides an easy programming model to build vertical applications on top
+
+Read more:
+<a href=http://wiki.github.com/PeterScalaDB/AtectBase/database-specification>Database specification </a>
+<a href =http://github.com/PeterScalaDB/AtectBase/raw/master/README.md>Read the readme file</a>
