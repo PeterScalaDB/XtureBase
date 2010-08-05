@@ -91,6 +91,7 @@ def getInstanceData(ref:Reference):InstanceData = {
 		(theList(ref): @unchecked)  match {
 		case CreateAction(_,Some(data),_) => return data
 		case DataChangeAction(Some(data),_,_) => return data
+		case _ => 
 	}
 	StorageManager.getInstanceData(ref)
 }
@@ -113,6 +114,7 @@ def getReferencingLinks(ref:Reference):Option[ReferencingLinks] = {
 	if(theList.contains(ref))
 		(theList(ref): @unchecked) match {
 		   case DataChangeAction(_,_,a:Some[ReferencingLinks]) => return a
+		   case _ => 
 	  }
 	StorageManager.getReferencingLinks(ref)
 }

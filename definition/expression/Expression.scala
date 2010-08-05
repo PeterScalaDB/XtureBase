@@ -31,6 +31,14 @@ trait Expression
 	 * 
 	 */
 	def getFieldReferences(resultList:List[FieldReference]):List[FieldReference]=resultList
+	
+	/** removes a certain FieldReference from the term and replaces it with it's cache Value
+	 * 
+	 * @param checker a checker function that checks if a given field ref is the one to remove
+	 * has to be called by FieldReference instances of this term
+	 * @return a new Term with the FieldReference removed
+	 */
+	def replaceFieldRefWithValue(checker:(FieldReference)=> Boolean):Expression = this
 }
 
 object Expression

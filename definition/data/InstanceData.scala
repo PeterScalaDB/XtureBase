@@ -15,7 +15,7 @@ class InstanceData (override val ref:Reference,val classVersion:Byte,
 	val fieldData:Array[Expression],	 									
 	val owners:Array[OwnerReference]=Array()) extends Referencable
 	{
-	
+
 	private var theClassVersion:ClassVersion=null
 	private var fieldValuesCache:Array[Constant]=new Array(fieldData.length)
 
@@ -82,11 +82,21 @@ private def getClassVersion:ClassVersion =
 		}
 		theClassVersion
 }
-
-	def fieldValue(index:Int):Constant = 
-	{
+  /** returns the calculated result value of the term in a field
+   * the field results are cached in an array. That is not pure functional and may cause problems.
+   * 
+   * @param index the field number
+   * @return the constant result value
+   */
+	def fieldValue(index:Int):Constant = 	{
 		if(fieldValuesCache(index)== null) {
-			fieldValuesCache(index)= {
+			regenFieldCache(index)
+		}
+		fieldValuesCache(index)
+	}
+	
+	def regenFieldCache(index:Int):Unit = {
+		fieldValuesCache(index)= {
 				val fieldType = getClassVersion.field(index).typ
 				val result=fieldData(index).getValue
 				//println("inst "+ref+" getfield "+index+" fieldType:"+fieldType+" result:" +result)
@@ -95,11 +105,10 @@ private def getClassVersion:ClassVersion =
 					else  // return converted value
 						Constant.createConversion(result,fieldType)		
 			}
-		}
-		fieldValuesCache(index) 
-
+		  
 	}
-	}
+	
+}
 
 
 

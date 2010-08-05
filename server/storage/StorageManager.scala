@@ -36,16 +36,18 @@ object StorageManager {
    */
   def getInstanceData(ref:Reference):InstanceData =
  	{
+  	print("getInstance "+ref)
   	val handler=getHandler(ref.typ)
   	handler.instCache.getInstanceData(ref.instance ) match
   	{
-  		case Some(cacheValue) => cacheValue
+  		case Some(cacheValue) =>{println(" cacheHit:"+cacheValue); cacheValue}
   		case None =>
   	  {
   	    val rec=handler.getInstanceRecord(ref.instance )
   	    if (rec.dataPos == 0 && rec.dataLength==0) throw new 
   	               IllegalArgumentException("get Instance() instance "+ref+" is deleted")
   	    val instObj=dataFileHandler.readInstance(ref,rec.dataPos)
+  	    println(" cacheMiss:"+instObj)
   	    handler.instCache.putInstanceData(instObj)
   	    instObj
   	  }

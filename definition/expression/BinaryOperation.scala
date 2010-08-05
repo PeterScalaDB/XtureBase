@@ -57,6 +57,11 @@ case class BinaryOperation(left:Expression,operator:BinOperator,right:Expression
   	left.getFieldReferences(right.getFieldReferences(resultList))
   }
   
+  override def replaceFieldRefWithValue(checker:(FieldReference)=> Boolean):Expression = {
+  	new BinaryOperation(left.replaceFieldRefWithValue(checker),operator,
+  		right.replaceFieldRefWithValue(checker))
+  }
+  
 }
 
 object BinaryOperation

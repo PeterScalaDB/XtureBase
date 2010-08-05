@@ -31,7 +31,7 @@ object InstPropTableModel extends AbstractTableModel {
 	{
 		theVersion=theClass.getVersion(versionNr) match {case Some(a) => a;case None =>null}
 		propData=nprop
-		println("propData "+propData)
+		//println("propData "+propData)
 		
   	//println("Set inst "+theVersion)
   	fireTableStructureChanged()

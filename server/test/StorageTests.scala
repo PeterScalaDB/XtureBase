@@ -44,12 +44,9 @@ class StorageTests extends JUnitSuite
 	@Test def createPropTest():Unit =   {
 		assert(TransactionManager.doTransaction{
 			val inst=TransactionManager.tryCreateInstance(3,Array(new OwnerReference(0,new Reference(3,1))))
-			println(inst)  	
-			var newInst=inst.setField(0,new StringConstant("Sub-Object "+inst.ref.instance )).
-			setField(1,new DoubleConstant(Math.random*200 ))		
-			println(newInst)
-			assert(newInst!=null)
-			TransactionManager.tryWriteInstanceData(newInst)
+			println(inst)			
+			assert (TransactionManager.tryWriteInstanceField(inst.ref,0,new StringConstant("Sub-Object "+inst.ref.instance )))
+			assert (TransactionManager.tryWriteInstanceField(inst.ref,1,new DoubleConstant(Math.random*200 )))			
 		}==true)
 	}
 	
@@ -58,10 +55,9 @@ class StorageTests extends JUnitSuite
 		var inst:InstanceData=null
 		
 		assert(TransactionManager.doTransaction {			
-			inst=TransactionManager.tryCreateInstance(3,Array())
-			inst=inst.setField(0,new StringConstant("Copytest-Object "+inst.ref.instance+" "+Math.round(Math.random*1000) ))
-			   TransactionManager.tryWriteInstanceData(inst)
-			
+			inst=TransactionManager.tryCreateInstance(3,Array())			
+		  assert (TransactionManager.tryWriteInstanceField(inst.ref,0,
+				new StringConstant("Copytest-Object "+inst.ref.instance+" "+Math.round(Math.random*1000) )))			
 		}==true)
 		
 		StorageManager.getInstanceProperties(Reference(3,1)) match {
@@ -73,9 +69,17 @@ class StorageTests extends JUnitSuite
 		    	 
 			}
 			case _ => println("No properties found ")
-		}
-		
-		
+		}		
+	}
+	
+	@Test def linkTest():Unit = {
+		assert(TransactionManager.doTransaction{
+			assert(TransactionManager.tryWriteInstanceField(new Reference(3,3),1,new FieldReference(None,Some(2),1)))
+			assert(TransactionManager.tryWriteInstanceField(new Reference(3,4),0,
+				new BinaryOperation(new DoubleConstant(4),BinOperator.getOp('+'), new FieldReference(None,Some(2),1))))
+			assert(TransactionManager.tryWriteInstanceField(new Reference(3,4),1,
+				new BinaryOperation(new DoubleConstant(4),BinOperator.getOp('+'), new FieldReference(Some(3),Some(3),1))))	
+		})
 	}
 
 	@Test def readTest() =  {
@@ -85,6 +89,7 @@ class StorageTests extends JUnitSuite
 		for(i <-1 to maxID.toInt)
 			if(StorageManager.instanceExists(3,i))
 				println(StorageManager.getInstanceData(new Reference(3,i)))
+		StorageManager.shutDown()
 	}
 
 

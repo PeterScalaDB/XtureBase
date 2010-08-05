@@ -40,7 +40,22 @@ def getChildNr(ix: Int): Expression = { null }
 
 def getTerm(): String = term
 
-override def toString():String = "Ref["+remType+","+remInst+","+remField+"]"
+override def toString():String = "Ref["+remType+","+remInst+","+remField+",cv:"+cachedValue+"]"
+
+
+// overrides equals to allowing compare 2 FieldReference objects with different cache values
+override def equals(other: Any): Boolean =
+	other match {
+		case that: FieldReference =>
+			(that canEqual this) &&
+			remType == that.remType &&
+			remInst == that.remInst &&
+			remField == that.remField
+		case _ => false
+	}
+
+override def hashCode: Int = 41 * ( 41 + remType.hashCode)  + 1013*(3+remInst.hashCode)+remField.toInt
+
 
 def isConstant(): Boolean = { false }
 
@@ -55,10 +70,23 @@ def write(file: DataOutput): Unit = {
 		case _ => file.writeLong(0)
 	}
 	file.writeByte(remField)
+	//println("write "+toString+" cached Value:"+cachedValue)
 	cachedValue.write(file)
 }
 
-override def getFieldReferences(resultList:List[FieldReference])= this :: resultList
+def setCachedValue(newVal:Constant) = {
+	//print("SetCachedValue "+toString+" oldval:"+cachedValue)
+	cachedValue=newVal
+	//println(" newval: "+cachedValue)
+}
+
+	override def getFieldReferences(resultList:List[FieldReference])= this :: resultList
+
+	override def replaceFieldRefWithValue(checker:(FieldReference)=> Boolean):Expression = {
+		if(checker(this)) // this one is to remove
+			return cachedValue // replace this with the cached Value
+			else return this // else return this
+	}
 
 }
 
@@ -68,6 +96,8 @@ object FieldReference {
     val t=file.readInt
     val i=file.readLong
     val f=file.readByte
-    new FieldReference(if(t==0)None else Some(t),if(i==0)None else Some(i),f,Expression.read(file).asInstanceOf[Constant])
+    val ret =new FieldReference(if(t==0)None else Some(t),if(i==0)None else Some(i),f,Expression.read(file).asInstanceOf[Constant])
+    //println(" read "+ret+" cv: "+ret.cachedValue )
+    ret
 	}
 }

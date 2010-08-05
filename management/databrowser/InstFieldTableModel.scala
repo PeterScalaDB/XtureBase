@@ -27,6 +27,7 @@ object InstFieldTableModel extends AbstractTableModel
   
   def setInstance(newInst:InstanceData) =
   {
+  	println("instmodel set Instance "+newInst)
   	instance=newInst
   	if(instance==null) theVersion=null
   	else theVersion=theClass.getVersion(instance.classVersion) match {case Some(a) => a;case None =>null}
@@ -74,10 +75,10 @@ object InstFieldTableModel extends AbstractTableModel
   {
   	if((row>1)&&(column==1)&& instance!=null)
   	{
-  		val f:Byte=(row-2).toByte
-  		instance=instance.setField(f,StringParser.parse(obj.toString))
+  		val f:Byte=(row-2).toByte  		
+  		
   		TransactionManager.doTransaction {	
-  			TransactionManager.tryWriteInstanceData(instance)
+  			TransactionManager.tryWriteInstanceField(instance.ref,f,StringParser.parse(obj.toString))
   		}
   		
   	}
