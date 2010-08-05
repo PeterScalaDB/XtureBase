@@ -13,5 +13,5 @@ The aim of this project is to create a *database* that:
 * provides an easy programming model to build vertical applications on top
 
 Read more:
-<a href=http://wiki.github.com/PeterScalaDB/AtectBase/database-specification>Database specification </a>
-<a href =http://github.com/PeterScalaDB/AtectBase/raw/master/README.md>Read the readme file</a>
+
+"Database specification":http://wiki.github.com/PeterScalaDB/AtectBase/database-specification
