@@ -60,7 +60,7 @@ def changeOwner(newOwners:Array[OwnerReference]) = {
  * a helper routine for copying instances.
  * At the moment it creates a clone with the same class version.
  * There could be another version converting an instance from an old version to a new one,
- * having a translation list for fileds.
+ * having a translation list for fields.
  * 
  * @param newRef the reference of the clone instance
  * @param newOwners the owners of the new instance
@@ -68,6 +68,17 @@ def changeOwner(newOwners:Array[OwnerReference]) = {
  */
 def clone(newRef:Reference,newOwners:Array[OwnerReference]):InstanceData =	{
 	new InstanceData(newRef,classVersion,fieldData,newOwners)
+}
+
+/** replaces an ownerReferene with another ref and returns a new Instance with the new values
+ * 
+ * @param fromRef the old ref to remove
+ * @param toRef the new ref that replaces the old one
+ */
+def changeOwner(fromRef:OwnerReference,toRef:OwnerReference):InstanceData = {
+	val newOwnerList= for (ref <- owners)
+		yield (if (ref==fromRef) toRef else ref)
+		new InstanceData(ref,classVersion,fieldData,owners)
 }
 
 

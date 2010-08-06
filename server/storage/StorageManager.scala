@@ -140,7 +140,7 @@ object StorageManager {
   	    if (rec.linkPos == 0 && rec.linkLength==0) None
   	    else
   	    {
-  	      val propObj=linkFileHandler.readInstance(ref,rec.propPos)
+  	      val propObj=linkFileHandler.readInstance(ref,rec.linkPos)
   	      // not chached yet
   	      Some(propObj)
   	    }

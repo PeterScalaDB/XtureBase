@@ -7,6 +7,7 @@ import java.io._
 
 case class ExtFieldRef(typ:Int,inst:Long,field:Byte){
 	def write(file:DataOutput) = {
+		println("Write  "+this)
 		file.writeInt(typ);file.writeLong(inst);file.writeByte(field)		
 	}
 	def getReference=new Reference(typ,inst)
@@ -14,7 +15,9 @@ case class ExtFieldRef(typ:Int,inst:Long,field:Byte){
 
 object ExtFieldRef {
 	def read(file:DataInput) = {
-		new ExtFieldRef(file.readInt,file.readLong,file.readByte)
+		val ret=new ExtFieldRef(file.readInt,file.readLong,file.readByte)
+		println(ret)
+		ret
 	}
 }
 
@@ -32,9 +35,11 @@ class ReferencingLinks(override val ref:Reference,val links:Map[Int,List[ExtFiel
    * @param file where to write
    */
 	override def write(file:DataOutput)=    {
+		 print("write "+toString+" "+links.size)
   	 file.writeInt(links.size) 
   	 for((fnum,llist) <-links)
   	 {
+  		 print(" "+fnum+" -> "+llist.size)
   		 file.writeInt(fnum)
   		 file.writeInt(llist.size)
   		 for(ref <-llist)

@@ -80,7 +80,7 @@ object TransactionManager {
 	
 	private def tryWriteInstanceData(data:InstanceData) =	{
 		if(!running ) throw new IllegalArgumentException("No transaction defined ")
-		ActionList.addTransactionData(data.ref,new DataChangeAction (Some(data),None ))
+		ActionList.addTransactionData(data.ref,new DataChangeAction (Some(data) ))
 	}
 	
 	/**
@@ -101,9 +101,7 @@ object TransactionManager {
 			val sourceInst = resolveLinkRef(ref,nr)
 		  val sourceValue=ActionList.getInstanceData(sourceInst).fieldValue(nr.remField )
 		  nr.cachedValue =sourceValue	
-		}
-		
-		
+		}		
 		
 				// remove all ReferencingLinks data off the removed refs
 		val removedRefs=findMissingRefs(oldRefList,newRefList)
@@ -127,7 +125,7 @@ object TransactionManager {
 	}
 	
 	
-	
+		
 	/** notifies all target instances of the source instante that the data field has changed
 	 *  @param sourceRef instance that has changed
 	 *  @param fieldNr field nr that has changed
@@ -307,9 +305,13 @@ object TransactionManager {
 	 */
 	def tryMoveInstance(subRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference):Unit = {
 		if(!running ) throw new IllegalArgumentException("No transaction defined ")
-		//val instD=ActionList.getInstanceData(subRef)
+		// change the property information
 		internRemovePropertyFromOwner(subRef,fromOwner)
 		internAddPropertyToOwner(subRef,toOwner)
+		
+		// change the owner ref inside of the instance data
+		val instData=ActionList.getInstanceData(subRef)
+		ActionList.addTransactionData(subRef, new DataChangeAction(Some( instData.changeOwner(fromOwner,toOwner)),None,None))
 	}
 	
 	
@@ -318,9 +320,18 @@ object TransactionManager {
 		val instD=ActionList.getInstanceData(instRef)
 		// get the other owners of that instance, apart from "fromOwner", and add the new owner toOwner
 		val newOwners:Array[OwnerReference]= instD.owners.filter(x => x!=fromOwner) :+ toOwner
-		val createInst=tryCreateInstance(instRef.typ ,newOwners) // new instance created by DB
-		val newInst=instD.clone(createInst.ref ,newOwners) // make a copy of the existing instance
-		tryWriteInstanceData(newInst)
+		var createInst=tryCreateInstance(instRef.typ ,newOwners) // new instance created by DB
+		
+		createInst=instD.clone(createInst.ref,newOwners)
+		
+		// Register FieldReferences
+		for(i <- 0 until instD.fieldData.size)
+		{
+			val refList=instD.fieldData(i).getFieldReferences(Nil)
+			for(rf <-refList)
+				 addLinkRef(createInst.ref,i.toByte,rf)
+		}
+		ActionList.addTransactionData(createInst.ref,new DataChangeAction(Some(createInst)))
 		
 		// now copy all owned child instances
 		ActionList.getInstanceProperties(instRef) match {
