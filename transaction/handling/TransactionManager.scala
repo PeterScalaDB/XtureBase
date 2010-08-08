@@ -53,6 +53,7 @@ object TransactionManager {
 	
 	def tryCreateInstance(typ:Int,owners:Array[OwnerReference]) =	{	
 		if(!running ) throw new IllegalArgumentException("No transaction defined ")
+		//TODO: Check if the child type is allowed in the owner property fields
 		val newInst=StorageManager.createInstance(typ,owners)
 		ActionList.addTransactionData(newInst.ref,new CreateAction(newInst.ref ))
 		

@@ -51,7 +51,7 @@ class ObjectClass (val name:String,val id:Int,val description:String,nversions:L
    */
   def createInstance(ref: Reference,owner:Array[OwnerReference]):InstanceData =
   {
-  	new InstanceData(ref,lastVersion.versNr,Array.make(lastVersion.getFieldCount,EMPTY_EX),owner)
+  	new InstanceData(ref,lastVersion.versNr,Array.fill(lastVersion.getFieldCount)(EMPTY_EX),owner)
   }
   
   /** creates an empty InstanceProperty of this class
@@ -65,6 +65,8 @@ class ObjectClass (val name:String,val id:Int,val description:String,nversions:L
   		yield new PropertyFieldData(lastVersion.propField(i).single,Nil)).toArray
   	new InstanceProperties(ref,pArray)
   }
+  
+  //TODO: check if this class is compatible with a given class definition ( is a subclass)
   
 }
 

@@ -90,7 +90,7 @@ object DataViewPanel extends BorderPanel
 		//println("openBut "+ixTable.selection.rows)
 		if(! (ixTable.selection.rows.isEmpty))		 
 		{			
-			val ix:Int= ixTable.selection.rows.first
+			val ix:Int= ixTable.selection.rows.head
 			val inst:Long=IndexTableModel.ixList(ix)._1
 			//println("inst: "+inst)
 			if (StorageManager.instanceExists(InstFieldTableModel.theClass.id,inst))
@@ -116,7 +116,7 @@ object DataViewPanel extends BorderPanel
 	{
 		if(! (ixTable.selection.rows.isEmpty))		 
 		{			
-			val ix:Int= ixTable.selection.rows.first
+			val ix:Int= ixTable.selection.rows.head
 			val inst:Long=IndexTableModel.ixList(ix)._1
 			//println("inst: "+inst)
 		  InstFieldTableModel.setInstance(null)	

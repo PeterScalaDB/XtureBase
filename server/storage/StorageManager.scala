@@ -7,6 +7,8 @@ import definition.typ._
 import definition.data._
 import java.util.NoSuchElementException
 import java.io.DataInput
+import runtime.function._
+import definition.expression.FunctionManager
 
 
 /** manages all file io operations
@@ -17,11 +19,17 @@ object StorageManager {
   val dataFileHandler=new ContainerFileHandler("InstData.dat",InstanceData.read)
   val propFileHandler=new ContainerFileHandler("PropData.dat",InstanceProperties.read)
   val linkFileHandler=new ContainerFileHandler("ExternLinks.dat",ReferencingLinks.read)
+  var shuttedDown=false
+  var inited=false
   
   def init(classList:Map[Int,ObjectClass] ) =
   {
-  	if(ixHandlerList.isEmpty)
-  	  ixHandlerList=ixHandlerList++( for (i <-classList.values) yield (i.id -> new ClassIndexHandler(i)))  	  
+  	if(ixHandlerList.isEmpty||shuttedDown)
+  	{
+  		shuttedDown=false
+  	  ixHandlerList=ixHandlerList++( for (i <-classList.values) yield (i.id -> new ClassIndexHandler(i)))
+  	}
+  	FunctionManager.setManager(StorageFuncMan)
   }
   
   def getHandler(typ:Int) = try 
@@ -156,11 +164,16 @@ object StorageManager {
   
   def shutDown() =
   {
-  	println("Shutdown Storage")
-  	for (i <- ixHandlerList.values) i.shutDown
-  	dataFileHandler.shutDown
-  	propFileHandler.shutDown
-  	TransLogHandler.shutDown
+  	if(!shuttedDown)
+  	{
+  		println("Shutdown Storage")
+  		for (i <- ixHandlerList.values) i.shutDown
+  		dataFileHandler.shutDown
+  		propFileHandler.shutDown
+  		TransLogHandler.shutDown
+  		shuttedDown=true
+  		inited=false
+  	}
   }
   
   def printCacheReport() = {

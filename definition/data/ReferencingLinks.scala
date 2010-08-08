@@ -61,7 +61,7 @@ class ReferencingLinks(override val ref:Reference,val links:Map[Int,List[ExtFiel
 		// get the list for field "fieldNr" and remove the target link
 		val newList=links(fieldNr).filter(s => s.typ != target.typ || s.inst != target.instance )
 		// create a new object whith a new map that contains the new list
-		val newMap:Map[Int,List[ExtFieldRef]] = links(fieldNr)=newList
+		val newMap:Map[Int,List[ExtFieldRef]] = links.updated(fieldNr,newList)
 		println("Removing target Link target:"+target+ " field: "+fieldNr+ " Map:"+newMap)
 		new ReferencingLinks(ref,newMap  )
 	}
@@ -76,7 +76,7 @@ class ReferencingLinks(override val ref:Reference,val links:Map[Int,List[ExtFiel
 		// get the list for field "fieldNr" and adds the target link
 		val newList=target :: (if(links.contains(fieldNr))links(fieldNr) else Nil) 
 		// create a new object whith a new map that contains the new list
-		new ReferencingLinks(ref, links(fieldNr)=newList )
+		new ReferencingLinks(ref, links.updated(fieldNr,newList) )
 	} 
 }
 

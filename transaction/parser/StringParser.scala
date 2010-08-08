@@ -45,10 +45,14 @@ class StringParser extends JavaTokenParsers {
   def factor : Parser[Expression] =  	   
   	   doubleNumber ^^ {y => DoubleConstant(y.replace(',','.').toDouble) } |
        intNumber ^^ {x => IntConstant(x.toInt)} |       
-        "(" ~> expr <~ ")" | failure("Unknown Element") |
-       fieldRef 
+        "(" ~> expr <~ ")" | fieldRef | function | failure("Unknown Element")
        
-	
+	def paramList:Parser[List[Expression]] =
+		 ((expr ~ ";" ~ expr) ^^ {  case ex~ semi~ list => List(ex,list) }) |
+		 (expr ^^ {case ex => List(ex)}) 
+		
+	def function: Parser[Expression] = 
+		(ident ~ "(" ~ paramList ~ ")") ^^ {case name ~ b ~ list ~c => FunctionCall(None,name,list)} 
 }
 
 object StringParser extends StringParser

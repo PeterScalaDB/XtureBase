@@ -56,7 +56,7 @@ class TypTest extends JUnitSuite {
   	AllClasses.addClass(hugoClass)
   	AllClasses.resolveFields
   	val file=FSPaths.configDir+"types.xml"
-  	scala.xml.XML.saveFull(file,AllClasses.toXML,"UTF-8",true,null)
+  	scala.xml.XML.save(file,AllClasses.toXML,"UTF-8",true,null)
   	AllClasses.fromXML( xml.XML.loadFile(file))
   	Console.println(AllClasses.toXML)
   }

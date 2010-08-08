@@ -35,7 +35,7 @@ class StorageTests extends JUnitSuite
 		val inst=StorageManager.createInstance(3,Array())
 		println(inst)  	
 		var newInst=inst.setField(0,new StringConstant("Object "+inst.ref.instance )).
-		setField(1,new DoubleConstant(Math.random*100 ))
+		setField(1,new DoubleConstant(math.random*100 ))
 		StorageManager.writeInstance(newInst)
 		println(newInst)
 		assert(newInst!=null)
@@ -46,7 +46,7 @@ class StorageTests extends JUnitSuite
 			val inst=TransactionManager.tryCreateInstance(3,Array(new OwnerReference(0,new Reference(3,1))))
 			println(inst)			
 			assert (TransactionManager.tryWriteInstanceField(inst.ref,0,new StringConstant("Sub-Object "+inst.ref.instance )))
-			assert (TransactionManager.tryWriteInstanceField(inst.ref,1,new DoubleConstant(Math.random*200 )))			
+			assert (TransactionManager.tryWriteInstanceField(inst.ref,1,new DoubleConstant(math.random*200 )))			
 		}==true)
 	}
 	
@@ -57,7 +57,7 @@ class StorageTests extends JUnitSuite
 		assert(TransactionManager.doTransaction {			
 			inst=TransactionManager.tryCreateInstance(3,Array())			
 		  assert (TransactionManager.tryWriteInstanceField(inst.ref,0,
-				new StringConstant("Copytest-Object "+inst.ref.instance+" "+Math.round(Math.random*1000) )))			
+				new StringConstant("Copytest-Object "+inst.ref.instance+" "+math.round(math.random*1000) )))			
 		}==true)
 		
 		StorageManager.getInstanceProperties(Reference(3,1)) match {

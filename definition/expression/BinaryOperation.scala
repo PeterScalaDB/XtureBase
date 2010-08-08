@@ -11,18 +11,18 @@ import java.io.{DataInput,DataOutput}
  */
 case class BinaryOperation(left:Expression,operator:BinOperator,right:Expression) extends Expression {
 
-  def getType(): DataType.Value = { null }
+  def getType(): DataType.Value = { DataType.BinOp  }
   
-  private var cachedValue:Option[Constant]=None
+  
 
   def getValue(): Constant = 
   { 
   	val value1=left.getValue
   	val value2=right.getValue
-  	cachedValue = operator.getValue(value1,value2)  	
-  	cachedValue match { case Some(value) => value
-  											case None => null
-  											}
+  	operator.getValue(value1,value2)  match { 
+  		case Some(value) => value
+  		case None => null
+  	}
   }
   
   

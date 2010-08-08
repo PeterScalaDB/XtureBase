@@ -107,7 +107,7 @@ object ClassTableWindow extends SimpleSwingApplication
 		//println("showData" +classTable.selection.rows +" "+classTable.selection.rows.empty)
 		if(! (classTable.selection.rows.isEmpty))		 
 		{			
-			val ix:Int= classTable.selection.rows.first
+			val ix:Int= classTable.selection.rows.head
 			val typ= TypTableModel.classList(ix).id
 			//println("showData "+ix+" "+typ)
 			IndexTableModel.setTypeHandler(StorageManager.getHandler(typ))

@@ -51,6 +51,7 @@ object Expression
 			case DataType.StringTyp => new StringConstant(file.readUTF)			
 			case DataType.BinOp => BinaryOperation(file)
 			case DataType.FieldRefTyp => FieldReference(file)
+			case DataType.FunctionCall => FunctionCall(file)
 			case _ => EMPTY_EX
 		}		
 	}
