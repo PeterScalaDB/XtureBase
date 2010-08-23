@@ -44,11 +44,13 @@ object TransactionManager {
 	
 	
 	// breaks an transaction if an error occurs during the transaction
-	 def breakTransaction() = 	{
-		ActionList.breakAllData()		
+	 def breakTransaction() =	{
+		 ActionList.breakAllData()		
 		TransLogHandler.resetTransID()
 		running=false
-	}
+	 }
+		
+	
 	
 	
 	def tryCreateInstance(typ:Int,owners:Array[OwnerReference]) =	{	
@@ -91,37 +93,63 @@ object TransactionManager {
 	 */
 	def tryWriteInstanceField(ref:Reference,fieldNr:Byte,newExpression:Expression):Boolean = {
 		if(!running ) throw new IllegalArgumentException("No transaction defined ")
+		var theExpression=newExpression
 		val instD=ActionList.getInstanceData(ref)
 		
 		// check for FieldReferences
-		val oldRefList=instD.fieldData(fieldNr).getFieldReferences(Nil)
-		val newRefList=newExpression.getFieldReferences(Nil)	
+		val oldRefList=instD.fieldData(fieldNr).getElementList[FieldReference](DataType.FieldRefTyp,Nil)
+		val newRefList=newExpression.getElementList[FieldReference](DataType.FieldRefTyp,Nil)	
 		// set the cache value of the FieldReference expressions in the new Expression
 		for(nr<-newRefList)
 		{
 			val sourceInst = resolveLinkRef(ref,nr)
 		  val sourceValue=ActionList.getInstanceData(sourceInst).fieldValue(nr.remField )
-		  nr.cachedValue =sourceValue	
+		  nr.cachedValue =sourceValue	//side effect !!! should be changed !
 		}		
 		
 				// remove all ReferencingLinks data off the removed refs
-		val removedRefs=findMissingRefs(oldRefList,newRefList)
-		println("Removed Refs:" +removedRefs)
+		val removedRefs=findMissingElements[FieldReference](oldRefList,newRefList)
+		
 		for( r <- removedRefs)
 			removeLinkRef(ref,r)
 	  // add new ReferencinLinks data for added refs
-		val addedRefs=findMissingRefs(newRefList,oldRefList)
-		println("added Refs: "+addedRefs)
+		val addedRefs=findMissingElements[FieldReference](newRefList,oldRefList)
+		
 		for( r <- addedRefs)
 		  addLinkRef(ref,fieldNr,r)
-			 
-		val oldValue=instD.fieldData(fieldNr).getValue // safe the old field value 				  
-		// store data		
-		ActionList.addTransactionData(ref,new DataChangeAction (Some(instD.setField(fieldNr,newExpression)) ))
+		
+		 // Check for CollFunctionCalls 
+		val oldCollCalls= instD.fieldData(fieldNr).getElementList[CollectingFuncCall](DataType.CollFunctionCall,Nil)
+		if( !oldCollCalls.isEmpty) println("oldCollCalls "+oldCollCalls)
+		val newCollCalls=newExpression.getElementList[CollectingFuncCall](DataType.CollFunctionCall,Nil)
+		if( !newCollCalls.isEmpty) println("newCollCalls "+newCollCalls)
+		 
+		// Remove all CollResults of the removed CollCalls
+		val removedCalls=findMissingElements[CollectingFuncCall](oldCollCalls,newCollCalls)
+		val remCollData:CollFuncResultSet= if(! removedCalls.isEmpty) removeCollCalls(ref,removedCalls,fieldNr)
+		      else null
+		// add new CollResults
+		val newCalls=findMissingElements[CollectingFuncCall](newCollCalls,oldCollCalls)
+		val newCollData = if(!newCalls.isEmpty) {
+			  val (acollData,anExpression)=addCollCalls(remCollData, ref, newCalls, fieldNr,newExpression)
+			  theExpression=anExpression // update the Expression
+			  println("addCollData "+acollData)
+			  println("newExpression "+theExpression)
+			  acollData
+		} else remCollData
+			    
+		if (newCollData!=null) ActionList.addTransactionData(ref,new DataChangeAction(None,None,None,Some(newCollData))) 
+			  
+		//safe the old field value  
+		val oldValue=instD.fieldData(fieldNr).getValue   				  
+		// set field in instance to new expression
+		val newInst=instD.setField(fieldNr,theExpression)
+		// store data
+		ActionList.addTransactionData(ref,new DataChangeAction (Some(newInst) ))
 		
 		// pass on the changed value to referencing instances
-		val newValue=newExpression.getValue
-		if(newValue!=oldValue) passOnChangedValue(ref,fieldNr,newValue)
+		val newValue=theExpression.getValue
+		if(newValue!=oldValue) passOnChangedValue(newInst,fieldNr,oldValue,newValue)
 		true
 	}
 	
@@ -132,16 +160,29 @@ object TransactionManager {
 	 *  @param fieldNr field nr that has changed
 	 *  @param newValue the new value of the field 
 	 */
-	private def passOnChangedValue(sourceRef:Reference,fieldNr:Byte,newValue:Constant):Unit ={
-		ActionList.getReferencingLinks(sourceRef) match {			
+	private def passOnChangedValue(newInst:InstanceData,fieldNr:Byte,oldValue:Constant,newValue:Constant):Unit ={
+		
+		// Check for other instances referencing to this instance
+		ActionList.getReferencingLinks(newInst.ref) match {			
 			case Some(refLinks) => {				
 				for (r <- refLinks.links(fieldNr)) // get all reflinks for the changed field
-				   notifyDataChangeToReferencingInst(r,sourceRef,fieldNr,newValue) // notify them
+				   notifyDataChangeToReferencingInst(r,newInst.ref,fieldNr,newValue) // notify them
 			}
 			case _ => // go drink a beer
 		}
+		// Check for parent instances having collectingFunctions on this instance
+		for(owner <-newInst.owners ) {
+			ActionList.getCollData(owner.ownerRef) match {
+				case Some(collData) => {
+					notifyCollFunc_ChildChanged(owner ,collData,newInst.ref,fieldNr,oldValue,newValue)
+				}
+				case _ => // another beer
+			}
+		}
 	}	
 	
+	
+	// **************************** FieldReference Management **************************************************************
 	
 	
 	/** notifies ONE target instance that the source instance field was modified and stores it 
@@ -155,7 +196,7 @@ object TransactionManager {
 		val targetData=ActionList.getInstanceData(targetRef)
 		val theField=targetData.fieldData(targetFieldRef.field )
 		val oldRemoteValue=theField.getValue // result value before changing the cache value
-		val refList=theField.getFieldReferences(Nil) // all field references in the term
+		val refList=theField.getElementList[FieldReference](DataType.FieldRefTyp,Nil) // all field references in the term
 		
 		// find the reference(s) that point the the source instance
 		for(fRef <-refList; // check all references in the term
@@ -168,24 +209,11 @@ object TransactionManager {
 		val newRemoteValue=theField.getValue
 		if(newRemoteValue!=oldRemoteValue){ // if the value has changed after the change of the referenced field
 			//pass on the changed value of the target instance to it's targets
-			passOnChangedValue(targetRef,targetFieldRef.field,newRemoteValue)			
+			passOnChangedValue(targetData,targetFieldRef.field,oldRemoteValue,newRemoteValue)			
 		}
 		// save the target instance with the new cached value (could be optimized when cachevalue does not change)
 		ActionList.addTransactionData(targetRef,new DataChangeAction(Some(targetData)))
 	}
-	
-	 
-	
-	
-	
-	// Checks the  reference lists of the new value and the old value, what references were removed in the old one	
-	private def findMissingRefs(oldList:List[FieldReference],newList:List[FieldReference]) =
-	{		
-		var resultList:List[FieldReference]=Nil
-		for(r <-oldList)
-			if(!newList.contains(r)) resultList= r :: resultList
-		resultList
-	}	
 	
 	/**  resolves the real source ref, when the type or instance field is not set in a FieldReference
 	 * @param targetRef the "this" instance what contains the field with the FieldReference
@@ -232,8 +260,165 @@ object TransactionManager {
 		//TODO check against circular references !!!
 	}
 	
+	//**************************************  CollectingFunction management **************************************
+	
+	/** removes  function call results from the result set
+	 * @param ref Reference of the parent instace
+	 * @param oldCollCalls the list of calls to be removed
+	 * @param pFieldNr the field where the calls were stored
+	 * 
+	 */
+	private def removeCollCalls(ref:Reference,oldCollCalls:List[CollectingFuncCall],pFieldNr:Byte):CollFuncResultSet ={				
+		//val sourceInst=resolveLinkRef(targetRef,sourceRef)
+		var collData= ( ActionList.getCollData(ref) match {
+			case Some(collData) => collData
+			case _ => throw new IllegalArgumentException ("Cant find CollFunkData for "+ref + 
+				" when trying to remove CollFunks "+oldCollCalls)
+		} )
+		for(r <- oldCollCalls)
+		   collData=collData.removeCollCall(r,pFieldNr)
+		collData		
+	}
+	
+	/** adds new collFuncCalls to the collFuncResultSet
+	 *  @param collData current version of the ResultSet
+	 *  @param ref Reference of the parent instance
+	 *  @param newCollCalls the calls inside of a parentfield that are to be added
+	 *  @param pfieldNr in what field were the calls added
+	 *  @return tuple: (the new result set, the updated expression)
+	 */
+	private def addCollCalls(collData:CollFuncResultSet,ref:Reference,newCollCalls:List[CollectingFuncCall],
+	                         pFieldNr:Byte, newTerm:Expression):(CollFuncResultSet,Expression) ={				
+		// get the collData
+		var theTerm=newTerm
+		var theCollData= 
+			if(collData==null) 
+			  ActionList.getCollData(ref) match {
+				 case Some(collData) => collData
+				 case _ => new CollFuncResultSet(ref,Nil) // no Colldata there, create new			         
+			  } 
+		  else collData
+		// for each new call  
+		for(nc <- newCollCalls) { // add it to the resultset
+		   val (acollData,resultValue)=theCollData.addCollCall(nc,pFieldNr)
+		   theCollData=acollData 
+		   theTerm=setFuncResults(theTerm,nc,resultValue) // and put the result into the call expression
+		}  
+		(theCollData,theTerm)		
+	}
+	
+	/** puts the results of a collfunc into the call expression 
+	 * @param newTerm the term containing the funcCall that should be replaced with a call that has the result set
+	 * @param call the new function call we are looking for
+	 * @param newValue the new value that should be given to the call
+	 * @return the updated expression
+	 */
+	private def setFuncResults(newTerm:Expression,call:CollectingFuncCall,newValue:Constant ):Expression= {
+		newTerm.replaceExpression((ex:Expression) => {
+		  	 ex match {
+		  		 case fc:CollectingFuncCall => {
+		  			   println("setFuncResults fc:"+fc + "call:"+call+" =="+(fc==call)+" newValue:"+newValue)
+		  			   if(fc==call) fc.setValue(newValue)
+		  			   else fc
+		  			 }
+		  		 case a => a 
+		  	 }
+		   })
+	}
+	
+	/** notifies the owner that the value of a CollFuncCall has changed
+	 * @param ownerInst the InstanceData of the owner
+	 * @param collData the collFuncData of the functionCall that should be changed
+	 * @param newValue the new result of the functionCall that should be set
+	 * @return a new version of the owner's InstanceData
+	 */
+	private def updateOwnerCollFunc(ownerInst:InstanceData,collData:CollFuncResult,newValue:Constant):InstanceData = {
+		println("updateOwnerCollFunc "+ownerInst.fieldData(collData.parentField ))
+		val newExpression=ownerInst.fieldData(collData.parentField ).replaceExpression((ex:Expression) => {
+		  	 ex match {
+		  		 case fc:CollectingFuncCall => {
+		  			 println("UpdateOwnerCollFunc fc:"+fc+ " colldata:"+collData+" newValue:"+newValue)
+		  			 if(collData.fitsToFuncCall(fc,collData.parentField)) fc.setValue(newValue)
+		  			 else fc		  		 
+		  		 }
+		  		 case a => a 
+		  	 }
+		   })
+		 println(" newExpr:"+newExpression)  
+		 ownerInst.setField(collData.parentField,newExpression)
+	}
+	
+	/** notifies one parent instance that a child was changed, eventually calculates the new values and stores the changes
+	 * @param owner Reference to the owner instance
+	 * @param collData the CollFuncResultSet of the owner instance
+	 * @param childRef the Reference of the changed child
+	 * @param childField the number of the field that was changed
+	 * @param oldValue the old value of the field
+	 * @param newValue the new value of the field
+	 * 
+	 */
+	private def notifyCollFunc_ChildChanged(owner:OwnerReference,collData:CollFuncResultSet,childRef:Reference,childField:Byte,
+	                                       oldValue:Constant,newValue:Constant)= {
+		val myClass=AllClasses.getClassByID(childRef.typ)
+		var matches=false
+		// check if the child matches to any of the collFuncResults 
+		for(res <-collData.callResultList )
+		   if(res.childField ==childField && res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
+		  		 myClass.inheritsFrom(res.childType)) matches=true
+		
+		if(matches) {  // if yes, update the changes
+			var parentInstData=ActionList.getInstanceData(owner.ownerRef)
+			val newCollDataList=
+			(for(res <-collData.callResultList )
+				yield if(res.childField ==childField && res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
+		  		 myClass.inheritsFrom(res.childType))  {
+		  	      val (newRes,value) = collData.childChanged(res,childRef,oldValue,newValue)
+		  	      parentInstData=updateOwnerCollFunc(parentInstData,newRes,value)		  	      
+		  	      newRes
+		    }	
+		  	else res).toList		
+		  val newResultSet=new CollFuncResultSet(owner.ownerRef,newCollDataList)
+		  ActionList.addTransactionData(owner.ownerRef ,new DataChangeAction(Some(parentInstData),None,None,Some(newResultSet)))		 
+		}		
+	}
 	
 	
+	private def notifyCollFunc_ChildDeleted(owner:OwnerReference,collData:CollFuncResultSet,childInstance:InstanceData) = {
+		val myClass=AllClasses.getClassByID(childInstance.ref.typ)
+		var matches=false
+		for(res <-collData.callResultList )
+		{
+			println("res :"+res)
+			if( res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
+		  		 myClass.inheritsFrom(res.childType)) matches=true
+		}
+		if(matches) {
+			println("matches")
+			var parentInstData=ActionList.getInstanceData(owner.ownerRef)
+			val newCollDataList=
+			(for(res <-collData.callResultList )
+				yield if( res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
+		  		 myClass.inheritsFrom(res.childType))  {
+		  	      val (newRes,value) = collData.childDeleted(res,childInstance.ref ,childInstance.fieldValue(res.childField ))
+		  	      println("ChildDeleted newRes:"+newRes+ " new Value:"+value)
+		  	      parentInstData=updateOwnerCollFunc(parentInstData,newRes,value)		  	      
+		  	      newRes
+		    }	
+		  	else res).toList
+		  val newResultSet=new CollFuncResultSet(owner.ownerRef,newCollDataList)
+		  ActionList.addTransactionData(owner.ownerRef ,new DataChangeAction(Some(parentInstData),None,None,Some(newResultSet)))
+		}
+	}
+	
+	
+	// Checks the  lists of the new value and the old value, what elements were removed in the new one	
+	private def findMissingElements[T <: Expression](oldList:List[T],newList:List[T]) =
+	{		
+		var resultList:List[T]=Nil
+		for(r <-oldList)
+			if(!newList.contains(r)) resultList= r :: resultList
+		resultList
+	}	
 	
 	/**
 	 * @param ref the instance to be deleted
@@ -242,6 +427,7 @@ object TransactionManager {
 	def tryDeleteInstance(ref:Reference,dontNotifyOwner:Option[Reference]):Unit =	{
   	if(!running ) throw new IllegalArgumentException("No transaction defined ")
   	val instD=ActionList.getInstanceData(ref)
+  	// mark this instance as deleted
   	ActionList.addTransactionData(ref,new DeleteAction(ref ))
 
   	// notify owners
@@ -255,7 +441,7 @@ object TransactionManager {
   	// remove link information at external source instances
   	for(afield <-instD.fieldData) // check all fields for FieldReferences
   	{
-  		val refList= afield.getFieldReferences(Nil) // get all FielReferences from that term
+  		val refList= afield.getElementList[FieldReference](DataType.FieldRefTyp,Nil) // get all FielReferences from that term
   		for(fref <-refList) // remove all external links
   			removeLinkRef(ref,fref)
   	}
@@ -270,13 +456,21 @@ object TransactionManager {
 					  	{
 					  		val targetData=ActionList.getInstanceData(targetRef)
 					  		val theField=targetData.fieldData(aref.field ). // get the term that contains the linkref
-					  		replaceFieldRefWithValue({ // go through all elements and searches fieldRef elements
-					  			aFieldRef =>{ val relink=resolveLinkRef(targetRef,aFieldRef);
-					  				 						println("checking ref:"+aFieldRef+" resolved:"+relink+" with:"+ref);
-					  				 						relink==ref
+					  		replaceExpression( // go through all elements and searches fieldRef elements
+					  			(anExpression:Expression) =>{ anExpression match  {
+					  				case aFieldRef:FieldReference => {	
+					  					val relink=resolveLinkRef(targetRef,aFieldRef);
+					  				  println("checking ref:"+aFieldRef+" resolved:"+relink+" with:"+ref);
+					  				  if (relink==ref) aFieldRef.cachedValue // replace the reference with the cached value
+					  				  else aFieldRef // wrong reference, leave it
+					  				}
+					  				case other => other // dont change any other elements
+					  			}
+					  				 						
+					  				 						
 					  				 } // compares a fieldref with this instance
 					  			// if it is the same, return true. That will make the LinkRef replace itself with the cached Value					  		
-					  		})					  		
+					  		)					  		
 					  		ActionList.addTransactionData(targetRef,new DataChangeAction(Some(targetData.setField(aref.field, theField)))) // store that target
 					  	}
 					  }
@@ -284,6 +478,21 @@ object TransactionManager {
 			}
 			case _ => // go drink a beer
 		}
+  	
+  	// notify CollFuncs of the parent instances
+  	println("check Coll "+ instD.owners.mkString(", "))
+  	for(owner <-instD.owners)
+  	{
+  		println(" "+owner.ownerRef)
+  		ActionList.getCollData(owner.ownerRef) match {
+				case Some(collData) => {
+					println("notify CollFunc Child Deleted, owner:"+owner+" child"+instD.ref)
+					notifyCollFunc_ChildDeleted(owner ,collData,instD)
+				}
+				case b => println("check "+owner+" for Colldata:"+b) // more beer !
+			}
+  	}
+  	
   	//TODO delete instance from caches !!!
   	
   	// delete Children
@@ -328,7 +537,7 @@ object TransactionManager {
 		// Register FieldReferences
 		for(i <- 0 until instD.fieldData.size)
 		{
-			val refList=instD.fieldData(i).getFieldReferences(Nil)
+			val refList=instD.fieldData(i).getElementList[FieldReference](DataType.FieldRefTyp,Nil)
 			for(rf <-refList)
 				 addLinkRef(createInst.ref,i.toByte,rf)
 		}

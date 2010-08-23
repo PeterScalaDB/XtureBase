@@ -27,7 +27,7 @@ object InstFieldTableModel extends AbstractTableModel
   
   def setInstance(newInst:InstanceData) =
   {
-  	println("instmodel set Instance "+newInst)
+  	//println("instmodel set Instance "+newInst)
   	instance=newInst
   	if(instance==null) theVersion=null
   	else theVersion=theClass.getVersion(instance.classVersion) match {case Some(a) => a;case None =>null}

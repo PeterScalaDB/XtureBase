@@ -17,7 +17,7 @@ class ClassIndexHandler(val theClass:ObjectClass)
 {
 	val fileName=new File(FSPaths.dataDir+theClass.name+".idx")	
 	val theFile= new RandomAccessFile(fileName,"rwd") 
-	val recordSize=8*4+4*3
+	val recordSize=8*5+4*4
 	var numRecords=theFile.length/recordSize
 	//println("Typ: "+theClass.id+" numRecords:"+numRecords)
 	val firstID= if(numRecords>0) readIxInst(0) else 0
@@ -62,15 +62,22 @@ class ClassIndexHandler(val theClass:ObjectClass)
     TransLogHandler.dataChanged(TransType.linksChanged ,theClass.id,inst,dataPos,dataLength)
 	}
 	
+	def writeCollFuncData(inst:Long,dataPos:Long,dataLength:Int) =
+	{
+		internalWrite(inst,dataPos,dataLength,(8+4)*3)
+		TransLogHandler.dataChanged(TransType.collFuncChanged ,theClass.id,inst,dataPos,dataLength)
+	}
+	
 	
 	def createInstance():Long =
 	{
 		val inst=lastID+1		
 		theFile.seek(theFile.length)
 		theFile.writeLong(inst)
-		theFile.writeLong(0);theFile.writeInt(0)
-		theFile.writeLong(0);theFile.writeInt(0)
-		theFile.writeLong(0);theFile.writeInt(0)
+		theFile.writeLong(0);theFile.writeInt(0)//data
+		theFile.writeLong(0);theFile.writeInt(0)//prop
+		theFile.writeLong(0);theFile.writeInt(0)//link
+		theFile.writeLong(0);theFile.writeInt(0)//coll
 		numRecords+=1
 		lastID=inst
 		TransLogHandler.dataChanged(TransType.created,theClass.id,inst,0,0)
@@ -111,7 +118,7 @@ class ClassIndexHandler(val theClass:ObjectClass)
 	{		
 		theFile.seek(findIxRecord(inst)*recordSize)
 		new IndexRecord(theFile.readLong,theFile.readLong,theFile.readInt,theFile.readLong,theFile.readInt,
-			theFile.readLong,theFile.readInt)
+			theFile.readLong,theFile.readInt,theFile.readLong,theFile.readInt)
 	}
 	
 	// internal routines
@@ -166,7 +173,8 @@ class ClassIndexHandler(val theClass:ObjectClass)
 /** Index record for instance data
  * 
  */
-class IndexRecord (val inst:Long,val dataPos:Long,val dataLength:Int,val propPos:Long,val propLength:Int,val linkPos:Long,val linkLength:Int)
+class IndexRecord (val inst:Long,val dataPos:Long,val dataLength:Int,val propPos:Long,val propLength:Int,
+	val linkPos:Long,val linkLength:Int,val collPos:Long,val collLength:Int)
 {
 
 }

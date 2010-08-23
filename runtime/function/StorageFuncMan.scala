@@ -5,6 +5,7 @@ package runtime.function
 
 import definition.expression._
 import definition.typ._
+import transaction.handling._
 /**
  * 
  */
@@ -47,12 +48,35 @@ object StorageFuncMan extends FunctionManager {
 				entry.func(paramValues)
 			else EMPTY_EX 
 			//TODO notify when wrong function parameters passed
-		}
-		  
-		else throw new IllegalArgumentException("Function "+uname+" not found")
-		
+		}		  
+		else throw new IllegalArgumentException("Function "+uname+" not found")		
 	}
+	
+	val collFuncList= Map[String,CollectingFunction] (
+	    ("doubleSum" -> new SingleCollFunction("doubleSum"){
+	    	def childAdded(oldResult:Constant,newValue:Constant):Constant = {
+	    	  new DoubleConstant(oldResult.toDouble+newValue.toDouble)	
+	    	}	
+	      def childChanged(oldResult:Constant,oldValue:Constant,newValue:Constant):Option[Constant]	= {
+	      	Some(new DoubleConstant(oldResult.toDouble-oldValue.toDouble+newValue.toDouble))
+	       }
+		    def childRemoved(oldResult:Constant,oldValue:Constant):Option[Constant] = {
+		    	Some(new DoubleConstant(oldResult.toDouble-oldValue.toDouble))
+		    }		   
+	    	def emptyValue:Constant = new DoubleConstant(0)	
+	    })		
+	    
+	)
+	
+	
+	
+	
 }
+
+
+// *********************************** HELPER CLASSES ********************************************
+
+
 
 case class FEntry(params:List[ParDes],func:(List[Constant])=>Constant)
 

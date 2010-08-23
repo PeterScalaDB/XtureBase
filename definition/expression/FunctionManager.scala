@@ -13,6 +13,7 @@ trait FunctionManager {
 	
 	def getFunctionValue(module:Option[String],funcName:String,paramValues:List[Constant]):Constant
 	
+	//def getCollFunctionValue(funcName:String,propertyField:Byte,childType:Int,childField:Byte):Constant
 	
 }
 

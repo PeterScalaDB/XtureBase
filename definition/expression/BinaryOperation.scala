@@ -52,16 +52,26 @@ case class BinaryOperation(left:Expression,operator:BinOperator,right:Expression
   	right.write(file)
   }
   
-  // looks for fieldreferences in both operands
-  override def getFieldReferences (resultList:List[FieldReference]) = {
-  	left.getFieldReferences(right.getFieldReferences(resultList))
-  }
+    
+  override def getElementList[T <: Expression](whatType:DataType.Value,resultList:List[T]):List[T]={
+  	left.getElementList(whatType,right.getElementList(whatType,super.getElementList(whatType,resultList)))		
+	}
   
-  override def replaceFieldRefWithValue(checker:(FieldReference)=> Boolean):Expression = {
-  	new BinaryOperation(left.replaceFieldRefWithValue(checker),operator,
-  		right.replaceFieldRefWithValue(checker))
-  }
   
+  
+  override def replaceExpression(checker:(Expression) => Expression): Expression = 
+  {
+    val newMe=checker(this)
+    if (newMe==this) // was not changed
+    {
+    	val newLeft=left.replaceExpression(checker)
+    	val newRight=right.replaceExpression(checker)
+    	if(newLeft!=left || newRight!=right) // operators were changed
+    		new BinaryOperation(newLeft,operator,newRight)
+    	else this
+    }
+    else newMe // return replacement of me
+  }
 }
 
 object BinaryOperation

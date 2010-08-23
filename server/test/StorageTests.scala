@@ -78,20 +78,33 @@ class StorageTests extends JUnitSuite
 			assert(TransactionManager.tryWriteInstanceField(new Reference(3,4),0,
 				new BinaryOperation(new DoubleConstant(4),BinOperator.getOp('+'), new FieldReference(None,Some(2),1))))
 			assert(TransactionManager.tryWriteInstanceField(new Reference(3,4),1,
-				new BinaryOperation(new DoubleConstant(19),BinOperator.getOp('-'), new FieldReference(Some(3),Some(3),1))))	
+				new BinaryOperation(new DoubleConstant(19),BinOperator.getOp('-'), new FieldReference(Some(3),Some(3),1))))
+		})
+		assert(TransactionManager.doTransaction{
 			val inst=TransactionManager.tryCreateInstance(3,Array(new OwnerReference(0,new Reference(3,1))))
+		
 			TransactionManager.tryCopyInstance(Reference(3,4),new OwnerReference(0,Reference(3,3)),OwnerReference(0,inst.ref))
 		})
 	}
 
+	
+	
+	@Test def collFuncTest() = {
+		assert(TransactionManager.doTransaction {
+			assert(TransactionManager.tryWriteInstanceField(new Reference(3,1),1,new CollectingFuncCall("doubleSum",0,3,1)))
+		})
+		assert(TransactionManager.doTransaction {
+			assert(TransactionManager.tryWriteInstanceField(new Reference(3,5),1,new IntConstant(50)))
+		}	)		
+	}
+	
 	@Test def readTest() =  {
-
 		val maxID=StorageManager.getHandler(3).lastID 
 
 		for(i <-1 to maxID.toInt)
 			if(StorageManager.instanceExists(3,i))
 				println(StorageManager.getInstanceData(new Reference(3,i)))
-		StorageManager.shutDown()
+		StorageManager.shutDown()		
 	}
 
 

@@ -36,7 +36,7 @@ class Cache[T <: Referencable](val typ:Int)(implicit m: Manifest[T]) {
 	def putInstanceData(inst:T):Unit = {
 		added+=1
 		for(i <- 0 until cacheSize)
-  		if(cache(i)!=null && cache(i).ref.instance ==inst.ref .instance  ) {
+  		if(cache(i)!=null && cache(i).ref.instance ==inst.ref.instance  ) {
   			cache(i)=inst
   			return 
   		}
@@ -44,6 +44,14 @@ class Cache[T <: Referencable](val typ:Int)(implicit m: Manifest[T]) {
 		if(pointer >=cacheSize) pointer = 0
 		cache(pointer)=inst
 	}	
+	
+	def removeInstanceData (inst:Long):Unit = {
+		for(i <- 0 until cacheSize)
+  		if(cache(i)!=null && cache(i).ref.instance ==inst  ) {
+  			cache(i)=null.asInstanceOf[T]
+  			return 
+  		}
+	}
 	
 	override def toString() = m.toString+ "-Cache for type "+typ+" miss:"+cacheMiss+" hit:"+cacheHit+ " add:"+added+" P:"+pointer
 	

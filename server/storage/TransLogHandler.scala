@@ -77,5 +77,6 @@ object TransType extends Enumeration
 	val dataChanged=Value("Data changed")
 	val propertyChanged=Value("Prop changed")
 	val linksChanged=Value("Links changed")
-	val deleted=Value("deleted")
+	val collFuncChanged=Value("CollFunc changed")
+	val deleted=Value("deleted")	
 }

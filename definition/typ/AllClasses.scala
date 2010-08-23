@@ -22,7 +22,7 @@ object AllClasses {
   def getClassList=classList
   
   // find a class by Name
-  def getClassByName(aname:String)= classList.values.find(_.name ==aname) 
+  def getClassByName(aname:String)= classList.valuesIterator.find(_.name ==aname) 
   
   // find a class by class ID
   def getClassByID(aId:Int )= classList(aId)
@@ -57,6 +57,9 @@ object AllClasses {
   }
   
   // resolves all superfields from all classes. Will be called after reading all classes from XLM
-  def resolveFields= for(cl <-classList; ver <-cl._2.versions) ver.resolveSuperFields(this) 
-  	
+  def resolveFields= for(cl <-classList; ver <-cl._2.versions)
+  									 {
+  											ver.resolveSuperFields(this)
+  											ver.resolveSuperClassIDs(this)
+  									 }		
 }

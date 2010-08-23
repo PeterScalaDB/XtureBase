@@ -12,6 +12,12 @@ import java.io._
 trait Referencable {
    def ref:Reference=null
    
+   
+   /** writes the Referencable object in the given datastream
+    *  subclasses dont need to store the reference in the datastream
+    *  
+    * @param d
+    */
    def write(d:DataOutput)={}   
    
 }

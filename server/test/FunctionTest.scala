@@ -11,6 +11,7 @@ import server.config._
 import server.storage._
 import definition.data._
 import transaction.handling._
+import transaction.parser._
 
 /**
  * 
@@ -28,7 +29,12 @@ class FunctionTest  extends JUnitSuite  {
 		println(new FunctionCall(None,"sin",List(DoubleConstant(math.Pi/2))).getValue)
 	}
 	
-	
-	
+	@Test def collFuncTest() = {
+	  val myString="12 + #doubleSum(1;2;3) * (#f15 + #t4i2f9) - #i12f18 "
+	  val expr=StringParser.parse(myString)
+	  println(expr +  " = " + expr.getTerm)
+	  
+	  assert(true)
+	}
   
 }

@@ -14,12 +14,14 @@ sealed abstract class TransactionData {
 
 case class CreateAction(ref:Reference, // reference of the new Instance
 												var newInstData:Option[InstanceData]=None, // optional data to be stored in the new instance
-												var newPropData:Option[InstanceProperties]=None //optional property data to be
+												var newPropData:Option[InstanceProperties]=None, //optional property data to be
+												var newCollData:Option[CollFuncResultSet]=None
 ) extends TransactionData
 
 case class DataChangeAction(var newInstData:Option[InstanceData],
 														var newPropData:Option[InstanceProperties]=None,
-														var newLinksData:Option[ReferencingLinks]=None) extends TransactionData
+														var newLinksData:Option[ReferencingLinks]=None,
+														var newCollData:Option[CollFuncResultSet]=None) extends TransactionData
 
 case class DeleteAction(ref:Reference) extends TransactionData
 

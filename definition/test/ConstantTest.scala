@@ -20,7 +20,8 @@ class ConstantTest extends JUnitSuite
   val intc=new IntConstant(199)
   val floatc=new DoubleConstant(1774.9901)
   val stringc=new StringConstant( "hello")
-  
+  val fr=new FieldReference(None,None,0)
+  val fc=new FunctionCall(None,"sum",List(intc))
   val stringn=new StringConstant("934.003")
   
   val testExpr= List (
@@ -42,6 +43,7 @@ class ConstantTest extends JUnitSuite
   
   @Test def binTest()=
   {
+  	
   	val a=new BinaryOperation(intc,BinOperator.getOp('*'),floatc);
   	//println(a+" "+a.getValue())
   	assertEquals(a.getValue,new IntConstant(199*1775))
@@ -50,8 +52,21 @@ class ConstantTest extends JUnitSuite
   	assertEquals(b.getValue,new DoubleConstant(1774.9901+199.0))
   	val c=new BinaryOperation(intc,BinOperator.getOp('*'),b)
   	//println(c.getTerm)
-  	val d=new BinaryOperation(a,BinOperator.getOp('+'),intc)
-  	//println(d.getTerm)
+  	val d=new BinaryOperation(a,BinOperator.getOp('+'),new BinaryOperation(intc,BinOperator.getOp('-'),fc))
+  	val f=new BinaryOperation(d,BinOperator.getOp('*'),fr)
+  	val g=new FunctionCall(None,"Sum",List(f,floatc))
+  	
+  	println(g.getTerm)
+  	val dlist=g.getElementList[DoubleConstant](DataType.IntTyp,List[DoubleConstant](floatc))
+  	println(dlist)
+  	
+  	val rlist=g.getElementList[FieldReference](DataType.FieldRefTyp,List[FieldReference]())
+  	println(rlist)
+  	println("CacheValue: "+rlist.head.cachedValue)
+  	
+  	val blist=g.getElementList[FunctionCall](DataType.FunctionCall,List[FunctionCall]())
+  	println(blist)
+  	println("CacheValue: "+blist.head.cacheValue)
   }
   
   

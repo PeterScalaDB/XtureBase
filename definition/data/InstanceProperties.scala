@@ -8,7 +8,7 @@ import scala.collection.immutable.Vector
 
 
 /** Stores the Property Information of an instance
- * 
+ * propertyFields: Array of the propertyFieldsData of an instance
  */
 class InstanceProperties(override val ref:Reference, val propertyFields:Array [PropertyFieldData])
       extends Referencable {
@@ -46,7 +46,7 @@ object InstanceProperties
 		val count:Int=file.readByte
 		val propArray=new Array[PropertyFieldData](count.toInt)
 		for(i <-0 until count)
-			 propArray(0)=PropertyFieldData(file)
+			 propArray(i)=PropertyFieldData(file)
 	  new InstanceProperties(ninstRef,propArray)				
 	}
 		

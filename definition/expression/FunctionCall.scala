@@ -11,10 +11,10 @@ import java.io._
 /** An expression that manages a function call
  * 
  */
-case class FunctionCall(module:Option[String],name:String,params:List[Expression]) extends Expression  {
-	def getType(): DataType.Value = { DataType.FunctionCall }
-  
-  var cacheValue:Constant=null
+case class FunctionCall(module:Option[String],name:String,params:List[Expression],
+	var cacheValue:Constant=null) extends Expression  {
+	
+	def getType(): DataType.Value = { DataType.FunctionCall }  
 
   def getValue(): Constant = 
   { 
@@ -26,7 +26,8 @@ case class FunctionCall(module:Option[String],name:String,params:List[Expression
   	cacheValue
   }
   
-  
+  //TODO: make special read/write methods that store the cached value, for sending
+  // terms via network
 
   def createCopy(): Expression = { new FunctionCall(module,name,params) }
 
@@ -50,17 +51,20 @@ case class FunctionCall(module:Option[String],name:String,params:List[Expression
   		p.write(file)  	
   }
   
-  // looks for fieldreferences in both operands
-  override def getFieldReferences (resultList:List[FieldReference]) = {
-  	var result=resultList
+  
+  
+  override def getElementList[T <: Expression](whatType:DataType.Value,resultList:List[T]):List[T]={
+  	var result=super.getElementList(whatType,resultList)
   	for(p<-params)
-  		result=p.getFieldReferences(result)
+  		result=p.getElementList(whatType,result)
   	result
   }
   
-  override def replaceFieldRefWithValue(checker:(FieldReference)=> Boolean):Expression = {
-  	new FunctionCall(module,name, for(p<-params) 
-  		                              yield p.replaceFieldRefWithValue(checker) )  	
+  
+  
+  override def replaceExpression(checker:(Expression) => Expression): Expression =  {
+  	 new FunctionCall(module,name, for(p<-params) 
+  		                              yield p.replaceExpression(checker) )
   }
 }
 

@@ -21,7 +21,7 @@ object ClassTableWindow extends SimpleSwingApplication
 	def dataInit()=
 	{		
 		TransactionManager.init()
-		TypTableModel.setClassList(AllClasses.getClassList.values.toArray)		
+		TypTableModel.setClassList(AllClasses.getClassList.valuesIterator.toArray)		
 	}
 
 	val classTable= new Table
@@ -78,7 +78,7 @@ object ClassTableWindow extends SimpleSwingApplication
 				val showIndexBut = new Button("Show Index")
 				val showTransBut = new Button("Show Trans Log")
 				val showCachesBut = new Button( "Show Caches")
-				contents += newClassBut += newVersionBut += showDataBut += showIndexBut += showTransBut+= showCachesBut					 
+				contents += showDataBut += newClassBut += newVersionBut += showIndexBut += showTransBut+= showCachesBut					 
 
 				listenTo(newClassBut,newVersionBut,showDataBut,showIndexBut,showTransBut,showCachesBut)
 				reactions += {

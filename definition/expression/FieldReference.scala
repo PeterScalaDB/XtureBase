@@ -13,7 +13,7 @@ import java.io._
  * is in the same instance  
  */
 case class FieldReference(remType:Option[Int],remInst:Option[Long],remField:Byte,var cachedValue:Constant=EMPTY_EX) extends Expression {
-	
+
 
 	val term:String = { 
 	"#" + (remType match {
@@ -31,7 +31,7 @@ def getValue(): Constant = { cachedValue }
 
 def createCopy(): Expression = {
 	new FieldReference(remType,remInst,remField,cachedValue)
-	
+
 }
 
 def getChildCount(): Int = { 0 }
@@ -47,12 +47,12 @@ override def toString():String = "Ref["+remType+","+remInst+","+remField+",cv:"+
 override def equals(other: Any): Boolean =
 	other match {
 		case that: FieldReference =>
-			(that canEqual this) &&
-			remType == that.remType &&
-			remInst == that.remInst &&
-			remField == that.remField
+		(that canEqual this) &&
+		remType == that.remType &&
+		remInst == that.remInst &&
+		remField == that.remField
 		case _ => false
-	}
+}
 
 override def hashCode: Int = 41 * ( 41 + remType.hashCode)  + 1013*(3+remInst.hashCode)+remField.toInt
 
@@ -62,8 +62,8 @@ def isConstant(): Boolean = { false }
 def write(file: DataOutput): Unit = {
 	file.writeByte(DataType.FieldRefTyp.id)
 	remType match {
-	  case Some (t) => file.writeInt(t)
-	  case _ => file.writeInt(0)
+		case Some (t) => file.writeInt(t)
+		case _ => file.writeInt(0)
 	}
 	remInst match {
 		case Some(i) => file.writeLong(i)
@@ -80,24 +80,18 @@ def setCachedValue(newVal:Constant) = {
 	//println(" newval: "+cachedValue)
 }
 
-	override def getFieldReferences(resultList:List[FieldReference])= this :: resultList
 
-	override def replaceFieldRefWithValue(checker:(FieldReference)=> Boolean):Expression = {
-		if(checker(this)) // this one is to remove
-			return cachedValue // replace this with the cached Value
-			else return this // else return this
-	}
 
 }
 
 
 object FieldReference {
 	def apply (file: DataInput):Expression = {
-    val t=file.readInt
-    val i=file.readLong
-    val f=file.readByte
-    val ret =new FieldReference(if(t==0)None else Some(t),if(i==0)None else Some(i),f,Expression.read(file).asInstanceOf[Constant])
-    //println(" read "+ret+" cv: "+ret.cachedValue )
-    ret
+		val t=file.readInt
+		val i=file.readLong
+		val f=file.readByte
+		val ret =new FieldReference(if(t==0)None else Some(t),if(i==0)None else Some(i),f,Expression.read(file).asInstanceOf[Constant])
+		//println(" read "+ret+" cv: "+ret.cachedValue )
+		ret
 	}
 }

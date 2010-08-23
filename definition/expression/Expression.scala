@@ -27,18 +27,28 @@ trait Expression
 	def write(file:DataOutput):Unit
 	
 	
-	/** returns all FieldReferences from this expression
-	 * 
-	 */
-	def getFieldReferences(resultList:List[FieldReference]):List[FieldReference]=resultList
 	
-	/** removes a certain FieldReference from the term and replaces it with it's cache Value
+	
+	/** returns all Elements of the given type from this expression
 	 * 
-	 * @param checker a checker function that checks if a given field ref is the one to remove
-	 * has to be called by FieldReference instances of this term
-	 * @return a new Term with the FieldReference removed
+	 * @param whatType Type-Id from definition.typ.DataType
+	 * @param resultList a List of elements of the given type. The elements of this expression will be added to that list.
+	 * @return a new list containing all elements of resultList and the elements of this list fitting to the given type
 	 */
-	def replaceFieldRefWithValue(checker:(FieldReference)=> Boolean):Expression = this
+	def getElementList[T <: Expression](whatType:DataType.Value,resultList:List[T]):List[T]={
+		if(this.getType==whatType) this.asInstanceOf[T]::resultList
+		else resultList
+	}
+	
+		
+	
+	/** replaces certain elements of this term
+	 * 
+	 * @param checker a function that is given a certain part of this term and it gives a replacement
+	 * @return the new term with all replacements
+	 */
+	def replaceExpression(checker:(Expression) => Expression): Expression = 
+		checker(this)
 }
 
 object Expression
@@ -52,6 +62,7 @@ object Expression
 			case DataType.BinOp => BinaryOperation(file)
 			case DataType.FieldRefTyp => FieldReference(file)
 			case DataType.FunctionCall => FunctionCall(file)
+			case DataType.CollFunctionCall => CollectingFuncCall(file)
 			case _ => EMPTY_EX
 		}		
 	}

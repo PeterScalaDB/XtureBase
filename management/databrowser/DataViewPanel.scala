@@ -42,19 +42,21 @@ object DataViewPanel extends BorderPanel
 			viewportView=ixTable 
 		},BorderPanel.Position.Center)
 
-		add (new GridPanel(3,1)
+		add (new GridPanel(4,1)
 		{
 			val openBut=new Button("Open Instance")
 			val createBut=new Button("Create Instance")
 			val deleteBut=new Button("Delete Instance")
+			val checkCollBut=new Button("check CollData")
 			
-			contents+=openBut+=createBut+=deleteBut
-			listenTo(openBut,createBut,deleteBut)
+			contents+=openBut+=createBut+=deleteBut+=checkCollBut
+			listenTo(openBut,createBut,deleteBut,checkCollBut)
 			reactions += 
 			{
 				case ButtonClicked(`openBut`) => openInstance
 				case ButtonClicked(`createBut`) => createInstance
 				case ButtonClicked(`deleteBut`) => deleteInstance
+				case ButtonClicked(`checkCollBut`) => checkCollData
 			}
 		},BorderPanel.Position.South)
 
@@ -125,6 +127,19 @@ object DataViewPanel extends BorderPanel
 			}		  
 		  
 		  IndexTableModel.readTheList
+		}
+	}
+	
+	def checkCollData() =
+	{
+		if(! (ixTable.selection.rows.isEmpty))		 
+		{			
+			val ix:Int= ixTable.selection.rows.head
+			val inst:Long=IndexTableModel.ixList(ix)._1
+			//println("inst: "+inst)
+			
+			println(ActionList.getCollData(new Reference(InstFieldTableModel.theClass.id,inst)))		  
+		  
 		}
 	}
 }

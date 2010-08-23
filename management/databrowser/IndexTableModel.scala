@@ -26,6 +26,7 @@ object IndexTableModel extends AbstractTableModel
 	
 	def readTheList()
 	{
+		println(handler.lastID)
 		ixList=
 		(for (i <- 1L to handler.lastID; if(handler.instanceExists(i)); rec=handler.getInstanceRecord(i) )
 			yield (i,rec.dataPos,rec.dataLength)).toArray				

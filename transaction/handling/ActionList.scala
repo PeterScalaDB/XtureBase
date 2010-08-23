@@ -17,9 +17,9 @@ object ActionList {
 
 	def breakAllData() = {
 		println("Break")
-	for(trans <- theList.values)
+	for(trans <- theList.valuesIterator)
 		(trans: @unchecked) match {
-			case CreateAction(ref,_,_) => { // delete the Instances that got created during the try phase
+			case CreateAction(ref,_,_,_) => { // delete the Instances that got created during the try phase
 				try {
 					StorageManager.deleteInstance(ref.typ, ref.instance)
 				} catch {case e => {println("BreakAllData error "+e)}} 
@@ -33,19 +33,22 @@ def reset() = {theList=Map.empty}
 
 def commitAllData() = {
 	try {		
-		for(trans <- theList.values)
+		for(trans <- theList.valuesIterator)
 			trans match {
-				case CreateAction(ref,a,b) => { // Instances get created during the Try-Phase of the transaction
+				case CreateAction(ref,a,b,co) => { // Instances get created during the Try-Phase of the transaction
 					for (data <-a)  StorageManager.writeInstance(data) // if instdata is defined, write
 					for (pdata <-b)  StorageManager.writeInstanceProperties(pdata) // if propdata is defined, write
+					for (c <- co) StorageManager.writeCollectingFuncData(c)
 				}
-				case DataChangeAction(in,pr,li) => {
+				case DataChangeAction(in,pr,li,co) => {
 					for(i <- in) StorageManager.writeInstance(i); // if instance is defined, write
 					for(p <- pr) StorageManager.writeInstanceProperties(p) // if properties ...
 					for(l <- li) StorageManager.writeReferencingLinks(l)
+					for(c <- co) StorageManager.writeCollectingFuncData(c)
 				}
 				
 				case DeleteAction(ref) => StorageManager.deleteInstance(ref.typ,ref.instance )
+				//TODO: delete link, property and collFunc data !
 		}
 		reset()
 	} catch { case e:Exception => TransactionManager.breakTransaction() }
@@ -58,21 +61,23 @@ def addTransactionData (ref:Reference,newRec:TransactionData) = {
 		theList(ref) match { // is there already an transaction data for this instance ?			
 			case a:CreateAction => newRec match { 
 				// a createAction is already there. What action shall be added ?
-				case  DataChangeAction(in,pr,li ) => {
+				case  DataChangeAction(in,pr,li,co ) => {
 					if (in!=None) a.newInstData = in // add the new data to the createAction
 					if (pr!=None) a.newPropData = pr
 					if (li!=None) throw new IllegalArgumentException("Cant add external links to created Instance "+ref+" "+li)
+					if (co!=None) a.newCollData= co
 				}				                                  
 				case x: DeleteAction => throw new IllegalArgumentException("Delete after create for "+ref)
 				case x: CreateAction =>  throw new IllegalArgumentException("Create after create for "+ref)
 			}
 
-			case a:DataChangeAction => newRec match {
+			case b:DataChangeAction => newRec match {
 				// a DataChange action is already there. What action shall be added ?
-				case  DataChangeAction(in,pr,li ) => {
-					if (in!=None) a.newInstData = in // add the new data to the createAction
-					if (pr!=None) a.newPropData = pr
-					if (li!=None) a.newLinksData = li
+				case  DataChangeAction(in,pr,li,co ) => {
+					if (in!=None) b.newInstData = in // add the new data to the createAction
+					if (pr!=None) b.newPropData = pr
+					if (li!=None) b.newLinksData = li
+					if (co!=None) b.newCollData= co
 				}				
 				case x: DeleteAction => theList += (ref ->newRec) // replace the datachange action with the delete
 				case x: CreateAction =>  throw new IllegalArgumentException("Creating an existing instance "+ref)																	 
@@ -80,6 +85,7 @@ def addTransactionData (ref:Reference,newRec:TransactionData) = {
 
 			case a:DeleteAction => {} // drop the new action when the instance should already be deleted
 		}
+	// no data for that ref yet, add the new TransactionData
 	else theList += (ref -> newRec)
 }
 
@@ -88,10 +94,11 @@ def addTransactionData (ref:Reference,newRec:TransactionData) = {
  */
 def getInstanceData(ref:Reference):InstanceData = {
 	if (theList.contains(ref))
-		(theList(ref): @unchecked)  match {
-		case CreateAction(_,Some(data),_) => return data
-		case DataChangeAction(Some(data),_,_) => return data
-		case _ => 
+		(theList(ref))  match {
+		case CreateAction(_,Some(data),_,_) => return data
+		case DataChangeAction(Some(data),_,_,_) => return data
+		case a:DeleteAction => return null 
+		case _ => // drink another beer
 	}
 	StorageManager.getInstanceData(ref)
 }
@@ -99,9 +106,9 @@ def getInstanceData(ref:Reference):InstanceData = {
 
 def getInstanceProperties(ref:Reference):Option[InstanceProperties] = {
 	if (theList.contains(ref))
-		(theList(ref): @unchecked) match {
-		case CreateAction(_,_,a:Some[InstanceProperties]) => return a
-		case DataChangeAction(_,a:Some[InstanceProperties],_) => return a
+		(theList(ref)) match {
+		case CreateAction(_,_, a @ Some(_),_) => return a
+		case DataChangeAction(_,a @ Some(_),_,_) => return a
 		case _ => // ignore
 	}
 	StorageManager.getInstanceProperties(ref)
@@ -112,11 +119,22 @@ def getInstanceProperties(ref:Reference):Option[InstanceProperties] = {
  */
 def getReferencingLinks(ref:Reference):Option[ReferencingLinks] = {
 	if(theList.contains(ref))
-		(theList(ref): @unchecked) match {
-		   case DataChangeAction(_,_,a:Some[ReferencingLinks]) => return a
+		(theList(ref)) match {
+		   case DataChangeAction(_,_,a@ Some(_),_) => return a
 		   case _ => 
 	  }
 	StorageManager.getReferencingLinks(ref)
+}
+
+def getCollData(ref:Reference):Option[CollFuncResultSet] =
+{
+	if (theList.contains(ref))
+		(theList(ref)) match {
+		case CreateAction(_,_,_,a@ Some(_)) => return a
+		case DataChangeAction(_,_,_,b @ Some(_)) => return b
+		case _ => // ignore
+	}
+	StorageManager.getCollectingFuncData(ref)
 }
 
 

@@ -19,6 +19,7 @@ object StorageManager {
   val dataFileHandler=new ContainerFileHandler("InstData.dat",InstanceData.read)
   val propFileHandler=new ContainerFileHandler("PropData.dat",InstanceProperties.read)
   val linkFileHandler=new ContainerFileHandler("ExternLinks.dat",ReferencingLinks.read)
+  val collFuncFileHandler=new ContainerFileHandler("collFuncs.dat",CollFuncResultSet.read)
   var shuttedDown=false
   var inited=false
   
@@ -27,7 +28,7 @@ object StorageManager {
   	if(ixHandlerList.isEmpty||shuttedDown)
   	{
   		shuttedDown=false
-  	  ixHandlerList=ixHandlerList++( for (i <-classList.values) yield (i.id -> new ClassIndexHandler(i)))
+  	  ixHandlerList=ixHandlerList++( for (i <-classList.valuesIterator) yield (i.id -> new ClassIndexHandler(i)))
   	}
   	FunctionManager.setManager(StorageFuncMan)
   }
@@ -44,18 +45,18 @@ object StorageManager {
    */
   def getInstanceData(ref:Reference):InstanceData =
  	{
-  	print("getInstance "+ref)
+  	//print("getInstance "+ref)
   	val handler=getHandler(ref.typ)
   	handler.instCache.getInstanceData(ref.instance ) match
   	{
-  		case Some(cacheValue) =>{println(" cacheHit:"+cacheValue); cacheValue}
+  		case Some(cacheValue) =>{/*println(" cacheHit:"+cacheValue);*/ cacheValue}
   		case None =>
   	  {
   	    val rec=handler.getInstanceRecord(ref.instance )
   	    if (rec.dataPos == 0 && rec.dataLength==0) throw new 
   	               IllegalArgumentException("get Instance() instance "+ref+" is deleted")
   	    val instObj=dataFileHandler.readInstance(ref,rec.dataPos)
-  	    println(" cacheMiss:"+instObj)
+  	    //println(" cacheMiss:"+instObj)
   	    handler.instCache.putInstanceData(instObj)
   	    instObj
   	  }
@@ -94,7 +95,10 @@ object StorageManager {
    */
   def deleteInstance(typ:Int,inst:Long) = 
   {
-  	getHandler(typ).deleteInstance(inst)  	
+  	val handler=getHandler(typ)
+  	handler.deleteInstance(inst)
+  	handler.instCache.removeInstanceData(inst)
+  	handler.propCache.removeInstanceData(inst)  	
   }
   
   /* creates an empty Properties object with default values
@@ -113,7 +117,7 @@ object StorageManager {
   	//println("get Inst prop "+ref)
   	handler.propCache.getInstanceData(ref.instance) match
   	{
-  		case a:Some[InstanceProperties] => a
+  		case a @Some(_) => a
   		case None =>
   	  {
   	    val rec=handler.getInstanceRecord(ref.instance)
@@ -162,22 +166,49 @@ object StorageManager {
   }
   
   
+  // *************************************************************************************
+  //                                   Collecting-Functions
+  
+  def getCollectingFuncData(ref:Reference):Option[CollFuncResultSet] = {
+  	val handler=getHandler(ref.typ)
+  	val rec=handler.getInstanceRecord(ref.instance)
+  	    println(" collfunc recpos "+rec.collPos +" recsize:"+rec.collLength)
+  	    if (rec.collPos == 0 && rec.collLength==0) None
+  	    else
+  	    {
+  	      val propObj=collFuncFileHandler.readInstance(ref,rec.collPos)
+  	      // not chached yet
+  	      Some(propObj)
+  	    }
+  }
+  
+  
+  def writeCollectingFuncData(data:CollFuncResultSet) = {
+  	val (pos,size)=collFuncFileHandler.writeInstance(data)
+  	val handler= getHandler(data.ref.typ)
+  	handler.writeCollFuncData(data.ref.instance, pos, size)
+  }
+  
+  
+  
   def shutDown() =
   {
   	if(!shuttedDown)
   	{
   		println("Shutdown Storage")
-  		for (i <- ixHandlerList.values) i.shutDown
+  		for (i <- ixHandlerList.valuesIterator) i.shutDown
   		dataFileHandler.shutDown
   		propFileHandler.shutDown
   		TransLogHandler.shutDown
+  		linkFileHandler.shutDown
+  		collFuncFileHandler.shutDown
   		shuttedDown=true
   		inited=false
   	}
   }
   
   def printCacheReport() = {
-   for (i <- ixHandlerList.values) i.printCaches	
+   for (i <- ixHandlerList.valuesIterator) i.printCaches	
   }
   
 	

@@ -6,6 +6,7 @@ package transaction.parser
 import scala.util.parsing.combinator.JavaTokenParsers
 import definition.expression._
 
+
 /** parses a String into an expression
  * 
  */
@@ -15,6 +16,8 @@ class StringParser extends JavaTokenParsers {
     """-?\d+""".r
   def doubleNumber: Parser[String] = 
     """((\d+)?[\.,]\d*|\d*[\.,]\d+)""".r
+    
+  def numberParam: Parser[String] = """\d+""".r
     
   /*def fieldReference: Parser[String] =
   	"""[#]([tT]\d+)?([iI]\d+)?[fF]\d+""".r*/
@@ -45,7 +48,7 @@ class StringParser extends JavaTokenParsers {
   def factor : Parser[Expression] =  	   
   	   doubleNumber ^^ {y => DoubleConstant(y.replace(',','.').toDouble) } |
        intNumber ^^ {x => IntConstant(x.toInt)} |       
-        "(" ~> expr <~ ")" | fieldRef | function | failure("Unknown Element")
+        "(" ~> expr <~ ")" | fieldRef | function | collFunction | failure("Unknown Element")
        
 	def paramList:Parser[List[Expression]] =
 		 ((expr ~ ";" ~ expr) ^^ {  case ex~ semi~ list => List(ex,list) }) |
@@ -53,6 +56,11 @@ class StringParser extends JavaTokenParsers {
 		
 	def function: Parser[Expression] = 
 		(ident ~ "(" ~ paramList ~ ")") ^^ {case name ~ b ~ list ~c => FunctionCall(None,name,list)} 
+       
+  def collFunction: Parser[Expression] = (("#" ~> ident <~ "(") ~ (numberParam <~ ";") ~ (numberParam <~ ";") ~ (numberParam <~ ")")) ^^ {
+  																					case name ~ propField ~ childType ~ childField => 
+  																					CollectingFuncCall(name,propField.toByte,childType.toInt,childField.toByte) 
+                                         }
 }
 
 object StringParser extends StringParser

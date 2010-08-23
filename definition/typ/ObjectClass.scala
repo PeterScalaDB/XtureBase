@@ -66,7 +66,18 @@ class ObjectClass (val name:String,val id:Int,val description:String,nversions:L
   	new InstanceProperties(ref,pArray)
   }
   
-  //TODO: check if this class is compatible with a given class definition ( is a subclass)
+  /** checks if this class inherits from the given other class
+   * 
+   * @param otherClassID id of the other class
+   * @return true if this is a subclass of otherClassID
+   */
+  def inheritsFrom(otherClassID:Int):Boolean =
+  {
+  	println( " " +name +" "+id+"InheritsFrom: "+ otherClassID)
+  	plastVersion.superClassIDs.contains(otherClassID)
+  }
+  
+  //TODO: check class Version when testing inheritance. InstanceProperties needs to store the class versions
   
 }
 
@@ -75,9 +86,11 @@ object ObjectClass
 	// creates an ObjectClass object from XML
 	def fromXML(node: scala.xml.Node) =
 	{		
-		new ObjectClass((node \"@name").text, (node \"@id").text.toInt,  (node \"@desc").text,
+		val name=(node \"@name").text
+		val id=(node \"@id").text.toInt
+		new ObjectClass(name,id ,  (node \"@desc").text,
 			(for(afield <-(node \\"ClassVersion"))
-				yield ClassVersion.fromXML(afield)).toList )
+				yield ClassVersion.fromXML(afield,id)).toList )
 	}
 }
 
@@ -89,13 +102,15 @@ object ObjectClass
  */
 class ClassVersion (val versNr:Byte, 
 	private val fields:Array[FieldDefinition],private val propFields:Array[PropertyFieldDefinition], 
-	val superClasses:List[(String,Byte)])
+	val superClasses:List[(String,Byte)],classID:Int)
 {	
 	private var vsuperFields:Array[FieldDefinition]= null // list of inherited fields from the super class
 	private var vsuperPropFields:Array[PropertyFieldDefinition] = null
+	private var vsuperClassIDs:List[Int] = Nil
 	
 	def superFields=vsuperFields
 	def superPropFields=vsuperPropFields
+	def superClassIDs=vsuperClassIDs // Id ofs this class and all super classes
 	
 	// converts the description of this version to XML
 	def toXML =
@@ -109,17 +124,29 @@ class ClassVersion (val versNr:Byte,
 	}	
 	
 	// gets the inherited fields from the super classes
-	def resolveSuperFields(ac:AllClasses.type):Unit =
-	{		
+	def resolveSuperFields(ac:AllClasses.type):Unit = 	{		
 		if(superFields==null)
 		{	
 			for(cl <-superClasses)
 				ac.getClassVersion(cl._1,cl._2).resolveSuperFields(ac)
 		  vsuperFields= superClasses.flatMap({case(sname,sver) => { ac.getClassVersion(sname,sver).getFields  }}).toArray
-		  vsuperPropFields = superClasses.flatMap({case(sname,sver) => { ac.getClassVersion(sname,sver).getPropFields  }}).toArray
+		  vsuperPropFields = superClasses.flatMap({case(sname,sver) => { ac.getClassVersion(sname,sver).getPropFields  }}).toArray		  
 		}
 		//Console.println("Resolve "+versNr+" "+superClasses+" "+vsuperFields)  
 	}	
+	
+	// creates a list of all super classes of this class
+	def resolveSuperClassIDs(ac:AllClasses.type):List[Int] = {
+		if(vsuperClassIDs==Nil)
+		{			
+		  for(cl <-superClasses)							 
+				vsuperClassIDs= ac.getClassVersion(cl._1,cl._2).resolveSuperClassIDs(ac) ::: vsuperClassIDs
+		  vsuperClassIDs=classID :: vsuperClassIDs	
+		} 
+		//println("ClassVersion" +classID+" vers:"+versNr+" superClasses:"+vsuperClassIDs)
+		vsuperClassIDs
+	}
+		
 	
 	def getFields :Array[FieldDefinition] = vsuperFields++ fields
 	def getPropFields : Array[PropertyFieldDefinition] = vsuperPropFields ++ propFields
@@ -152,7 +179,7 @@ object ClassVersion
 {	
 	
 	// creates a version from XLM
-	def fromXML(node: scala.xml.Node)=
+	def fromXML(node: scala.xml.Node,thisID:Int)=
 	{
 		val a:Array[FieldDefinition]= (for(afield <-(node \\"FieldDef"))
 				      yield FieldDefinition.fromXML(afield) ).toArray
@@ -161,7 +188,7 @@ object ClassVersion
 		
 		 new ClassVersion( (node \ "@versNr").text.toByte, a,b,
 			(for(cfield <-(node \\ "sc")) 
-				      yield ((cfield \ "@name").text, (cfield \ "@version").text.toByte) ).toList )
+				      yield ((cfield \ "@name").text, (cfield \ "@version").text.toByte) ).toList ,thisID)
 	  
 	}
 }
