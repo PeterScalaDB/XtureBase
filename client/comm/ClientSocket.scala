@@ -13,10 +13,11 @@ import scala.collection.mutable.HashMap
 
 
 
+
 /** manages the communication with the server
  * 
  */
-class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:String) extends Thread {
+class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:String) extends Thread("Socket-Thread") {
 	
 	private val socket = new Socket(serverAddress, port)
 	val out =  new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()))
@@ -61,7 +62,8 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 				command match {
 					case ServerCommands.sendTypes  => readInTypes(in)
 					case ServerCommands.wantQuit => {quitApplication();return }					
-					case a => if (commandHandlerMap.contains(a)) commandHandlerMap(a)(in)
+					case a => if (commandHandlerMap.contains(a)) 
+						              commandHandlerMap(a)(in)						             
 										else println("ServerCommand "+a+" not handled")					
 				}
 			}
@@ -75,7 +77,7 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 	private def readInTypes(in: DataInputStream) = {
 		val xmlString=in.readUTF()		
 		AllClasses.fromXML(scala.xml.XML.loadString(xmlString))
-		println(AllClasses.toXML)
+		//println(AllClasses.toXML)
 	}
 	
 	
@@ -125,19 +127,23 @@ object ClientSocket {
   	sock.start()
   	ClientQueryManager.setClientSocket(sock)
   	println("Query Database ")
-  	println("quick:" + ClientQueryManager.queryInstance(Reference(3,1), -1))
+  	
+  	println("quick:" + ClientQueryManager.queryInstance(Reference(3,1), -1).mkString(","))
   	var substID:Int = -10
   	ClientQueryManager.createSubscription(Reference(3,3),0) { 
   		(id:Int,notification:NotificationType.Value,data:Array[InstanceData])=>
   		println("Get data id:"+id+ " Type:"+notification)
+  		
   		substID=id
   		println("Num:"+data.size)
-  		println("quick inside:" + ClientQueryManager.queryInstance(data(0).ref, -1))
+  		println("quick inside:" + ClientQueryManager.queryInstance(data(0).ref, -1).mkString(","))
   		for(elem <-data ) {
   			println(elem)
   			ClientQueryManager.createSubscription(elem.ref,-1){ 
   				(id:Int,notification:NotificationType.Value,data:Array[InstanceData]) =>
   				println("Sub 1st:"+data(0))  		
+  				
+  				println("quick inside:" + ClientQueryManager.queryInstance(Reference(3,2), -1).mkString(","))
   			}
   		}
   		

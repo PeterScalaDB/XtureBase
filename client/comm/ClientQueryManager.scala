@@ -25,6 +25,7 @@ object ClientQueryManager {
 	private val commandResultQueue = new SynchronousQueue()
 	
 	private var sock:ClientSocket=null
+	val myPool=Executors.newCachedThreadPool() 
 	
 	def setClientSocket(newSock:ClientSocket) = {
 		sock=newSock
@@ -44,7 +45,8 @@ object ClientQueryManager {
 	
 	private def handleQueryResults(in:DataInputStream) = 	{
 		val data=readArray(in)
-		println("Handling Query result data size:"+data.size)
+		println("Handling Query result data size:"+data.size+ " "+Thread.currentThread)
+		
 		queryQueue.put(data)
 		
 	}
@@ -53,7 +55,7 @@ object ClientQueryManager {
 	
 	def queryInstance(ref:Reference,propertyField:Byte):Array[InstanceData] = 	{		
 		sock.sendData(ClientCommands.queryInstance ) {out =>			
-			println("Sending Query request "+ref)
+			println("Sending Query request "+ref + " "+Thread.currentThread)
 			ref.write(out)
 			out.writeByte(propertyField)
 		}
@@ -66,7 +68,7 @@ object ClientQueryManager {
 		
 		sock.sendData(ClientCommands.startSubscription ) {out =>
 			newSubscriberQueue.add( Subscriber(updateFunc))
-			println("adding subscription "+parentRef)
+			println("adding subscription "+parentRef+ " "+Thread.currentThread)
 			parentRef.write(out)
 			out.writeByte(propertyField)
 		}
@@ -75,10 +77,11 @@ object ClientQueryManager {
 	private def handleAcceptSubscription(in:DataInputStream) = {
 		val subsID:Int=in.readInt
 		val data=readArray(in)
-		println("Handling accept subs "+data)
+		println("Handling accept subs "+data.mkString(","))
+		//println(Thread.currentThread)
 		val subs:Subscriber=newSubscriberQueue.take()			
 		subscriptionMap.put(subsID,subs)
-		subs.func(subsID,NotificationType.sendData,data)
+		runInPool(subs.func(subsID,NotificationType.sendData,data))
 	}
 	
 	private def handleSubsNotifications(in:DataInputStream ) = {
@@ -88,11 +91,20 @@ object ClientQueryManager {
 		NotificationType(in.readInt) match {
 			case NotificationType.FieldChanged => {
 				val inst=InstanceData.read(Reference(in),in)
-				subscriber.func(substID,NotificationType.FieldChanged,Array(inst))
+				runInPool(subscriber.func(substID,NotificationType.FieldChanged,Array(inst)))
 			}
 		}
 		
 	}
+	
+	/** runs a given function in a new Thread from the ThreadPool
+	 *  to avoid deadlocks
+	 */
+	def runInPool( a: => Unit) = {
+		myPool.execute(new Runnable() {
+						            	def run = a})
+	}
+		
 	
 	def removeSubscription(subsID:Int) = {
 		sock.sendData(ClientCommands.stopSubscription ) {out =>
