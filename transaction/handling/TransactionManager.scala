@@ -8,6 +8,7 @@ import server.config._
 import definition.typ._
 import definition.data._
 import definition.expression._
+import server.comm._
 
 /** manages Transaction handling
  * 
@@ -15,13 +16,7 @@ import definition.expression._
 object TransactionManager {
   var running=false
 	
-	
-	// Initalisation of the Storage system
-  def init() = {
-  	AllClasses.fromXML( xml.XML.loadFile(FSPaths.configDir+"types.xml" ))
-  	StorageManager.init(AllClasses.getClassList)
-  	println("Max Trans:"+TransLogHandler.transID)
-  }
+	private val transLock : AnyRef = new Object()	
 			
 	
 	
@@ -179,6 +174,8 @@ object TransactionManager {
 				case _ => // another beer
 			}
 		}
+		// notify Subscriptions
+		CommonSubscriptionHandler.instanceChanged(newInst)
 	}	
 	
 	
@@ -576,7 +573,7 @@ object TransactionManager {
 	 *  encapsulates a transaction so that StartTransaction and Finishtransaction/BreakTransaction
 	 *  will always be executed
 	 */
-	def doTransaction (f :  => Unit):Boolean = {
+	def doTransaction (f :  => Unit):Boolean = transLock.synchronized{
     startTransaction()
     var success=true
     try {
@@ -584,7 +581,9 @@ object TransactionManager {
     } catch { case e:Exception => {e.printStackTrace(); success=false; breakTransaction()}   }
     if(success) finishTransaction()
     success
-}
+	}
+	
+	
 	
 
 }

@@ -20,7 +20,7 @@ object ClassTableWindow extends SimpleSwingApplication
 {
 	def dataInit()=
 	{		
-		TransactionManager.init()
+		SessionManager.init()
 		TypTableModel.setClassList(AllClasses.getClassList.valuesIterator.toArray)		
 	}
 
