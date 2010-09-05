@@ -21,6 +21,8 @@ trait Constant extends Expression {
   
   def toInt:Int
   
+  def toLong:Long
+  
   def toDouble:Double
   
   def toBoolean:Boolean 
@@ -40,6 +42,7 @@ object Constant
 	def createConversion(value:Constant,toType: DataType.Value) =
 		toType match {		
 		case DataType.IntTyp => new IntConstant(value.toInt)
+		case DataType.LongTyp => new LongConstant(value.toLong)
 		case DataType.DoubleTyp => new DoubleConstant(value.toDouble)   
 		case DataType.StringTyp => new StringConstant(value.toString)
 		case _ => throw new IllegalArgumentException("Conversion to type "+toType+" is not supported yet")
@@ -53,6 +56,8 @@ object EMPTY_EX extends Constant
 	def createCopy:Expression= this	
 	
 	def toInt:Int=0
+	
+	def toLong:Long=0
   
   def toDouble:Double=0
   

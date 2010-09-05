@@ -77,7 +77,7 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 	private def readInTypes(in: DataInputStream) = {
 		val xmlString=in.readUTF()		
 		AllClasses.fromXML(scala.xml.XML.loadString(xmlString))
-		//println(AllClasses.toXML)
+		println(AllClasses.toXML)
 	}
 	
 	
@@ -130,18 +130,18 @@ object ClientSocket {
   	println("Query Database ")
   	
   	println("quick:" + ClientQueryManager.queryInstance(Reference(3,1), -1).mkString(","))
-  	var substID:Int = -10
-  	ClientQueryManager.createSubscription(Reference(3,3),0) { 
-  		(id:Int,notification:NotificationType.Value,data:Array[InstanceData])=>
-  		println("Get data id:"+id+ " Type:"+notification)
+  	var substID=0
+  	substID=ClientQueryManager.createSubscription(Reference(3,3),0) { 
+  		(notification:NotificationType.Value,data:Array[InstanceData])=>
+  		println("Get data id:"+substID+ " Type:"+notification)
   		
-  		substID=id
+  		
   		println("Num:"+data.size)
   		println("quick inside:" + ClientQueryManager.queryInstance(data(0).ref, -1).mkString(","))
   		for(elem <-data ) {
   			println(elem)
   			ClientQueryManager.createSubscription(elem.ref,0){ 
-  				(id:Int,notification:NotificationType.Value,data:Array[InstanceData]) =>
+  				(notification:NotificationType.Value,data:Array[InstanceData]) =>
   				println("Sub 1st:"+data.size)  		
   				
   				println("quick inside:" + ClientQueryManager.queryInstance(Reference(3,2), -1).mkString(","))

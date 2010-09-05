@@ -15,7 +15,7 @@ import java.io._
  */
 object ClientQueryManager {
 	//type InstArrayFunc=(Array[InstanceData])=> Unit
-	type UpdateFunc=(Int,NotificationType.Value,Array[InstanceData])=>Unit
+	type UpdateFunc=(NotificationType.Value,Array[InstanceData])=>Unit
 	
 	//case class Query(func: InstArrayFunc)		
 	case class Subscriber(func: UpdateFunc)
@@ -24,6 +24,7 @@ object ClientQueryManager {
 	private val newSubscriberQueue=new ArrayBlockingQueue[Subscriber](3)
 	private val subscriptionMap=new ConcurrentHashMap[Int,Subscriber]()
 	private val commandResultQueue = new SynchronousQueue[Option[Constant]]()
+	private val subscriptionAcceptQueue = new SynchronousQueue[Int]()
 	
 	private var sock:ClientSocket=null
 	private val myPool=Executors.newCachedThreadPool() 
@@ -48,8 +49,12 @@ object ClientQueryManager {
 		queryQueue.take
 	}
 	
-		
-	def createSubscription(parentRef:Reference,propertyField:Byte)(updateFunc: UpdateFunc) = {		
+	/** creates a new subscription
+	 * @param updateFunc a function to be called when values are updated
+	 * @return the subscriptionID
+	 * 	
+	 */
+	def createSubscription(parentRef:Reference,propertyField:Byte)(updateFunc: UpdateFunc):Int = {		
 		
 		sock.sendData(ClientCommands.startSubscription ) {out =>
 			newSubscriberQueue.add( Subscriber(updateFunc))
@@ -57,6 +62,7 @@ object ClientQueryManager {
 			parentRef.write(out)
 			out.writeByte(propertyField)
 		}
+		subscriptionAcceptQueue.take()
 	}
 	
 	
@@ -75,6 +81,32 @@ object ClientQueryManager {
 			newValue.write(out)
 		}
 		commandResultQueue.take()			
+	}
+	
+	/** creates an instance and returns the instanceID
+	 * @param classType the typeID of the new instance
+	 * @param owners the owners of the new instance
+	 * @return the ID of the new class
+	 */
+	def createInstance(classType:Int,owners:Array[OwnerReference]):Long = {
+		sock.sendData(ClientCommands.createInstance ) { out =>
+		   out.writeInt(classType)
+		   out.writeInt(owners.size)
+		   for(owner <-owners)
+		  	 owner.write(out)			
+		}
+		println("create "+Thread.currentThread.getName)
+		commandResultQueue.take() match {
+			case Some(const) => const.toLong
+			case None => throw new IllegalArgumentException("no instance ID returned when creating type "+classType)
+		}
+	}
+	
+	
+	def deleteInstance(ref:Reference) = {
+		sock.sendData(ClientCommands.deleteInstance ) { out =>
+			ref.write(out)
+		}
 	}
 	
 	
@@ -101,10 +133,11 @@ object ClientQueryManager {
 		val subsID:Int=in.readInt
 		val data=readArray(in)
 		println("Handling accept subs "+data.mkString(","))
-		//println(Thread.currentThread)
+		
 		val subs:Subscriber=newSubscriberQueue.take()			
 		subscriptionMap.put(subsID,subs)
-		runInPool(subs.func(subsID,NotificationType.sendData,data))
+		subscriptionAcceptQueue.put(subsID)
+		runInPool(subs.func(NotificationType.sendData,data))
 	}
 	
 	private def handleSubsNotifications(in:DataInputStream ) = {
@@ -114,12 +147,22 @@ object ClientQueryManager {
 		NotificationType(in.readInt) match {
 			case NotificationType.FieldChanged => {
 				val inst=InstanceData.read(Reference(in),in)
-				runInPool(subscriber.func(substID,NotificationType.FieldChanged,Array(inst)))
+				runInPool(subscriber.func(NotificationType.FieldChanged,Array(inst)))
+			}
+			case NotificationType.childAdded => {
+				val inst=InstanceData.read(Reference(in),in)
+				runInPool(subscriber.func(NotificationType.childAdded,Array(inst)))
+			}
+			case NotificationType.childRemoved => {
+				val ref=Reference(in)
+				runInPool(subscriber.func(NotificationType.childRemoved,
+					Array(new InstanceData(ref,0,null,null)))) // empty instance
 			}
 		}		
 	}
 	
 	private def handleCommandResponse(in:DataInputStream ) = {
+		
 		val hasError=in.readBoolean
 		if(hasError) {
 			val error=CommandError.read(in)
@@ -127,6 +170,8 @@ object ClientQueryManager {
 		}
 		val result:Option[Constant]= if(in.readBoolean) Some(Expression.readConstant(in))
 																 else None
+		println("command Response "+result+" "+Thread.currentThread)
+		
 		commandResultQueue.put(result)
 	}
 	

@@ -57,23 +57,24 @@ object TransactionManager {
 		// notify owners
 		for(owner <-owners)
 		{
-			internAddPropertyToOwner(newInst.ref,owner)
+			internAddPropertyToOwner(newInst,owner)
 		}
 		newInst
 	}
 	
 		
 	// internal routine
-	private def internAddPropertyToOwner(ref:Reference,owner:OwnerReference) = {
+	private def internAddPropertyToOwner(newInst:InstanceData,owner:OwnerReference) = {
 		val newProp= (ActionList.getInstanceProperties(owner.ownerRef) match {
 				// Property data found				
 				case Some(a) => a 
 				// so far no Property data there, create an empty one
 				case _ => StorageManager.createInstanceProperties(owner.ownerRef)
 			} // and add the new child to the prop list
-			).addChildInstance(owner.ownerField ,ref) 
+			).addChildInstance(owner.ownerField ,newInst.ref) 
 			
 		  ActionList.addTransactionData(owner.ownerRef,DataChangeAction(None,Some(newProp)))
+		  CommonSubscriptionHandler.instanceCreated(owner,newInst)
 	}
 	
 	private def tryWriteInstanceData(data:InstanceData) =	{
@@ -159,7 +160,8 @@ object TransactionManager {
 		
 		// Check for other instances referencing to this instance
 		ActionList.getReferencingLinks(newInst.ref) match {			
-			case Some(refLinks) => {				
+			case Some(refLinks) => {		
+				if (refLinks.links.contains(fieldNr))
 				for (r <- refLinks.links(fieldNr)) // get all reflinks for the changed field
 				   notifyDataChangeToReferencingInst(r,newInst.ref,fieldNr,newValue) // notify them
 			}
@@ -421,7 +423,7 @@ object TransactionManager {
 	 * @param ref the instance to be deleted
 	 * @param dontNotifyOwner When notifying the parents of that instance, ignore the given parent
 	 */
-	def tryDeleteInstance(ref:Reference,dontNotifyOwner:Option[Reference]):Unit =	{
+	def tryDeleteInstance(ref:Reference,dontNotifyOwner:Option[Reference]):Boolean =	{
   	if(!running ) throw new IllegalArgumentException("No transaction defined ")
   	val instD=ActionList.getInstanceData(ref)
   	// mark this instance as deleted
@@ -473,7 +475,7 @@ object TransactionManager {
 					  }
 				   
 			}
-			case _ => // go drink a beer
+			case _ => // go drink a beer			
 		}
   	
   	// notify CollFuncs of the parent instances
@@ -502,6 +504,7 @@ object TransactionManager {
   		}
   		case None => 
   	}
+  	true
   }
 	
 	
@@ -514,10 +517,11 @@ object TransactionManager {
 		if(!running ) throw new IllegalArgumentException("No transaction defined ")
 		// change the property information
 		internRemovePropertyFromOwner(subRef,fromOwner)
-		internAddPropertyToOwner(subRef,toOwner)
+		val instData=ActionList.getInstanceData(subRef)
+		internAddPropertyToOwner(instData,toOwner)
 		
 		// change the owner ref inside of the instance data
-		val instData=ActionList.getInstanceData(subRef)
+		
 		ActionList.addTransactionData(subRef, new DataChangeAction(Some( instData.changeOwner(fromOwner,toOwner)),None,None))
 	}
 	
@@ -567,6 +571,8 @@ object TransactionManager {
   			} // and add the new child to the prop list
   			).removeChildInstance(fromOwner.ownerField ,subRef)
   	ActionList.addTransactionData(fromOwner.ownerRef,DataChangeAction(None,Some(newProp)))
+  	//  notify subscriptions
+  	CommonSubscriptionHandler.instanceDeleted(fromOwner,subRef)
 	}
 	
 	/**

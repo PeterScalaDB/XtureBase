@@ -43,6 +43,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	}
 	
 	def notifyInstanceChanged(subs:SubscriptionInfo,data:InstanceData) = {
+		println("Notify changed "+subs)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 			out.writeInt(subs.id )
 			out.writeInt(NotificationType.FieldChanged.id)
@@ -51,7 +52,26 @@ class UserQueryHandler(userSocket: UserSocket) {
 		}
 	}	
 	
-
+	def notifyInstanceAdded(subs:SubscriptionInfo,data:InstanceData) = {
+		println("Notify added "+subs)
+		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
+		out.writeInt(subs.id)
+		out.writeInt(NotificationType.childAdded.id )
+		data.ref.write(out)
+		data.write(out)
+		}
+	}
+	
+	def notifyInstanceDeleted(subs:SubscriptionInfo,ref:Reference) = {
+		println("Notify deleted "+subs)
+		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
+		out.writeInt(subs.id)
+		out.writeInt(NotificationType.childRemoved.id )
+		ref.write(out)
+		}
+	}
+	
+	
 	private def sendQueryData(out:DataOutputStream,parentRef:Reference,propertyField:Byte) = {
 		if (propertyField<0) // only get the parent Instance
 		{		

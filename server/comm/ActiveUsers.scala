@@ -33,6 +33,7 @@ object ActiveUsers {
    def removeUser(userID:Int) = {
   	 val entry=list.get(userID)  	 
   	 list.remove(userID)
+  	 CommonSubscriptionHandler.userLogsOff(userID)
   	 println("List size: "+list.size+" " +wantQuit)
   	 checkFinish()
    }

@@ -18,12 +18,13 @@ object ActionList {
 	def breakAllData() = {
 		println("Break")
 	for(trans <- theList.valuesIterator)
-		(trans: @unchecked) match {
+		trans match {
 			case CreateAction(ref,_,_,_) => { // delete the Instances that got created during the try phase
 				try {
 					StorageManager.deleteInstance(ref.typ, ref.instance)
 				} catch {case e => {println("BreakAllData error "+e)}} 
 			}
+			case _ =>
 	}
 	reset()
 }

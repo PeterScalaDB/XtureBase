@@ -11,9 +11,11 @@ import java.io.{DataInput,DataOutput}
  */
 case class StringConstant(val n:String) extends Constant {
 
-  def toInt(): Int = {  n.toInt }
+  def toInt(): Int = try{  n.toInt } catch { case e => 0}
+  
+  def toLong(): Long = try { n.toLong } catch { case e => 0L}
 
-  def toDouble(): Double = { n.toDouble }
+  def toDouble(): Double = try{ n.toDouble } catch { case e => 0}
 
   def toBoolean(): Boolean = { n.toBoolean }
 

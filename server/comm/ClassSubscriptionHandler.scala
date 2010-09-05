@@ -20,9 +20,13 @@ class ClassSubscriptionHandler(typID:Int) {
 		case b:PropSubscription => addPropS(b)
 	}
 	
-	def removeSubscription(s:SubscriptionInfo) = s match {
-		case a:SingleSubscription => removeSingleS(a)
-		case b:PropSubscription => removePropS(b)
+	def removeSubscription(s:SubscriptionInfo) = {
+		println("remove Subscription "+s)
+		s match {
+
+			case a:SingleSubscription => removeSingleS(a)
+			case b:PropSubscription => removePropS(b)
+		}
 	}
 	
 	
@@ -40,6 +44,24 @@ class ClassSubscriptionHandler(typID:Int) {
 			for(subs <-list)
 				if(subs.propertyField ==propField)
 					subs.user.queryHandler.notifyInstanceChanged(subs,childInst)
+		}
+	}
+	
+	def instanceCreated(owner:OwnerReference,newInstance:InstanceData) = {
+		if(propSubsMap.contains(owner.ownerRef)) {
+			val list=propSubsMap(owner.ownerRef)
+			for(subs <-list)
+				if(subs.propertyField ==owner.ownerField )
+					subs.user.queryHandler.notifyInstanceAdded(subs,newInstance)
+		}
+	}
+	
+	def instanceDeleted(owner:OwnerReference,ref:Reference) = {
+		if(propSubsMap.contains(owner.ownerRef)) {
+			val list=propSubsMap(owner.ownerRef)
+			for(subs <-list)
+				if(subs.propertyField ==owner.ownerField )
+					subs.user.queryHandler.notifyInstanceDeleted(subs,ref)
 		}
 	}
 	

@@ -46,13 +46,15 @@ object CommonSubscriptionHandler {
 			subscriptionList(id)=null			
 		}
 	
+	
 	def getSubscriptionInfo(id:Int):SubscriptionInfo =
 		listLock.synchronized {
 			subscriptionList(id)
 		}
 	
+	
 	def instanceChanged(newState:InstanceData) = {
-		println("subsMan inst changed"+newState.ref)
+		println("subsMan inst changed "+newState.ref)
 		// notify subscriptions for this single instance
 		classHandlerMap(newState.ref.typ ).singleInstanceChanged(newState)
 		// notify subscriptions for this instance as child
@@ -60,9 +62,22 @@ object CommonSubscriptionHandler {
 			classHandlerMap(owner.ownerRef.typ).childInstanceChanged(owner.ownerRef,owner.ownerField,newState)
 	}
 	
-	def userLogsOff(userID:Int) = listLock.synchronized {
-		val newBuffer=ArrayBuffer[SubscriptionInfo]()
-		for(subs <- subscriptionList)
+	
+	def instanceCreated(owner:OwnerReference,newInstance:InstanceData) = {
+		println("subsMan inst created "+ newInstance.ref)
+		classHandlerMap(owner.ownerRef.typ).instanceCreated(owner,newInstance)		
+	}
+	
+	
+	def instanceDeleted(owner:OwnerReference,ref:Reference) = {
+		println("subsMan inst deleted "+ ref)
+		classHandlerMap(owner.ownerRef.typ).instanceDeleted(owner,ref)
+	}
+	
+	
+	def userLogsOff(userID:Int) = listLock.synchronized {		
+		println("subsMan user log off "+userID)
+		for(subs <- subscriptionList; if (subs!=null))
 			if(subs.user.info.id==userID) {				
 				classHandlerMap(subs.parentRef.typ).removeSubscription(subs)
 				subscriptionList(subs.id)=null 

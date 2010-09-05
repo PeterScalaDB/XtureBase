@@ -30,6 +30,8 @@ case class DoubleConstant(n:Double) extends Constant {
   
   def toInt =  n.round.toInt
   
+  def toLong =  n.round.toLong
+  
   def toDouble = n
   
   def toBoolean= n>0

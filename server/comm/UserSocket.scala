@@ -17,7 +17,7 @@ import transaction.handling._
 /** manages communications with a client
  * 
  */
-class UserSocket(socket: Socket) extends Thread () {
+class UserSocket(socket: Socket) extends Thread ("userSocket") {
 
 	private val outStreamLock : AnyRef = new Object()
 	private val out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream())); 
@@ -32,6 +32,8 @@ class UserSocket(socket: Socket) extends Thread () {
 	
 	// register routines
 	registerCommandHandler(ClientCommands.writeField) (wantWriteField)
+	registerCommandHandler(ClientCommands.createInstance)(wantCreateInstance)
+	registerCommandHandler(ClientCommands.deleteInstance)(wantDeleteInstance)
 		
 	
 
@@ -84,22 +86,28 @@ class UserSocket(socket: Socket) extends Thread () {
 
 
 		private def handleCommands(in:DataInputStream,user:UserInfo):Unit = {			
-			while(true)
-			{					
-				val command =ClientCommands(in.readByte.toInt)
-				try {
-					command match {
-						case ClientCommands.getTypes => sendTypes()
-						case ClientCommands.logOut => {logoutUser(user.id);return }
-						case ClientCommands.getSetupData => sendSetupData()
-						case ClientCommands.storeSetupData=> storeSetupData()
-						case a => if (commandHandlerMap.contains(a))commandHandlerMap(a)(in)
-											else println("unhandled command "+a)
-					}			  
+			var wantRun=true
+			try {
+				while(wantRun)
+				{					
+					val command =ClientCommands(in.readByte.toInt)
+					try {
+						command match {
+							case ClientCommands.getTypes => sendTypes()
+							case ClientCommands.logOut => {wantRun=false }
+							case ClientCommands.getSetupData => sendSetupData()
+							case ClientCommands.storeSetupData=> storeSetupData()
+							case a => if (commandHandlerMap.contains(a))commandHandlerMap(a)(in)
+							else println("unhandled command "+a)
+						}			  
+					}
+					catch {
+						case e:Exception => e.printStackTrace;
+					}				
 				}
-				catch {
-					case e:Exception => e.printStackTrace;
-				}
+			}
+			finally {
+				logoutUser(user.id)
 			}
 		}
 
@@ -151,6 +159,66 @@ class UserSocket(socket: Socket) extends Thread () {
 			try {
 				TransactionManager.doTransaction {
 					if (!TransactionManager.tryWriteInstanceField(ref,field,expr))
+						error=new CommandError("Unknown Issue",ClientCommands.writeField.id,0)
+				}
+			} 
+			catch {
+				case e:Exception =>
+				e.printStackTrace()
+				error=new CommandError(e.toString,ClientCommands.writeField.id,0)
+			}
+			sendData(ServerCommands.sendCommandResponse ) {out =>
+			 if(error!=null) {
+				 out.writeBoolean(true)
+				 error.write(out)	
+			 }
+			 else {
+				 out.writeBoolean(false) // no errors
+				 out.writeBoolean(false) // no result value
+			 }
+			}			 
+		}
+		
+		
+		private def wantCreateInstance(in:DataInputStream) = {
+			var error:CommandError=null
+			var result:Long = -1
+			val typ=in.readInt
+			val ownerCount=in.readInt
+			val ownerArray:Array[OwnerReference]=(for (i <-0 until ownerCount) yield OwnerReference.read(in)).toArray
+			
+			try {
+				TransactionManager.doTransaction {
+					val inst= TransactionManager.tryCreateInstance(typ,ownerArray)
+					if (inst==null)	error=new CommandError("Unknown Issue",ClientCommands.createInstance.id,0)
+					else result=inst.ref.instance 
+				}
+			} 
+			catch {
+				case e:Exception =>
+				e.printStackTrace()
+				error=new CommandError(e.toString,ClientCommands.writeField.id,0)
+			}
+			sendData(ServerCommands.sendCommandResponse ) {out =>
+			 if(error!=null) {
+				 out.writeBoolean(true)
+				 error.write(out)	
+			 }
+			 else {
+				 out.writeBoolean(false) // no errors		
+				 out.writeBoolean(true)
+				 LongConstant(result).write(out) // the result value
+			 }
+			}			 
+		}
+		
+		private def wantDeleteInstance(in:DataInputStream) = {
+			var error:CommandError=null
+			var result:Constant=null
+			val ref=Reference(in)			
+			try {
+				TransactionManager.doTransaction {
+					if (!TransactionManager.tryDeleteInstance(ref,None))
 						error=new CommandError("Unknown Issue",ClientCommands.writeField.id,0)
 				}
 			} 

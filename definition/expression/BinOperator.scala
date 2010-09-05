@@ -30,6 +30,7 @@ object BinOperator
 				left.getType match 
   			{
   				case DataType.IntTyp => Some(new IntConstant (left.toInt +right.toInt))
+  				case DataType.LongTyp => Some(new LongConstant (left.toLong +right.toLong))
   				case DataType.DoubleTyp => Some(new DoubleConstant (left.toDouble + right.toDouble ))
   				case DataType.StringTyp => Some(new StringConstant (left.toString + right.toString ))
   				case _ =>  throw new IllegalArgumentException( "Wrong Datatype "+left.getType+" for add operation ")
@@ -41,6 +42,7 @@ object BinOperator
 				left.getType match   			
 				{
   				case DataType.IntTyp => Some(new IntConstant (left.toInt -right.toInt))
+  				case DataType.LongTyp => Some(new LongConstant (left.toLong -right.toLong))
   				case DataType.DoubleTyp => Some(new DoubleConstant (left.toDouble - right.toDouble ))  				
   				case _ =>  throw new IllegalArgumentException( "Wrong Datatype "+left.getType+" for add operation ")
   			} 			
@@ -51,6 +53,7 @@ object BinOperator
 				left.getType match 
   			{
   				case DataType.IntTyp => Some(new IntConstant (left.toInt *right.toInt))
+  				case DataType.LongTyp => Some(new LongConstant (left.toLong *right.toLong))
   				case DataType.DoubleTyp => Some(new DoubleConstant (left.toDouble * right.toDouble ))  				
   				case _ =>  throw new IllegalArgumentException( "Wrong Datatype "+left.getType+" for add operation ")
   			} 			

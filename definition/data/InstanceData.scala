@@ -34,10 +34,7 @@ override def write(file:DataOutput) = 	{
 
 	file.writeByte(owners.length)
 	for(owner<-owners)
-	{
-		file.writeByte(owner.ownerField)
-		owner.ownerRef.write(file)
-	}
+		owner.write(file)	
 }
 
 /** changes the value of a single field and returns a new instance object with the new value
@@ -138,7 +135,7 @@ object InstanceData
 		val nOwners=file.readByte
 		val ownArray=new Array[OwnerReference](nOwners)
 		for( o<- 0 until nOwners)
-			ownArray(o)=new OwnerReference(file.readByte,Reference(file))
+			ownArray(o)= OwnerReference.read(file)
 	new InstanceData(nref,version,fArray,ownArray)
 }		
 
@@ -149,4 +146,14 @@ object InstanceData
  */
 case class OwnerReference(val ownerField:Byte, //in what property field of the owner instance
 	//is this instance stored 
-	val ownerRef:Reference) // reference of the owner instance
+	val ownerRef:Reference) { // reference of the owner instance
+	
+		def write(out:DataOutput) = {
+			out.writeByte(ownerField)
+			ownerRef.write(out)
+	}
+}
+
+object OwnerReference {
+	def read(in:DataInput) = new OwnerReference(in.readByte,Reference(in)) 
+}

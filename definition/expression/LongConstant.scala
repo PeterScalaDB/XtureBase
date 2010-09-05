@@ -1,19 +1,18 @@
 /**
- * Author: Peter Started:18.07.2010
+ * Author: Peter Started:05.09.2010
  */
 package definition.expression
 
 import definition.typ.DataType
 import java.io.{DataInput,DataOutput}
-
 /**
  * 
  */
-case class IntConstant(val n:Int) extends Constant {
+case class LongConstant(val n:Long) extends Constant {
 
-  def getType(): DataType.Value = { DataType.IntTyp }
+  def getType(): DataType.Value = { DataType.LongTyp }
 
-  def createCopy(): Expression = { new IntConstant(n) }
+  def createCopy(): Expression = { new LongConstant(n) }
 
   def getTerm() = { String.valueOf(n) }
   
@@ -27,17 +26,17 @@ case class IntConstant(val n:Int) extends Constant {
 
   override def hashCode = n.hashCode*/
   
-  def toInt =  n
+  def toInt =  n.toInt
   
   def toDouble = n.toDouble
   
-  def toLong = n.toLong
+  def toLong = n
   
   def toBoolean= n>0
   
   def write(file:DataOutput)= { 
-  	file.writeByte(DataType.IntTyp.id)
-  	file.writeInt(n)
+  	file.writeByte(DataType.LongTyp.id)
+  	file.writeLong(n)
   }
 
 }
