@@ -9,8 +9,10 @@ import server.config._
 import definition.comm._
 import definition.typ.AllClasses
 import definition.data._
+import definition.expression._
 import server.storage._
 import scala.collection.mutable.HashMap
+import transaction.handling._
 
 /** manages communications with a client
  * 
@@ -27,6 +29,7 @@ class UserSocket(socket: Socket) extends Thread () {
 
 	private var commandHandlerMap= scala.collection.mutable.HashMap[ClientCommands.Value,CommandHandlerFunc]()
 	val queryHandler=new UserQueryHandler(this)
+	
 	// register routines
 	registerCommandHandler(ClientCommands.writeField) (wantWriteField)
 		
@@ -70,8 +73,8 @@ class UserSocket(socket: Socket) extends Thread () {
 				}
 			}
 			catch {
-				case e: SocketException =>
-				() // avoid stack trace when stopping a client with Ctrl-C
+				case e: SocketException => println("Socket failed: "+e) 
+				 // avoid stack trace when stopping a client with Ctrl-C
 				case e: IOException =>
 				e.printStackTrace();
 			}
@@ -140,7 +143,32 @@ class UserSocket(socket: Socket) extends Thread () {
 		}
 		
 		private def wantWriteField(in:DataInputStream) = {
-			
+			var error:CommandError=null
+			var result:Constant=null
+			val ref=Reference(in)
+			val field=in.readByte
+			val expr=Expression.read(in)
+			try {
+				TransactionManager.doTransaction {
+					if (!TransactionManager.tryWriteInstanceField(ref,field,expr))
+						error=new CommandError("Unknown Issue",ClientCommands.writeField.id,0)
+				}
+			} 
+			catch {
+				case e:Exception =>
+				e.printStackTrace()
+				error=new CommandError(e.toString,ClientCommands.writeField.id,0)
+			}
+			sendData(ServerCommands.sendCommandResponse ) {out =>
+			 if(error!=null) {
+				 out.writeBoolean(true)
+				 error.write(out)	
+			 }
+			 else {
+				 out.writeBoolean(false) // no errors
+				 out.writeBoolean(false) // no result value
+			 }
+			}			 
 		}
 
 		

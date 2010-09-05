@@ -12,6 +12,7 @@ import definition.data._
 class ClassSubscriptionHandler(typID:Int) {
 	// subscriptions to single objects
 	var singleSubsMap=Map[Reference,List[SingleSubscription]]()
+	// subscriptions to parents
 	var propSubsMap=Map[Reference,List[PropSubscription]]()
 	
 	def addSubscription(s:SubscriptionInfo) = s match {
@@ -23,6 +24,26 @@ class ClassSubscriptionHandler(typID:Int) {
 		case a:SingleSubscription => removeSingleS(a)
 		case b:PropSubscription => removePropS(b)
 	}
+	
+	
+	def singleInstanceChanged(newState:InstanceData) = {
+		if (singleSubsMap.contains(newState.ref))	{
+			val list=singleSubsMap(newState.ref)
+			for(subs <-list)
+				subs.user.queryHandler.notifyInstanceChanged(subs,newState)
+		}
+	}
+	
+	def childInstanceChanged(ownerRef:Reference,propField:Byte,childInst:InstanceData) = {
+		if(propSubsMap.contains(ownerRef)) {
+			val list=propSubsMap(ownerRef)
+			for(subs <-list)
+				if(subs.propertyField ==propField)
+					subs.user.queryHandler.notifyInstanceChanged(subs,childInst)
+		}
+	}
+	
+	// ********************** Internal routines ***********************
 	
 	private def addSingleS(s:SingleSubscription) = {
 		if(singleSubsMap.contains(s.parentRef )) { // add to existing
@@ -50,13 +71,8 @@ class ClassSubscriptionHandler(typID:Int) {
 		propSubsMap.put(s.parentRef,list - s)
 	}
 	
-	def singleInstanceChanged(newState:InstanceData) = {
-		if(singleSubsMap.contains(newState.ref))
-		{
-			val list=singleSubsMap(newState.ref)
-			for(subs <-list)
-				subs.user.queryHandler.notifyInstanceChanged(subs,newState)
-		}
-	}
+	
+	
+	
 	
 }

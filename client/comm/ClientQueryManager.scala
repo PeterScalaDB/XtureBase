@@ -6,6 +6,7 @@ package client.comm
 import definition.data._
 import definition.typ._
 import definition.comm._
+import definition.expression._
 import java.util.concurrent._
 import java.io._
 
@@ -22,10 +23,10 @@ object ClientQueryManager {
 	private val queryQueue = new SynchronousQueue[Array[InstanceData]]()	
 	private val newSubscriberQueue=new ArrayBlockingQueue[Subscriber](3)
 	private val subscriptionMap=new ConcurrentHashMap[Int,Subscriber]()
-	private val commandResultQueue = new SynchronousQueue()
+	private val commandResultQueue = new SynchronousQueue[Option[Constant]]()
 	
 	private var sock:ClientSocket=null
-	val myPool=Executors.newCachedThreadPool() 
+	private val myPool=Executors.newCachedThreadPool() 
 	
 	def setClientSocket(newSock:ClientSocket) = {
 		sock=newSock
@@ -33,26 +34,11 @@ object ClientQueryManager {
 		sock.registerCommandHandler(ServerCommands.sendQueryResponse)(handleQueryResults)
 		sock.registerCommandHandler(ServerCommands.acceptSubscription)(handleAcceptSubscription)
 		sock.registerCommandHandler(ServerCommands.sendSubscriptionNotification )(handleSubsNotifications)
+		sock.registerCommandHandler(ServerCommands.sendCommandResponse )(handleCommandResponse)
 	}
 	
-	// helper func
-	private def readArray(in:DataInputStream):Array[InstanceData] = {
-			val numData=in.readInt
-			val retArray=new Array[InstanceData](numData)
-					for(i <- 0 until numData) retArray(i)=InstanceData.read(Reference(in), in)
-			retArray
-		}
-	
-	private def handleQueryResults(in:DataInputStream) = 	{
-		val data=readArray(in)
-		println("Handling Query result data size:"+data.size+ " "+Thread.currentThread)
 		
-		queryQueue.put(data)
 		
-	}
-	
-	
-	
 	def queryInstance(ref:Reference,propertyField:Byte):Array[InstanceData] = 	{		
 		sock.sendData(ClientCommands.queryInstance ) {out =>			
 			println("Sending Query request "+ref + " "+Thread.currentThread)
@@ -62,8 +48,7 @@ object ClientQueryManager {
 		queryQueue.take
 	}
 	
-	
-	
+		
 	def createSubscription(parentRef:Reference,propertyField:Byte)(updateFunc: UpdateFunc) = {		
 		
 		sock.sendData(ClientCommands.startSubscription ) {out =>
@@ -73,6 +58,44 @@ object ClientQueryManager {
 			out.writeByte(propertyField)
 		}
 	}
+	
+	
+	def removeSubscription(subsID:Int) = {
+		sock.sendData(ClientCommands.stopSubscription ) {out =>
+			out.writeInt(subsID)			
+		}
+		subscriptionMap.remove(subsID)
+	}
+	
+	
+	def writeInstanceField(ref:Reference,fieldNr:Byte,newValue:Expression) = {
+		sock.sendData(ClientCommands.writeField ) { out =>
+			ref.write(out)
+			out.writeByte(fieldNr)
+			newValue.write(out)
+		}
+		commandResultQueue.take()			
+	}
+	
+	
+	// ************************************* Internal routines *************************************
+	
+	private def readArray(in:DataInputStream):Array[InstanceData] = {
+			val numData=in.readInt
+			val retArray=new Array[InstanceData](numData)
+					for(i <- 0 until numData) retArray(i)=InstanceData.read(Reference(in), in)
+			retArray
+		}
+	
+	
+	private def handleQueryResults(in:DataInputStream) = 	{
+		val data=readArray(in)
+		println("Handling Query result data size:"+data.size+ " "+Thread.currentThread)
+		
+		queryQueue.put(data)
+		
+	}
+	
 	
 	private def handleAcceptSubscription(in:DataInputStream) = {
 		val subsID:Int=in.readInt
@@ -93,23 +116,28 @@ object ClientQueryManager {
 				val inst=InstanceData.read(Reference(in),in)
 				runInPool(subscriber.func(substID,NotificationType.FieldChanged,Array(inst)))
 			}
+		}		
+	}
+	
+	private def handleCommandResponse(in:DataInputStream ) = {
+		val hasError=in.readBoolean
+		if(hasError) {
+			val error=CommandError.read(in)
+			throw error
 		}
-		
+		val result:Option[Constant]= if(in.readBoolean) Some(Expression.readConstant(in))
+																 else None
+		commandResultQueue.put(result)
 	}
 	
 	/** runs a given function in a new Thread from the ThreadPool
 	 *  to avoid deadlocks
 	 */
-	def runInPool( a: => Unit) = {
+	private def runInPool( a: => Unit) = {
 		myPool.execute(new Runnable() {
 						            	def run = a})
 	}
 		
 	
-	def removeSubscription(subsID:Int) = {
-		sock.sendData(ClientCommands.stopSubscription ) {out =>
-			out.writeInt(subsID)			
-		}
-		subscriptionMap.remove(subsID)
-	}
+	
 }

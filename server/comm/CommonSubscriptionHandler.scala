@@ -12,7 +12,7 @@ import definition.typ._
  * 
  */
 object CommonSubscriptionHandler {
-	private val subscriptionList= ArrayBuffer[SubscriptionInfo] ()  
+	private var subscriptionList= ArrayBuffer[SubscriptionInfo] ()  
 	private val listLock : AnyRef = new Object()
 	
 	private var classHandlerMap:Map[Int,ClassSubscriptionHandler]=Map()
@@ -52,6 +52,20 @@ object CommonSubscriptionHandler {
 		}
 	
 	def instanceChanged(newState:InstanceData) = {
+		println("subsMan inst changed"+newState.ref)
+		// notify subscriptions for this single instance
 		classHandlerMap(newState.ref.typ ).singleInstanceChanged(newState)
+		// notify subscriptions for this instance as child
+		for(owner <-newState.owners )
+			classHandlerMap(owner.ownerRef.typ).childInstanceChanged(owner.ownerRef,owner.ownerField,newState)
+	}
+	
+	def userLogsOff(userID:Int) = listLock.synchronized {
+		val newBuffer=ArrayBuffer[SubscriptionInfo]()
+		for(subs <- subscriptionList)
+			if(subs.user.info.id==userID) {				
+				classHandlerMap(subs.parentRef.typ).removeSubscription(subs)
+				subscriptionList(subs.id)=null 
+			}
 	}
 }

@@ -8,6 +8,7 @@ import java.net._
 import java.io._
 import definition.typ.AllClasses
 import definition.data._
+import definition.expression._
 import scala.actors._
 import scala.collection.mutable.HashMap
 
@@ -42,7 +43,6 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 			 if(retValue !="welcome" ) {println("not welcome, message: "+retValue); return }
 			 println("Logged in to "+serverAddress)
 			 sendData(ClientCommands.getTypes ){out =>}
-			 Thread.`yield`()
 			 handleCommands(in)
 		 }
 		 catch {
@@ -126,6 +126,7 @@ object ClientSocket {
   	val sock=new ClientSocket(InetAddress.getByName(args(0)),args(1).toInt,args(2),args(3))
   	sock.start()
   	ClientQueryManager.setClientSocket(sock)
+  	Thread.`yield`()
   	println("Query Database ")
   	
   	println("quick:" + ClientQueryManager.queryInstance(Reference(3,1), -1).mkString(","))
@@ -139,9 +140,9 @@ object ClientSocket {
   		println("quick inside:" + ClientQueryManager.queryInstance(data(0).ref, -1).mkString(","))
   		for(elem <-data ) {
   			println(elem)
-  			ClientQueryManager.createSubscription(elem.ref,-1){ 
+  			ClientQueryManager.createSubscription(elem.ref,0){ 
   				(id:Int,notification:NotificationType.Value,data:Array[InstanceData]) =>
-  				println("Sub 1st:"+data(0))  		
+  				println("Sub 1st:"+data.size)  		
   				
   				println("quick inside:" + ClientQueryManager.queryInstance(Reference(3,2), -1).mkString(","))
   			}
@@ -150,6 +151,8 @@ object ClientSocket {
   	}
   	
   	println("Finish")  	
+  	readLine()
+  	ClientQueryManager.writeInstanceField(Reference(3,4),0,StringConstant("a new Value "+Math.random*100))
   	readLine()
   	ClientQueryManager.removeSubscription(substID)
   	sock.quitApplication()

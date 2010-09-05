@@ -31,6 +31,7 @@ object ActiveUsers {
    def getUserQueryHandler(userID:Int) = list.get(userID).queryHandler
    
    def removeUser(userID:Int) = {
+  	 val entry=list.get(userID)  	 
   	 list.remove(userID)
   	 println("List size: "+list.size+" " +wantQuit)
   	 checkFinish()

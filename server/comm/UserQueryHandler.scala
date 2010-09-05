@@ -90,7 +90,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 		}
 	}
 	
-	//TODO: remove all remaining subscribtions when user logs off
+	
 
 	
 }

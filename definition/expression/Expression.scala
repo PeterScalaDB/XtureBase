@@ -66,6 +66,16 @@ object Expression
 			case _ => EMPTY_EX
 		}		
 	}
+	
+	def readConstant(file:DataInput):Constant =
+	{
+		DataType(file.readByte()) match {
+			case DataType.IntTyp => new IntConstant(file.readInt)
+			case DataType.DoubleTyp => new DoubleConstant(file.readDouble)
+			case DataType.StringTyp => new StringConstant(file.readUTF)		
+			case _ => EMPTY_EX
+		}		
+	}
 }
 
 

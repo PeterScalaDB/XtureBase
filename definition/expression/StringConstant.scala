@@ -9,7 +9,7 @@ import java.io.{DataInput,DataOutput}
 /**
  *  String Constant type
  */
-class StringConstant(val n:String) extends Constant {
+case class StringConstant(val n:String) extends Constant {
 
   def toInt(): Int = {  n.toInt }
 
