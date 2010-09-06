@@ -9,6 +9,7 @@ import java.util.NoSuchElementException
 import java.io.DataInput
 import runtime.function._
 import definition.expression.FunctionManager
+import server.test.SimpleProfiler
 
 
 /** manages all file io operations
@@ -55,7 +56,7 @@ object StorageManager {
   	    val rec=handler.getInstanceRecord(ref.instance )
   	    if (rec.dataPos == 0 && rec.dataLength==0) throw new 
   	               IllegalArgumentException("get Instance() instance "+ref+" is deleted")
-  	    val instObj=dataFileHandler.readInstance(ref,rec.dataPos)
+  	    val instObj=dataFileHandler.readInstance(ref,rec.dataPos,rec.dataLength)
   	    //println(" cacheMiss:"+instObj)
   	    handler.instCache.putInstanceData(instObj)
   	    instObj
@@ -72,8 +73,8 @@ object StorageManager {
   	val hand =getHandler(typ)
   	val inst=hand.theClass.createInstance(
   		new Reference(typ,hand.createInstance()),owners)  	
-  	writeInstance(inst)
-  	inst
+  	//writeInstance(inst)
+  	inst  
   }
   
   /*def getNextInstanceNr(typ:Int):Long =  {
@@ -81,13 +82,15 @@ object StorageManager {
   }*/
   
   /** writes an instance to the data file
-   * 
+   *  @param created was this instance created during this transaction and should a created
+   *  record be stored in the transaction log 
    */
-  def writeInstance(data:InstanceData)=  {
+  def writeInstance(data:InstanceData,created:Boolean)=  {
   	val (pos,size)=dataFileHandler.writeInstance(data)
   	val handler= getHandler(data.ref.typ)
-  	handler.writeData(data.ref.instance, pos, size)
+  	handler.writeData(data.ref.instance, pos, size,created)
   	handler.instCache.putInstanceData(data)  	
+  	SimpleProfiler.measure("writeInst")
   }
   
   /** deletes an instace from the index
@@ -125,7 +128,7 @@ object StorageManager {
   	    if (rec.propPos == 0 && rec.propLength==0) None
   	    else
   	    {
-  	      val propObj=propFileHandler.readInstance(ref,rec.propPos)
+  	      val propObj=propFileHandler.readInstance(ref,rec.propPos,rec.propLength)
   	      handler.propCache.putInstanceData(propObj)
   	      Some(propObj)
   	    }
@@ -139,6 +142,7 @@ object StorageManager {
   	val handler= getHandler(data.ref.typ)
   	handler.writePropertiesData(data.ref.instance, pos, size)
   	handler.propCache.putInstanceData(data)
+  	SimpleProfiler.measure("wprop")
   }
   
   // *************************************************************************************
@@ -152,7 +156,7 @@ object StorageManager {
   	    if (rec.linkPos == 0 && rec.linkLength==0) None
   	    else
   	    {
-  	      val propObj=linkFileHandler.readInstance(ref,rec.linkPos)
+  	      val propObj=linkFileHandler.readInstance(ref,rec.linkPos,rec.linkLength )
   	      // not chached yet
   	      Some(propObj)
   	    }
@@ -172,11 +176,11 @@ object StorageManager {
   def getCollectingFuncData(ref:Reference):Option[CollFuncResultSet] = {
   	val handler=getHandler(ref.typ)
   	val rec=handler.getInstanceRecord(ref.instance)
-  	    println(" collfunc recpos "+rec.collPos +" recsize:"+rec.collLength)
+  	    //println(" collfunc recpos "+rec.collPos +" recsize:"+rec.collLength)
   	    if (rec.collPos == 0 && rec.collLength==0) None
   	    else
   	    {
-  	      val propObj=collFuncFileHandler.readInstance(ref,rec.collPos)
+  	      val propObj=collFuncFileHandler.readInstance(ref,rec.collPos,rec.collLength)
   	      // not chached yet
   	      Some(propObj)
   	    }

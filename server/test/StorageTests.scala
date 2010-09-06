@@ -12,6 +12,7 @@ import server.config._
 import server.storage._
 import definition.data._
 import transaction.handling._
+import server.comm._
 
 /**
  * 
@@ -23,7 +24,7 @@ class StorageTests extends JUnitSuite
 
 		AllClasses.fromXML( xml.XML.loadFile(FSPaths.configDir+"types.xml"))
 		StorageManager.init(AllClasses.getClassList)
-
+		CommonSubscriptionHandler.init(AllClasses.getClassList)
 	}
 
 	@Test def storageManTest() =  {  	
@@ -36,7 +37,7 @@ class StorageTests extends JUnitSuite
 		println(inst)  	
 		var newInst=inst.setField(0,new StringConstant("Object "+inst.ref.instance )).
 		setField(1,new DoubleConstant(math.random*100 ))
-		StorageManager.writeInstance(newInst)
+		StorageManager.writeInstance(newInst,true)
 		println(newInst)
 		assert(newInst!=null)
 	}

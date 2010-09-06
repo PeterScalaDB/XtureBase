@@ -9,6 +9,7 @@ import definition.typ._
 import definition.data._
 import definition.expression._
 import server.comm._
+import server.test.SimpleProfiler
 
 /** manages Transaction handling
  * 
@@ -25,7 +26,7 @@ object TransactionManager {
 	  if(running ) throw new IllegalArgumentException("An Transaction is still running ")
 		running=true
 	  TransLogHandler.incrementTransID();
-	  println("Start Trans " +TransLogHandler.transID)
+	  //println("Start Trans " +TransLogHandler.transID)
 	}
 	
 	// Finishes the Transaction and commits all changes to the database
@@ -33,7 +34,7 @@ object TransactionManager {
 		
 		if(!running) throw new IllegalArgumentException("Finish: No transaction running ")		
 		ActionList.commitAllData()
-		println("Finish Trans "+ TransLogHandler.transID)
+		//println("Finish Trans "+ TransLogHandler.transID)
 		running=false
 	}
 	
@@ -51,14 +52,16 @@ object TransactionManager {
 	def tryCreateInstance(typ:Int,owners:Array[OwnerReference]) =	{	
 		if(!running ) throw new IllegalArgumentException("No transaction defined ")
 		//TODO: Check if the child type is allowed in the owner property fields
+		SimpleProfiler.startMeasure("Create")
 		val newInst=StorageManager.createInstance(typ,owners)
-		ActionList.addTransactionData(newInst.ref,new CreateAction(newInst.ref ))
-		
+		SimpleProfiler.measure("stored")
+		ActionList.addTransactionData(newInst.ref,new CreateAction(newInst.ref,Some(newInst) ))		
 		// notify owners
 		for(owner <-owners)
 		{
 			internAddPropertyToOwner(newInst,owner)
 		}
+		SimpleProfiler.measure("notif owner")
 		newInst
 	}
 	
@@ -89,9 +92,10 @@ object TransactionManager {
 	 */
 	def tryWriteInstanceField(ref:Reference,fieldNr:Byte,newExpression:Expression):Boolean = {
 		if(!running ) throw new IllegalArgumentException("No transaction defined ")
+		SimpleProfiler.startMeasure("Change inst")
 		var theExpression=newExpression
 		val instD=ActionList.getInstanceData(ref)
-		
+		SimpleProfiler.measure("load")
 		// check for FieldReferences
 		val oldRefList=instD.fieldData(fieldNr).getElementList[FieldReference](DataType.FieldRefTyp,Nil)
 		val newRefList=newExpression.getElementList[FieldReference](DataType.FieldRefTyp,Nil)	
@@ -113,7 +117,7 @@ object TransactionManager {
 		
 		for( r <- addedRefs)
 		  addLinkRef(ref,fieldNr,r)
-		
+		SimpleProfiler.measure("refCheck")
 		 // Check for CollFunctionCalls 
 		val oldCollCalls= instD.fieldData(fieldNr).getElementList[CollectingFuncCall](DataType.CollFunctionCall,Nil)
 		if( !oldCollCalls.isEmpty) println("oldCollCalls "+oldCollCalls)
@@ -129,13 +133,13 @@ object TransactionManager {
 		val newCollData = if(!newCalls.isEmpty) {
 			  val (acollData,anExpression)=addCollCalls(remCollData, ref, newCalls, fieldNr,newExpression)
 			  theExpression=anExpression // update the Expression
-			  println("addCollData "+acollData)
-			  println("newExpression "+theExpression)
+			  //println("addCollData "+acollData)
+			  //println("newExpression "+theExpression)
 			  acollData
 		} else remCollData
 			    
 		if (newCollData!=null) ActionList.addTransactionData(ref,new DataChangeAction(None,None,None,Some(newCollData))) 
-			  
+		SimpleProfiler.measure("collcheck")	  
 		//safe the old field value  
 		val oldValue=instD.fieldData(fieldNr).getValue   				  
 		// set field in instance to new expression
@@ -146,6 +150,7 @@ object TransactionManager {
 		// pass on the changed value to referencing instances
 		val newValue=theExpression.getValue
 		if(newValue!=oldValue) passOnChangedValue(newInst,fieldNr,oldValue,newValue)
+		SimpleProfiler.measure("passOn")
 		true
 	}
 	
@@ -336,7 +341,7 @@ object TransactionManager {
 		val newExpression=ownerInst.fieldData(collData.parentField ).replaceExpression((ex:Expression) => {
 		  	 ex match {
 		  		 case fc:CollectingFuncCall => {
-		  			 println("UpdateOwnerCollFunc fc:"+fc+ " colldata:"+collData+" newValue:"+newValue)
+		  			 //println("UpdateOwnerCollFunc fc:"+fc+ " colldata:"+collData+" newValue:"+newValue)
 		  			 if(collData.fitsToFuncCall(fc,collData.parentField)) fc.setValue(newValue)
 		  			 else fc		  		 
 		  		 }
@@ -387,19 +392,19 @@ object TransactionManager {
 		var matches=false
 		for(res <-collData.callResultList )
 		{
-			println("res :"+res)
+			//println("res :"+res)
 			if( res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
 		  		 myClass.inheritsFrom(res.childType)) matches=true
 		}
 		if(matches) {
-			println("matches")
+			//println("matches")
 			var parentInstData=ActionList.getInstanceData(owner.ownerRef)
 			val newCollDataList=
 			(for(res <-collData.callResultList )
 				yield if( res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
 		  		 myClass.inheritsFrom(res.childType))  {
 		  	      val (newRes,value) = collData.childDeleted(res,childInstance.ref ,childInstance.fieldValue(res.childField ))
-		  	      println("ChildDeleted newRes:"+newRes+ " new Value:"+value)
+		  	      //println("ChildDeleted newRes:"+newRes+ " new Value:"+value)
 		  	      parentInstData=updateOwnerCollFunc(parentInstData,newRes,value)		  	      
 		  	      newRes
 		    }	
@@ -459,7 +464,7 @@ object TransactionManager {
 					  			(anExpression:Expression) =>{ anExpression match  {
 					  				case aFieldRef:FieldReference => {	
 					  					val relink=resolveLinkRef(targetRef,aFieldRef);
-					  				  println("checking ref:"+aFieldRef+" resolved:"+relink+" with:"+ref);
+					  				  //println("checking ref:"+aFieldRef+" resolved:"+relink+" with:"+ref);
 					  				  if (relink==ref) aFieldRef.cachedValue // replace the reference with the cached value
 					  				  else aFieldRef // wrong reference, leave it
 					  				}
@@ -479,7 +484,7 @@ object TransactionManager {
 		}
   	
   	// notify CollFuncs of the parent instances
-  	println("check Coll "+ instD.owners.mkString(", "))
+  	//println("check Coll "+ instD.owners.mkString(", "))
   	for(owner <-instD.owners)
   	{
   		println(" "+owner.ownerRef)
@@ -526,10 +531,12 @@ object TransactionManager {
 	}
 	
 	
-	def tryCopyInstance(instRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference):Unit = {
+	def tryCopyInstance(instRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference):Long = {
 		if(!running ) throw new IllegalArgumentException("No transaction defined ")
 		val instD=ActionList.getInstanceData(instRef)
 		// get the other owners of that instance, apart from "fromOwner", and add the new owner toOwner
+		if(!instD.owners.contains(fromOwner)) throw new IllegalArgumentException("Copy: instance "+instRef+" is not owned by "+ fromOwner)
+		if(!instD.owners.contains(toOwner)) throw new IllegalArgumentException("Copy: instance "+instRef+" is already owned by "+ toOwner)
 		val newOwners:Array[OwnerReference]= instD.owners.filter(x => x!=fromOwner) :+ toOwner
 		var createInst=tryCreateInstance(instRef.typ ,newOwners) // new instance created by DB
 		
@@ -557,6 +564,7 @@ object TransactionManager {
 			}
 			case _ => {} // if no children, do nothing
 		}
+		createInst.ref.instance 
 	}
 	
 	
@@ -585,7 +593,7 @@ object TransactionManager {
     try {
         f
     } catch { case e:Exception => {e.printStackTrace(); success=false; breakTransaction()}   }
-    if(success) finishTransaction()
+    if(success) finishTransaction()   
     success
 	}
 	

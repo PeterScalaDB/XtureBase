@@ -17,22 +17,52 @@ class ClassIndexHandler(val theClass:ObjectClass)
 {
 	val fileName=new File(FSPaths.dataDir+theClass.name+".idx")	
 	val theFile= new RandomAccessFile(fileName,"rwd") 
-	val recordSize=8*5+4*4
+	final val recordSize=8*5+4*4
 	var numRecords=theFile.length/recordSize
 	//println("Typ: "+theClass.id+" numRecords:"+numRecords)
 	val firstID= if(numRecords>0) readIxInst(0) else 0
 	var lastID:Long= if(numRecords>0) readIxInst(numRecords-1) else 0
 	
+	val bufferStream=new MyByteStream(56)
+	val miniBufferStream=new MyByteStream(12)
+	val miniOutStream=new DataOutputStream(miniBufferStream)
+	
+	
+	val outStream=new DataOutputStream(bufferStream)
+	for(i <-0 until 7 )	outStream.writeLong(0)
+	
+	var readBuffer= new Array[Byte](56)
+	var inBufferStream=new ByteArrayInputStream(readBuffer)
+	var dataInStream=new DataInputStream(inBufferStream)
+	
 	val instCache=new Cache[InstanceData](theClass.id)
 	val propCache=new Cache[InstanceProperties](theClass.id)
+	
+	var counter=0
 	
 	
 	// stores Information about the instance data in the index
 	
-	def writeData(inst:Long,dataPos:Long,dataLength:Int) =
+	def createInstance():Long =
+	{
+		val inst=lastID+1		
+		theFile.seek(theFile.length)
+		bufferStream.reset()
+		outStream.writeLong(inst)
+		theFile.write(bufferStream.buffer,0,56)
+		numRecords+=1
+		lastID=inst
+		
+		inst
+	}	
+	
+	
+	
+	def writeData(inst:Long,dataPos:Long,dataLength:Int,created:Boolean) =
 	{	  
 	  internalWrite(inst,dataPos,dataLength,0) 
-	  TransLogHandler.dataChanged(TransType.dataChanged,theClass.id,inst,dataPos,dataLength)
+	  if(created) TransLogHandler.dataChanged(TransType.created,theClass.id,inst,dataPos,dataLength) 
+	  else        TransLogHandler.dataChanged(TransType.dataChanged,theClass.id,inst,dataPos,dataLength)
 	}
 	
 	
@@ -46,8 +76,10 @@ class ClassIndexHandler(val theClass:ObjectClass)
 	  	throw new IllegalArgumentException("Storing wrong instance" +inst+ " in class "+theClass.name)
 	  }
 		theFile.seek(findIxRecord(inst)*recordSize+8+ixOffset)
-		theFile.writeLong(dataPos)
-	  theFile.writeInt(dataLength)
+		miniBufferStream.reset()
+		miniOutStream.writeLong(dataPos)
+	  miniOutStream.writeInt(dataLength)
+	  theFile.write(miniBufferStream.buffer,0,12)
 	}
 	
 	def writePropertiesData(inst:Long,dataPos:Long,dataLength:Int) =
@@ -69,20 +101,7 @@ class ClassIndexHandler(val theClass:ObjectClass)
 	}
 	
 	
-	def createInstance():Long =
-	{
-		val inst=lastID+1		
-		theFile.seek(theFile.length)
-		theFile.writeLong(inst)
-		theFile.writeLong(0);theFile.writeInt(0)//data
-		theFile.writeLong(0);theFile.writeInt(0)//prop
-		theFile.writeLong(0);theFile.writeInt(0)//link
-		theFile.writeLong(0);theFile.writeInt(0)//coll
-		numRecords+=1
-		lastID=inst
-		TransLogHandler.dataChanged(TransType.created,theClass.id,inst,0,0)
-		inst
-	}
+	
 	
 	
 	
@@ -117,9 +136,24 @@ class ClassIndexHandler(val theClass:ObjectClass)
 	 def getInstanceRecord (inst:Long):IndexRecord =
 	{		
 		theFile.seek(findIxRecord(inst)*recordSize)
-		new IndexRecord(theFile.readLong,theFile.readLong,theFile.readInt,theFile.readLong,theFile.readInt,
-			theFile.readLong,theFile.readInt,theFile.readLong,theFile.readInt)
+		theFile.read(readBuffer,0,56)
+		inBufferStream.reset		
+		new IndexRecord(dataInStream.readLong,dataInStream.readLong,dataInStream.readInt,dataInStream.readLong,dataInStream.readInt,
+			dataInStream.readLong,dataInStream.readInt,dataInStream.readLong,dataInStream.readInt)
 	}
+	 
+	 def readFully():Array[IndexRecord] = {
+		 val retArray=new Array[IndexRecord](numRecords.toInt)
+		 theFile.seek(0)
+		 for(i<- 0 until numRecords.toInt) {
+			 theFile.read(readBuffer,0,56)
+			 inBufferStream.reset		
+			 retArray(i)=new IndexRecord(dataInStream.readLong,dataInStream.readLong,dataInStream.readInt,dataInStream.readLong,dataInStream.readInt,
+				 dataInStream.readLong,dataInStream.readInt,dataInStream.readLong,dataInStream.readInt)			 
+		 }
+		 retArray
+			 
+	 }
 	
 	// internal routines
 	
@@ -128,7 +162,7 @@ class ClassIndexHandler(val theClass:ObjectClass)
 	{
 		if(numRecords==0) None
 		if(inst==lastID) numRecords
-		if(inst==firstID) 0		
+		//if(inst==firstID) 0		
 		// binary search
 		def finder(lower:Long,upper:Long):Option[Long] =
 		{
@@ -158,6 +192,8 @@ class ClassIndexHandler(val theClass:ObjectClass)
 	// reads the Instance # at the given position 
 	private def readIxInst(pos:Long) =
 	{
+		//println("readIxInst "+counter)
+		//counter+=1
 		theFile.seek(pos*recordSize)
 		theFile.readLong
 	}

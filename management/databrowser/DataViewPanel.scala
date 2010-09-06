@@ -35,7 +35,7 @@ object DataViewPanel extends BorderPanel
 
 	add (new BorderPanel() // left rail
 	{
-		preferredSize=new Dimension(150,200)
+		preferredSize=new Dimension(190,200)
 		add (new Label("Index-Table"),BorderPanel.Position.North)
 		add (new ScrollPane()
 		{
@@ -93,7 +93,7 @@ object DataViewPanel extends BorderPanel
 		if(! (ixTable.selection.rows.isEmpty))		 
 		{			
 			val ix:Int= ixTable.selection.rows.head
-			val inst:Long=IndexTableModel.ixList(ix)._1
+			val inst:Long=IndexTableModel.ixList(ix).inst
 			//println("inst: "+inst)
 			if (StorageManager.instanceExists(InstFieldTableModel.theClass.id,inst))
 			{
@@ -119,7 +119,7 @@ object DataViewPanel extends BorderPanel
 		if(! (ixTable.selection.rows.isEmpty))		 
 		{			
 			val ix:Int= ixTable.selection.rows.head
-			val inst:Long=IndexTableModel.ixList(ix)._1
+			val inst:Long=IndexTableModel.ixList(ix).inst
 			//println("inst: "+inst)
 		  InstFieldTableModel.setInstance(null)	
 		  TransactionManager.doTransaction{
@@ -135,7 +135,7 @@ object DataViewPanel extends BorderPanel
 		if(! (ixTable.selection.rows.isEmpty))		 
 		{			
 			val ix:Int= ixTable.selection.rows.head
-			val inst:Long=IndexTableModel.ixList(ix)._1
+			val inst:Long=IndexTableModel.ixList(ix).inst
 			//println("inst: "+inst)
 			
 			println(ActionList.getCollData(new Reference(InstFieldTableModel.theClass.id,inst)))		  

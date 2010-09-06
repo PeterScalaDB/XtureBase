@@ -14,10 +14,13 @@ object TransLogHandler
 {
 	val fileName=FSPaths.dataDir+"transaction.log"	
 	val theFile= new RandomAccessFile(fileName,"rwd")
+	val bufferStream=(new MyByteStream(34))
+	val outStream=new DataOutputStream(bufferStream)
+	
+		
 	var transID:Long =
 		if(theFile.length==0) { theFile.writeLong(1); 1 } 
-	  else theFile.readLong;
-	
+	  else theFile.readLong;	
 	theFile.seek(theFile.length)
   
 	
@@ -27,26 +30,23 @@ object TransLogHandler
 	
 	def instanceCreated(ref: Reference ) =
 	{		
-		println("Translog created ID:"+transID+" " +ref)
-		theFile.writeByte(TransType.created.id)
-		theFile.writeLong(transID)
-		theFile.writeInt(ref.typ)		
-		theFile.writeLong(ref.instance )
-		theFile.writeLong(0)
-		theFile.writeInt(0)
+		//println("Translog created ID:"+transID+" " +ref)
+		dataChanged(TransType.created,ref.typ,ref.instance,0,0)		
 	}
 	
 	
 	
 	def dataChanged(transTyp: TransType.Value,typ:Int,inst:Long,dataPos:Long,dataLength:Int) =
 	{		
-		println("TransLog changed ID:" + transID+ " transtyp:"+transTyp+" "+typ+", "+inst )
-		theFile.writeByte(transTyp.id)
-		theFile.writeLong(transID)
-		theFile.writeInt(typ)		
-		theFile.writeLong(inst )
-		theFile.writeLong(dataPos)
-		theFile.writeInt(dataLength)
+		//println("TransLog changed ID:" + transID+ " transtyp:"+transTyp+" "+typ+", "+inst )		
+		bufferStream.reset()		
+		outStream.writeByte(transTyp.id)
+		outStream.writeLong(transID)
+		outStream.writeInt(typ)		
+		outStream.writeLong(inst )
+		outStream.writeLong(dataPos)
+		outStream.writeInt(dataLength)
+		theFile.write(bufferStream.buffer,0,bufferStream.size())
 	}
 	
 	def shutDown() =

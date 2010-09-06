@@ -13,11 +13,19 @@ import scala.collection.immutable.Vector
 class InstanceProperties(override val ref:Reference, val propertyFields:Array [PropertyFieldData])
       extends Referencable {
 	
+	
 	override def write(file:DataOutput) =	{
+				
 		file.writeByte(propertyFields.length)
 		for(p <- propertyFields)
-			p.write(file)
+			p.write(file)			
 	}	
+	
+	def dataLength:Int = {
+		var result=1
+		for(p<-propertyFields) result += p.dataLength
+		result
+	}
 	
 	def addChildInstance (field:Byte,newInst:Reference):InstanceProperties = {
 		if(field>=propertyFields.length) throw new 
@@ -39,7 +47,6 @@ class InstanceProperties(override val ref:Reference, val propertyFields:Array [P
 
 object InstanceProperties 
 {
-	var pman:APropertyManager=null
 	
 	
 	 def read(ninstRef:Reference,file:DataInput  ) = {

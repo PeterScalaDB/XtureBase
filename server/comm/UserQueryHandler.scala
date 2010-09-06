@@ -43,7 +43,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	}
 	
 	def notifyInstanceChanged(subs:SubscriptionInfo,data:InstanceData) = {
-		println("Notify changed "+subs)
+		//println("Notify changed "+subs)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 			out.writeInt(subs.id )
 			out.writeInt(NotificationType.FieldChanged.id)
@@ -53,7 +53,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	}	
 	
 	def notifyInstanceAdded(subs:SubscriptionInfo,data:InstanceData) = {
-		println("Notify added "+subs)
+		//println("Notify added "+subs)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 		out.writeInt(subs.id)
 		out.writeInt(NotificationType.childAdded.id )
@@ -63,7 +63,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	}
 	
 	def notifyInstanceDeleted(subs:SubscriptionInfo,ref:Reference) = {
-		println("Notify deleted "+subs)
+		//println("Notify deleted "+subs)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 		out.writeInt(subs.id)
 		out.writeInt(NotificationType.childRemoved.id )

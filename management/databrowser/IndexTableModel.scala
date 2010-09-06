@@ -14,7 +14,7 @@ import server.storage._
 object IndexTableModel extends AbstractTableModel 
 {
 	var handler:ClassIndexHandler=null
-	var ixList: Array [(Long,Long,Int)]=Array ()
+	var ixList: Array [IndexRecord]=Array ()	
 	
   def setTypeHandler(nhandler:ClassIndexHandler) =
   {
@@ -27,25 +27,25 @@ object IndexTableModel extends AbstractTableModel
 	def readTheList()
 	{
 		println(handler.lastID)
-		ixList=
-		(for (i <- 1L to handler.lastID; if(handler.instanceExists(i)); rec=handler.getInstanceRecord(i) )
-			yield (i,rec.dataPos,rec.dataLength)).toArray				
+		var ix=0
+		ixList=handler.readFully									
 		fireTableStructureChanged()
 	}
 	
 	
-  def getRowCount(): Int = { ixList.length }
+  def getRowCount(): Int = { ixList.size }
 
   def getColumnCount(): Int = { 3 }
 
   def getValueAt(rowIndex: Int, columnIndex: Int): Object = 
   { 
+  	if(rowIndex>=ixList.size) return null
   	val a =ixList(rowIndex) 
   	columnIndex match 
   	{
-  		case 0 => a._1.asInstanceOf[AnyRef]
-  		case 1 => a._2.asInstanceOf[AnyRef]
-  		case 2 => a._3.asInstanceOf[AnyRef]
+  		case 0 => a.inst.toString
+  		case 1 => a.dataPos.toString
+  		case 2 => a.dataLength.toString
   	}
   }
   

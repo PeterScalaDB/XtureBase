@@ -42,7 +42,7 @@ object ClientQueryManager {
 		
 	def queryInstance(ref:Reference,propertyField:Byte):Array[InstanceData] = 	{		
 		sock.sendData(ClientCommands.queryInstance ) {out =>			
-			println("Sending Query request "+ref + " "+Thread.currentThread)
+			//println("Sending Query request "+ref + " "+Thread.currentThread)
 			ref.write(out)
 			out.writeByte(propertyField)
 		}
@@ -58,7 +58,7 @@ object ClientQueryManager {
 		
 		sock.sendData(ClientCommands.startSubscription ) {out =>
 			newSubscriberQueue.add( Subscriber(updateFunc))
-			println("adding subscription "+parentRef+ " "+Thread.currentThread)
+			//println("adding subscription "+parentRef+ " "+Thread.currentThread)
 			parentRef.write(out)
 			out.writeByte(propertyField)
 		}
@@ -95,10 +95,22 @@ object ClientQueryManager {
 		   for(owner <-owners)
 		  	 owner.write(out)			
 		}
-		println("create "+Thread.currentThread.getName)
+		//println("create "+Thread.currentThread.getName)
 		commandResultQueue.take() match {
 			case Some(const) => const.toLong
 			case None => throw new IllegalArgumentException("no instance ID returned when creating type "+classType)
+		}
+	}
+	
+	def copyInstance(ref:Reference,fromOwner:OwnerReference,toOwner:OwnerReference):Long = {
+		sock.sendData(ClientCommands.copyInstance ) { out =>
+			ref.write(out)
+			fromOwner.write(out)
+			toOwner.write(out)
+		}
+		commandResultQueue.take() match {
+			case Some(const) =>const.toLong
+			case None => throw new IllegalArgumentException("no instance ID returned when copying instance "+ref)
 		}
 	}
 	
@@ -122,7 +134,7 @@ object ClientQueryManager {
 	
 	private def handleQueryResults(in:DataInputStream) = 	{
 		val data=readArray(in)
-		println("Handling Query result data size:"+data.size+ " "+Thread.currentThread)
+		//println("Handling Query result data size:"+data.size+ " "+Thread.currentThread)
 		
 		queryQueue.put(data)
 		
@@ -132,7 +144,7 @@ object ClientQueryManager {
 	private def handleAcceptSubscription(in:DataInputStream) = {
 		val subsID:Int=in.readInt
 		val data=readArray(in)
-		println("Handling accept subs "+data.mkString(","))
+		//println("Handling accept subs "+data.mkString(","))
 		
 		val subs:Subscriber=newSubscriberQueue.take()			
 		subscriptionMap.put(subsID,subs)
@@ -170,7 +182,7 @@ object ClientQueryManager {
 		}
 		val result:Option[Constant]= if(in.readBoolean) Some(Expression.readConstant(in))
 																 else None
-		println("command Response "+result+" "+Thread.currentThread)
+		//println("command Response "+result+" "+Thread.currentThread)
 		
 		commandResultQueue.put(result)
 	}

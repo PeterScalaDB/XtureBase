@@ -13,6 +13,7 @@ import definition.expression._
 import server.storage._
 import scala.collection.mutable.HashMap
 import transaction.handling._
+import server.test.SimpleProfiler
 
 /** manages communications with a client
  * 
@@ -34,6 +35,7 @@ class UserSocket(socket: Socket) extends Thread ("userSocket") {
 	registerCommandHandler(ClientCommands.writeField) (wantWriteField)
 	registerCommandHandler(ClientCommands.createInstance)(wantCreateInstance)
 	registerCommandHandler(ClientCommands.deleteInstance)(wantDeleteInstance)
+	registerCommandHandler(ClientCommands.copyInstance)(wantCopyInstance)
 		
 	
 
@@ -143,7 +145,7 @@ class UserSocket(socket: Socket) extends Thread ("userSocket") {
 		}
 
 		private def storeSetupData() = {
-
+			println("store setup data")
 		}
 		
 		def registerCommandHandler(command:ClientCommands.Value)(func:CommandHandlerFunc) = {
@@ -235,6 +237,40 @@ class UserSocket(socket: Socket) extends Thread ("userSocket") {
 			 else {
 				 out.writeBoolean(false) // no errors
 				 out.writeBoolean(false) // no result value
+			 }
+			}			 
+		}
+		
+		private def wantCopyInstance(in:DataInputStream) = {
+			var error:CommandError=null
+			var result:Constant=null
+			val ref=Reference(in)		
+			val fromOwner=OwnerReference.read(in)
+			val toOwner=OwnerReference.read(in)
+			var instID=0L
+			SimpleProfiler.startMeasure("start copy")
+			try {
+				TransactionManager.doTransaction {
+					instID=TransactionManager.tryCopyInstance(ref,fromOwner,toOwner)
+					if(instID<0)
+						error=new CommandError("Unknown Issue",ClientCommands.copyInstance.id,0)
+					SimpleProfiler.measure("preparing ready")
+				}
+			} 
+			catch {
+				case e:Exception =>
+				e.printStackTrace()
+				error=new CommandError(e.toString,ClientCommands.copyInstance.id,0)
+			}
+			sendData(ServerCommands.sendCommandResponse ) {out =>
+			 if(error!=null) {
+				 out.writeBoolean(true)
+				 error.write(out)	
+			 }
+			 else {
+				 out.writeBoolean(false) // no errors
+				 out.writeBoolean(true)
+				 LongConstant(instID).write(out)				  
 			 }
 			}			 
 		}

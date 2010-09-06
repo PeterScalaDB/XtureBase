@@ -40,7 +40,7 @@ class SimpleTableModel extends TableModel {
 			(notType:NotificationType.Value,data: Array[InstanceData]) => {
 				
 				println("modification :"+notType+ " "+data.map(a => a.ref.sToString).mkString(",")+" "+Thread.currentThread.getName)
-				println()
+				//println()
 				notType match {
 					case NotificationType.sendData => dataList=data
 					case NotificationType.childAdded => dataList= dataList ++ data
@@ -88,6 +88,8 @@ class SimpleTableModel extends TableModel {
   def isCellEditable(rowIndex: Int, columnIndex: Int): Boolean = { 
   	columnIndex>0 
   }
+  
+  def getInstance(ix:Int) =dataList(ix)
 
   def getValueAt(rowIndex: Int, columnIndex: Int): Object = {
   	if(dataList==null) return null

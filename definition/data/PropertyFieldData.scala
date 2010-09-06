@@ -30,10 +30,15 @@ class PropertyFieldData (val isSingle:Boolean,val propertyList: List[Reference])
 	 */
 	def write(file:DataOutput) =   {
 		file.writeBoolean(isSingle)
-		file.writeByte(propertyList.size)
+		file.writeShort(propertyList.size)
 		for(p <-propertyList) p.write(file)
 	}
-
+	
+	def dataLength:Int = {
+		3 +propertyList.size*12
+	}
+		
+		
 	override def toString() = {
 		"["+propertyList.mkString(", ")+"]"
 	}
@@ -46,7 +51,7 @@ object PropertyFieldData
 {
 	def apply(file:DataInput) = {
 		val single=file.readBoolean
-		val count=file.readByte
+		val count=file.readShort
 		var plist:List[Reference]=Nil
 		for (i <-0 until count)
 			plist=Reference(file) :: plist

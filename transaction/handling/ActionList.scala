@@ -5,6 +5,7 @@ package transaction.handling
 
 import definition.data._
 import server.storage._
+import server.test.SimpleProfiler
 //import scala.collection.immutable.ListMap
 
 /** manages the List of actions of a transaction
@@ -34,15 +35,16 @@ def reset() = {theList=Map.empty}
 
 def commitAllData() = {
 	try {		
+		//println(theList)
 		for(trans <- theList.valuesIterator)
 			trans match {
 				case CreateAction(ref,a,b,co) => { // Instances get created during the Try-Phase of the transaction
-					for (data <-a)  StorageManager.writeInstance(data) // if instdata is defined, write
+					for (data <-a)  StorageManager.writeInstance(data,true) // if instdata is defined, write
 					for (pdata <-b)  StorageManager.writeInstanceProperties(pdata) // if propdata is defined, write
 					for (c <- co) StorageManager.writeCollectingFuncData(c)
 				}
 				case DataChangeAction(in,pr,li,co) => {
-					for(i <- in) StorageManager.writeInstance(i); // if instance is defined, write
+					for(i <- in) StorageManager.writeInstance(i,false); // if instance is defined, write
 					for(p <- pr) StorageManager.writeInstanceProperties(p) // if properties ...
 					for(l <- li) StorageManager.writeReferencingLinks(l)
 					for(c <- co) StorageManager.writeCollectingFuncData(c)
@@ -51,13 +53,14 @@ def commitAllData() = {
 				case DeleteAction(ref) => StorageManager.deleteInstance(ref.typ,ref.instance )
 				//TODO: delete link, property and collFunc data !
 		}
+		SimpleProfiler.finish("commit "+theList.size)
 		reset()
 	} catch { case e:Exception => TransactionManager.breakTransaction() }
 }
 
 
 def addTransactionData (ref:Reference,newRec:TransactionData) = {
-	println("add Transdata "+ref+"|"+newRec)
+	//println("add Transdata "+ref+"|"+newRec)
 	if (theList.contains(ref))
 		theList(ref) match { // is there already an transaction data for this instance ?			
 			case a:CreateAction => newRec match { 

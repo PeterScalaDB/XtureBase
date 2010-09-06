@@ -14,6 +14,13 @@ import java.io._
 class ContainerFileHandler [T <: Referencable] (val fileName:String,factory: (Reference,DataInput) => T)
 {	
 	val theFile= new RandomAccessFile(FSPaths.dataDir+fileName,"rwd")	
+	val bufferStream=(new MyByteStream(256))
+	val outStream=new DataOutputStream(bufferStream)
+	
+	var readBuffer= new Array[Byte](256)
+	var inBufferStream=new ByteArrayInputStream(readBuffer)
+	var dataInStream=new DataInputStream(inBufferStream)
+	
 	
 	
 	/** Stores an Instance in the Data File
@@ -22,20 +29,30 @@ class ContainerFileHandler [T <: Referencable] (val fileName:String,factory: (Re
 	 */
 	def writeInstance(data:T):(Long,Int) =
 	{
+		bufferStream.reset()		
 		val pos=theFile.length
 		theFile.seek(pos)
-		data.write(theFile)
-		val numBytes:Int=(theFile.length-pos).toInt
-		(pos,numBytes)
+		
+		data.write(outStream)
+		theFile.write(bufferStream.buffer,0,bufferStream.size())		
+		(pos,bufferStream.size())
 	}
 	
 	/**
 	 *  reads one instance out of the data File
 	 */
-	def readInstance(ref:Reference,pos:Long):T =
+	def readInstance(ref:Reference,pos:Long,size:Int):T =
 	{
+		if(size>readBuffer.size) {
+			readBuffer=new Array[Byte](size+128)
+			inBufferStream=new ByteArrayInputStream(readBuffer)
+			dataInStream=new DataInputStream(inBufferStream)
+		}		
+		
 		theFile.seek(pos)
-		factory(ref,theFile)
+		theFile.read(readBuffer,0,size)
+		inBufferStream.reset		
+		factory(ref,dataInStream)
 	}
 	
 	
@@ -45,4 +62,8 @@ class ContainerFileHandler [T <: Referencable] (val fileName:String,factory: (Re
 		theFile.close
 	}
 
+}
+
+class MyByteStream(nsize:Int) extends ByteArrayOutputStream(nsize) {
+	def buffer=buf
 }
