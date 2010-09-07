@@ -49,7 +49,7 @@ object TransactionManager {
 	
 	
 	
-	def tryCreateInstance(typ:Int,owners:Array[OwnerReference]) =	{	
+	def tryCreateInstance(typ:Int,owners:Array[OwnerReference],notifyRefandColl:Boolean) =	{	
 		if(!running ) throw new IllegalArgumentException("No transaction defined ")
 		//TODO: Check if the child type is allowed in the owner property fields
 		SimpleProfiler.startMeasure("Create")
@@ -61,6 +61,9 @@ object TransactionManager {
 		{
 			internAddPropertyToOwner(newInst,owner)
 		}
+		if(notifyRefandColl)
+			for(i <- 0 until newInst.fieldData.size;if (newInst.fieldData(i)!=EMPTY_EX))
+				passOnChangedValue(newInst,i.toByte,EMPTY_EX,newInst.fieldData(i).getValue)
 		SimpleProfiler.measure("notif owner")
 		newInst
 	}
@@ -185,6 +188,19 @@ object TransactionManager {
 		CommonSubscriptionHandler.instanceChanged(newInst)
 	}	
 	
+	private def passOnNewInstanceToCollFuncParents(newInst:InstanceData)
+	{
+		for(owner <-newInst.owners ) {
+			ActionList.getCollData(owner.ownerRef) match {
+				case Some(collData) => {
+					for(i <- 0 until newInst.fieldData.size;if (newInst.fieldData (i)!=EMPTY_EX))
+					notifyCollFunc_ChildChanged(owner ,collData,newInst.ref,i.toByte,EMPTY_EX,newInst.fieldData(i).getValue)
+				}
+				case _ => // another beer
+			}
+		}
+	}
+	
 	
 	// **************************** FieldReference Management **************************************************************
 	
@@ -249,7 +265,7 @@ object TransactionManager {
 	
 	
 	/** adds new external link information to the source instance
-	 * @param targetRef the new target instance pointing the the source instnace
+	 * @param targetRef the new target instance pointing to the source instance
 	 * @param targetField in what field in the target instance is the new FieldReference
 	 * @param sourceRef the FieldReference pointing to the source instance 
 	 */
@@ -322,8 +338,8 @@ object TransactionManager {
 		  	 ex match {
 		  		 case fc:CollectingFuncCall => {
 		  			   println("setFuncResults fc:"+fc + "call:"+call+" =="+(fc==call)+" newValue:"+newValue)
-		  			   if(fc==call) fc.setValue(newValue)
-		  			   else fc
+		  			   if(fc==call) return fc.setValue(newValue)
+		  			   else return fc
 		  			 }
 		  		 case a => a 
 		  	 }
@@ -352,6 +368,33 @@ object TransactionManager {
 		 ownerInst.setField(collData.parentField,newExpression)
 	}
 	
+	
+	/*private def notifyCollFunc_ChildAdded(owner:OwnerReference,collData:CollFuncResultSet,childInst:InstanceData)= {
+		val myClass=AllClasses.getClassByID(childInst.ref.typ)
+		var matches=false
+		// check if the child matches to any of the collFuncResults 
+		for(res <-collData.callResultList )
+		   if( res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
+		  		 myClass.inheritsFrom(res.childType)) matches=true
+		
+		if(matches) {  // if yes, update the changes
+			var parentInstData=ActionList.getInstanceData(owner.ownerRef)
+			val newCollDataList=
+			(for(res <-collData.callResultList )
+				yield if( res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
+		  		 myClass.inheritsFrom(res.childType))  {
+		  	      val (newRes,value) = collData.childChanged(res,childInst.ref,EMPTY_EX,
+		  	      	childInst.fieldData(res.childField).getValue)
+		  	      parentInstData=updateOwnerCollFunc(parentInstData,newRes,value)		  	      
+		  	      newRes
+		    }	
+		  	else res).toList		
+		  val newResultSet=new CollFuncResultSet(owner.ownerRef,newCollDataList)
+		  ActionList.addTransactionData(owner.ownerRef ,new DataChangeAction(Some(parentInstData),None,None,Some(newResultSet)))		 
+		}		
+	}*/
+	
+	
 	/** notifies one parent instance that a child was changed, eventually calculates the new values and stores the changes
 	 * @param owner Reference to the owner instance
 	 * @param collData the CollFuncResultSet of the owner instance
@@ -364,41 +407,49 @@ object TransactionManager {
 	private def notifyCollFunc_ChildChanged(owner:OwnerReference,collData:CollFuncResultSet,childRef:Reference,childField:Byte,
 	                                       oldValue:Constant,newValue:Constant)= {
 		val myClass=AllClasses.getClassByID(childRef.typ)
-		var matches=false
+		
+		var fieldMatchSet:Set[Int]=Set()
 		// check if the child matches to any of the collFuncResults 
 		for(res <-collData.callResultList )
 		   if(res.childField ==childField && res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
-		  		 myClass.inheritsFrom(res.childType)) matches=true
+		  		 myClass.inheritsFrom(res.childType)) fieldMatchSet=fieldMatchSet+ res.parentField
 		
-		if(matches) {  // if yes, update the changes
+		if(!fieldMatchSet.isEmpty) {  // if yes, update the changes			 
 			var parentInstData=ActionList.getInstanceData(owner.ownerRef)
+			val oldParentValues:Array[Constant]= new Array[Constant](parentInstData.fieldData .size)
+				for(i <-fieldMatchSet) oldParentValues(i)= parentInstData.fieldValue(i)
 			val newCollDataList=
 			(for(res <-collData.callResultList )
 				yield if(res.childField ==childField && res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
 		  		 myClass.inheritsFrom(res.childType))  {
-		  	      val (newRes,value) = collData.childChanged(res,childRef,oldValue,newValue)
+		  	      val (newRes,value) = collData.childChanged(res,childRef,oldValue,newValue)		  	      
 		  	      parentInstData=updateOwnerCollFunc(parentInstData,newRes,value)		  	      
 		  	      newRes
 		    }	
 		  	else res).toList		
 		  val newResultSet=new CollFuncResultSet(owner.ownerRef,newCollDataList)
-		  ActionList.addTransactionData(owner.ownerRef ,new DataChangeAction(Some(parentInstData),None,None,Some(newResultSet)))		 
+		  ActionList.addTransactionData(owner.ownerRef ,new DataChangeAction(Some(parentInstData),None,None,Some(newResultSet)))
+		  // pass on to owners
+		  for(fieldNr <-fieldMatchSet;if(parentInstData.fieldData(fieldNr).getValue!=oldParentValues(fieldNr)))
+		  	passOnChangedValue(parentInstData,fieldNr.toByte,oldParentValues(fieldNr),parentInstData.fieldData(fieldNr).getValue)
 		}		
 	}
 	
 	
 	private def notifyCollFunc_ChildDeleted(owner:OwnerReference,collData:CollFuncResultSet,childInstance:InstanceData) = {
 		val myClass=AllClasses.getClassByID(childInstance.ref.typ)
-		var matches=false
+		var fieldMatchSet:Set[Int]=Set()
 		for(res <-collData.callResultList )
 		{
 			//println("res :"+res)
 			if( res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
-		  		 myClass.inheritsFrom(res.childType)) matches=true
+		  		 myClass.inheritsFrom(res.childType)) fieldMatchSet=fieldMatchSet+ res.parentField
 		}
-		if(matches) {
+		if(!fieldMatchSet.isEmpty) {
 			//println("matches")
 			var parentInstData=ActionList.getInstanceData(owner.ownerRef)
+			val oldParentValues:Array[Constant]= new Array[Constant](parentInstData.fieldData .size)
+				for(i <-fieldMatchSet) oldParentValues(i)= parentInstData.fieldValue(i)
 			val newCollDataList=
 			(for(res <-collData.callResultList )
 				yield if( res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
@@ -411,6 +462,9 @@ object TransactionManager {
 		  	else res).toList
 		  val newResultSet=new CollFuncResultSet(owner.ownerRef,newCollDataList)
 		  ActionList.addTransactionData(owner.ownerRef ,new DataChangeAction(Some(parentInstData),None,None,Some(newResultSet)))
+		  // pass on to owners
+		  for(fieldNr <-fieldMatchSet;if(parentInstData.fieldData(fieldNr).getValue!=oldParentValues(fieldNr)))
+		  	passOnChangedValue(parentInstData,fieldNr.toByte,oldParentValues(fieldNr),parentInstData.fieldData(fieldNr).getValue)
 		}
 	}
 	
@@ -531,25 +585,31 @@ object TransactionManager {
 	}
 	
 	
-	def tryCopyInstance(instRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference):Long = {
+	def tryCopyInstance(instRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference,
+	                    collNotifyOwners:Boolean):Long = {
 		if(!running ) throw new IllegalArgumentException("No transaction defined ")
 		val instD=ActionList.getInstanceData(instRef)
 		// get the other owners of that instance, apart from "fromOwner", and add the new owner toOwner
 		if(!instD.owners.contains(fromOwner)) throw new IllegalArgumentException("Copy: instance "+instRef+" is not owned by "+ fromOwner)
-		if(!instD.owners.contains(toOwner)) throw new IllegalArgumentException("Copy: instance "+instRef+" is already owned by "+ toOwner)
+		if(instD.owners.contains(toOwner)) throw new IllegalArgumentException("Copy: instance "+instRef+" is already owned by "+ toOwner)
 		val newOwners:Array[OwnerReference]= instD.owners.filter(x => x!=fromOwner) :+ toOwner
-		var createInst=tryCreateInstance(instRef.typ ,newOwners) // new instance created by DB
+		var createInst=tryCreateInstance(instRef.typ ,newOwners,false) // new instance created by DB
 		
 		createInst=instD.clone(createInst.ref,newOwners)
 		
-		// Register FieldReferences
-		for(i <- 0 until instD.fieldData.size)
+		// Register FieldReferences to other instances
+		for(i <- 0 until instD.fieldData.size;if (instD.fieldData(i)!=EMPTY_EX))
 		{
 			val refList=instD.fieldData(i).getElementList[FieldReference](DataType.FieldRefTyp,Nil)
 			for(rf <-refList)
 				 addLinkRef(createInst.ref,i.toByte,rf)
 		}
-		ActionList.addTransactionData(createInst.ref,new DataChangeAction(Some(createInst)))
+		
+		// store data and copy collData to new Instance
+		ActionList.addTransactionData(createInst.ref,new DataChangeAction(Some(createInst),None,None,ActionList.getCollData(instRef)))		
+		// notify owners
+		if(collNotifyOwners)
+		passOnNewInstanceToCollFuncParents(createInst)
 		
 		// now copy all owned child instances
 		ActionList.getInstanceProperties(instRef) match {
@@ -559,7 +619,7 @@ object TransactionManager {
 					val fieldData=prop.propertyFields(fieldNr) // get the data for the prop field
 					for(childRef <-fieldData.propertyList) // go through all children of that field
 						tryCopyInstance(childRef,new OwnerReference(fieldNr.toByte,instRef), // copy them to the new instance
-							new OwnerReference(fieldNr.toByte,createInst.ref))
+							new OwnerReference(fieldNr.toByte,createInst.ref),false)
 				}
 			}
 			case _ => {} // if no children, do nothing
@@ -587,14 +647,14 @@ object TransactionManager {
 	 *  encapsulates a transaction so that StartTransaction and Finishtransaction/BreakTransaction
 	 *  will always be executed
 	 */
-	def doTransaction (f :  => Unit):Boolean = transLock.synchronized{
+	def doTransaction (f :  => Unit):Option[Exception] = transLock.synchronized{
     startTransaction()
     var success=true
     try {
         f
-    } catch { case e:Exception => {e.printStackTrace(); success=false; breakTransaction()}   }
+    } catch { case e:Exception => {e.printStackTrace(); success=false; breakTransaction();return Some(e)}   }
     if(success) finishTransaction()   
-    success
+    None
 	}
 	
 	

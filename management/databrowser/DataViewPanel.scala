@@ -32,6 +32,13 @@ object DataViewPanel extends BorderPanel
 		model=InstPropTableModel
 		selection.intervalMode=Table.IntervalMode.Single
 	}
+	
+	val collFuncTable=new Table()
+	{
+		model=CollFuncTableModel
+		selection.intervalMode=Table.IntervalMode.Single
+	}
+	
 
 	add (new BorderPanel() // left rail
 	{
@@ -76,12 +83,20 @@ object DataViewPanel extends BorderPanel
 		},BorderPanel.Position.Center)
 		
 		add (new BorderPanel(){
-			preferredSize=new Dimension(200,200)
+			preferredSize=new Dimension(200,300)
 			add (new Label("Property Data"),BorderPanel.Position.North)
 			add (new ScrollPane(){
 				viewportView=propTable
 				preferredSize=new Dimension(200,150)
 			},BorderPanel.Position.Center)
+			add (new BorderPanel(){
+				preferredSize=new Dimension(200,150)
+				add (new Label("CollFunc Data"),BorderPanel.Position.North)
+				add (new ScrollPane(){
+				viewportView=collFuncTable
+				preferredSize=new Dimension(200,100)
+			},BorderPanel.Position.Center)
+			},BorderPanel.Position.South)
 		},BorderPanel.Position.South)
 		
 	},BorderPanel.Position.Center)
@@ -101,6 +116,7 @@ object DataViewPanel extends BorderPanel
 				val i=StorageManager.getInstanceData(r)
 		    InstFieldTableModel.setInstance(i)
 		    InstPropTableModel.setPropData(StorageManager.getInstanceProperties(r),i.classVersion)
+		    CollFuncTableModel.setCollData(StorageManager.getCollectingFuncData(r))
 			} 
 		}
 	}
@@ -108,7 +124,7 @@ object DataViewPanel extends BorderPanel
 	def createInstance() =
 	{
 		TransactionManager.doTransaction{
-		  val inst=TransactionManager.tryCreateInstance(InstFieldTableModel.theClass.id, Array())
+		  val inst=TransactionManager.tryCreateInstance(InstFieldTableModel.theClass.id, Array(),true)
 		  //TransactionManager.tryWriteInstanceData(inst)	
 		}		
 		IndexTableModel.readTheList
@@ -124,7 +140,7 @@ object DataViewPanel extends BorderPanel
 		  InstFieldTableModel.setInstance(null)	
 		  TransactionManager.doTransaction{
 			  TransactionManager.tryDeleteInstance(new Reference(InstFieldTableModel.theClass.id,inst),None)	
-			}		  
+			}	  
 		  
 		  IndexTableModel.readTheList
 		}

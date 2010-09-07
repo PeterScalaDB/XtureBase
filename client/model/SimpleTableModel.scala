@@ -26,7 +26,9 @@ class SimpleTableModel extends TableModel {
 	
 	private val listenerList:EventListenerList = new EventListenerList();
 	
-	def loadData(nparentRef:Reference,npropField:Byte) = {
+	def loadData(nparentRef:Reference,npropField:Byte) =
+		ClientQueryManager.runInPool( 
+	{
 		parentRef=nparentRef
 		propField=npropField
 		val parentClassVers=AllClasses.getClassByID(parentRef.typ).lastVersion
@@ -48,12 +50,15 @@ class SimpleTableModel extends TableModel {
 					case NotificationType.childRemoved => dataList=dataList.filter(_.ref != data(0).ref)
 				}
 				
-				if(updateStructure ) { fireTableStructureChanged(); updateStructure=false }
+				if(updateStructure ) { SwingUtilities.invokeLater(new Runnable {
+				def run () =	fireTableStructureChanged();
+				})
+				updateStructure=false }
 				else fireTableDataChanged()
 			}			
 		}
 		
-	}
+	})
 	
 	def shutDown() = {
 		if(subscriptionID>=0)	{
@@ -123,17 +128,21 @@ class SimpleTableModel extends TableModel {
   	listenerList.remove(classOf[TableModelListener], l);
   }
   
-  def fireTableDataChanged() {
-        fireTableChanged(new TableModelEvent(this));
-    }
-  def fireTableStructureChanged() {
-        fireTableChanged(new TableModelEvent(this, TableModelEvent.HEADER_ROW));
-    }
+  def fireTableDataChanged() {  	
+  	fireTableChanged(new TableModelEvent(SimpleTableModel.this));  			
+  }
+  def fireTableStructureChanged() { 	  
+  	fireTableChanged(new TableModelEvent(SimpleTableModel.this, TableModelEvent.HEADER_ROW));
+  }
   
-  def fireTableChanged(e:TableModelEvent) {	
-	  val listeners:Array[Object] = listenerList.getListenerList();	
-		for (i <- (listeners.length-2) to (0,-2)) 
-	    if (listeners(i)==classOf[TableModelListener]) 
-	    	(listeners(i+1).asInstanceOf[TableModelListener]).tableChanged(e);	
+  def fireTableChanged(e:TableModelEvent) {
+  	//SwingUtilities.invokeLater(new Runnable() {
+  	//	def run() {
+  			val listeners:Array[Object] = listenerList.getListenerList();	
+  		for (i <- (listeners.length-2) to (0,-2)) 
+  			if (listeners(i)==classOf[TableModelListener]) 
+  				(listeners(i+1).asInstanceOf[TableModelListener]).tableChanged(e);
+  		//}
+  	//})
   }
 }

@@ -44,11 +44,11 @@ class StorageTests extends JUnitSuite
 
 	@Test def createPropTest():Unit =   {
 		assert(TransactionManager.doTransaction{
-			val inst=TransactionManager.tryCreateInstance(3,Array(new OwnerReference(0,new Reference(3,1))))
+			val inst=TransactionManager.tryCreateInstance(3,Array(new OwnerReference(0,new Reference(3,1))),true)
 			println(inst)			
 			assert (TransactionManager.tryWriteInstanceField(inst.ref,0,new StringConstant("Sub-Object "+inst.ref.instance )))
 			assert (TransactionManager.tryWriteInstanceField(inst.ref,1,new DoubleConstant(math.random*200 )))			
-		}==true)
+		}==None)
 	}
 	
 	@Test def movePropTest():Unit = {
@@ -56,17 +56,17 @@ class StorageTests extends JUnitSuite
 		var inst:InstanceData=null
 		
 		assert(TransactionManager.doTransaction {			
-			inst=TransactionManager.tryCreateInstance(3,Array())			
+			inst=TransactionManager.tryCreateInstance(3,Array(),true)			
 		  assert (TransactionManager.tryWriteInstanceField(inst.ref,0,
 				new StringConstant("Copytest-Object "+inst.ref.instance+" "+math.round(math.random*1000) )))			
-		}==true)
+		}==None)
 		
 		StorageManager.getInstanceProperties(Reference(3,1)) match {
 			case Some(prop) => {
 		     for(p <-prop.propertyFields(0).propertyList)
 		    	 assert( TransactionManager.doTransaction{
-		    		 TransactionManager.tryCopyInstance(p,oref,new OwnerReference(0,inst.ref))
-		    	 }==true)
+		    		 TransactionManager.tryCopyInstance(p,oref,new OwnerReference(0,inst.ref),true)
+		    	 }==None)
 		    	 
 			}
 			case _ => println("No properties found ")
@@ -80,12 +80,12 @@ class StorageTests extends JUnitSuite
 				new BinaryOperation(new DoubleConstant(4),BinOperator.getOp('+'), new FieldReference(None,Some(2),1))))
 			assert(TransactionManager.tryWriteInstanceField(new Reference(3,4),1,
 				new BinaryOperation(new DoubleConstant(19),BinOperator.getOp('-'), new FieldReference(Some(3),Some(3),1))))
-		})
+		}==None)
 		assert(TransactionManager.doTransaction{
-			val inst=TransactionManager.tryCreateInstance(3,Array(new OwnerReference(0,new Reference(3,1))))
+			val inst=TransactionManager.tryCreateInstance(3,Array(new OwnerReference(0,new Reference(3,1))),true)
 		
-			TransactionManager.tryCopyInstance(Reference(3,4),new OwnerReference(0,Reference(3,3)),OwnerReference(0,inst.ref))
-		})
+			TransactionManager.tryCopyInstance(Reference(3,4),new OwnerReference(0,Reference(3,3)),OwnerReference(0,inst.ref),true)
+		}==None)
 	}
 
 	
@@ -93,10 +93,10 @@ class StorageTests extends JUnitSuite
 	@Test def collFuncTest() = {
 		assert(TransactionManager.doTransaction {
 			assert(TransactionManager.tryWriteInstanceField(new Reference(3,1),1,new CollectingFuncCall("doubleSum",0,3,1)))
-		})
+		}==None)
 		assert(TransactionManager.doTransaction {
 			assert(TransactionManager.tryWriteInstanceField(new Reference(3,5),1,new IntConstant(50)))
-		}	)		
+		}==None	)		
 	}
 	
 	@Test def readTest() =  {

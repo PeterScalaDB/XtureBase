@@ -119,6 +119,7 @@ object ClientQueryManager {
 		sock.sendData(ClientCommands.deleteInstance ) { out =>
 			ref.write(out)
 		}
+		commandResultQueue.take() 
 	}
 	
 	
@@ -168,7 +169,7 @@ object ClientQueryManager {
 			case NotificationType.childRemoved => {
 				val ref=Reference(in)
 				runInPool(subscriber.func(NotificationType.childRemoved,
-					Array(new InstanceData(ref,0,null,null)))) // empty instance
+					Array(new InstanceData(ref,0,Array())))) // empty instance
 			}
 		}		
 	}
@@ -178,19 +179,22 @@ object ClientQueryManager {
 		val hasError=in.readBoolean
 		if(hasError) {
 			val error=CommandError.read(in)
-			throw error
+			commandResultQueue.put(None)
+			println( error)
 		}
-		val result:Option[Constant]= if(in.readBoolean) Some(Expression.readConstant(in))
+		else {
+			val result:Option[Constant]= if(in.readBoolean) Some(Expression.readConstant(in))
 																 else None
-		//println("command Response "+result+" "+Thread.currentThread)
+		  println("command Response "+result+" "+Thread.currentThread)
 		
-		commandResultQueue.put(result)
+		  commandResultQueue.put(result)
+		}
 	}
 	
 	/** runs a given function in a new Thread from the ThreadPool
 	 *  to avoid deadlocks
 	 */
-	private def runInPool( a: => Unit) = {
+	def runInPool( a: => Unit) = {
 		myPool.execute(new Runnable() {
 						            	def run = a})
 	}

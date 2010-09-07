@@ -77,7 +77,7 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 	private def readInTypes(in: DataInputStream) = {
 		val xmlString=in.readUTF()		
 		AllClasses.fromXML(scala.xml.XML.loadString(xmlString))
-		println(AllClasses.toXML)
+		//println(AllClasses.toXML)
 	}
 	
 	

@@ -65,7 +65,7 @@ object TableTest extends SimpleSwingApplication {
 			reactions += {
 					case ButtonClicked(`loadBut`) => loadData
 					case ButtonClicked(`openBut`) => openData
-					case ButtonClicked(`loadBut`) => deleteInstance
+					case ButtonClicked(`deleteBut`) => deleteInstance
 					case ButtonClicked(`stressBut`) => stressTest
 					case ButtonClicked(`copyBut`) => copyData
 			}
@@ -97,8 +97,11 @@ object TableTest extends SimpleSwingApplication {
 		tabModel.loadData(tabModel.getInstance(row).ref,propEdit.text.toByte)
 	}
 	
-	def deleteInstance() = {
-		
+	def deleteInstance():Unit = {
+		if(dataTable.selection.rows.isEmpty) return
+		val row:Int=dataTable.selection.rows.head
+		val r=ClientQueryManager.deleteInstance(tabModel.getInstance(row).ref)
+		println("Delete:"+r  )
 	}
 	
 	def stressTest() = {

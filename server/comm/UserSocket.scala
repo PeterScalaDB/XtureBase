@@ -159,10 +159,11 @@ class UserSocket(socket: Socket) extends Thread ("userSocket") {
 			val field=in.readByte
 			val expr=Expression.read(in)
 			try {
-				TransactionManager.doTransaction {
+				val ret=TransactionManager.doTransaction {
 					if (!TransactionManager.tryWriteInstanceField(ref,field,expr))
 						error=new CommandError("Unknown Issue",ClientCommands.writeField.id,0)
 				}
+				for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.copyInstance.id,0)
 			} 
 			catch {
 				case e:Exception =>
@@ -170,6 +171,7 @@ class UserSocket(socket: Socket) extends Thread ("userSocket") {
 				error=new CommandError(e.toString,ClientCommands.writeField.id,0)
 			}
 			sendData(ServerCommands.sendCommandResponse ) {out =>
+			println("send write")
 			 if(error!=null) {
 				 out.writeBoolean(true)
 				 error.write(out)	
@@ -190,18 +192,20 @@ class UserSocket(socket: Socket) extends Thread ("userSocket") {
 			val ownerArray:Array[OwnerReference]=(for (i <-0 until ownerCount) yield OwnerReference.read(in)).toArray
 			
 			try {
-				TransactionManager.doTransaction {
-					val inst= TransactionManager.tryCreateInstance(typ,ownerArray)
+				val ret=TransactionManager.doTransaction {
+					val inst= TransactionManager.tryCreateInstance(typ,ownerArray,true)
 					if (inst==null)	error=new CommandError("Unknown Issue",ClientCommands.createInstance.id,0)
 					else result=inst.ref.instance 
 				}
+				for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.createInstance.id,0)
 			} 
 			catch {
 				case e:Exception =>
 				e.printStackTrace()
-				error=new CommandError(e.toString,ClientCommands.writeField.id,0)
+				error=new CommandError(e.toString,ClientCommands.createInstance.id,0)
 			}
 			sendData(ServerCommands.sendCommandResponse ) {out =>
+			println("send create" +result)
 			 if(error!=null) {
 				 out.writeBoolean(true)
 				 error.write(out)	
@@ -219,17 +223,19 @@ class UserSocket(socket: Socket) extends Thread ("userSocket") {
 			var result:Constant=null
 			val ref=Reference(in)			
 			try {
-				TransactionManager.doTransaction {
+				val ret=TransactionManager.doTransaction {
 					if (!TransactionManager.tryDeleteInstance(ref,None))
 						error=new CommandError("Unknown Issue",ClientCommands.writeField.id,0)
 				}
+				for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.deleteInstance.id,0)
 			} 
 			catch {
 				case e:Exception =>
 				e.printStackTrace()
-				error=new CommandError(e.toString,ClientCommands.writeField.id,0)
+				error=new CommandError(e.toString,ClientCommands.deleteInstance.id,0)
 			}
 			sendData(ServerCommands.sendCommandResponse ) {out =>
+			println("send delete ready")
 			 if(error!=null) {
 				 out.writeBoolean(true)
 				 error.write(out)	
@@ -250,12 +256,13 @@ class UserSocket(socket: Socket) extends Thread ("userSocket") {
 			var instID=0L
 			SimpleProfiler.startMeasure("start copy")
 			try {
-				TransactionManager.doTransaction {
-					instID=TransactionManager.tryCopyInstance(ref,fromOwner,toOwner)
+				val ret=TransactionManager.doTransaction {
+					instID=TransactionManager.tryCopyInstance(ref,fromOwner,toOwner,true)
 					if(instID<0)
 						error=new CommandError("Unknown Issue",ClientCommands.copyInstance.id,0)
 					SimpleProfiler.measure("preparing ready")
 				}
+				for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.copyInstance.id,0)
 			} 
 			catch {
 				case e:Exception =>

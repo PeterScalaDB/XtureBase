@@ -63,7 +63,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	}
 	
 	def notifyInstanceDeleted(subs:SubscriptionInfo,ref:Reference) = {
-		//println("Notify deleted "+subs)
+		println("Notify deleted "+subs)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 		out.writeInt(subs.id)
 		out.writeInt(NotificationType.childRemoved.id )
