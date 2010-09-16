@@ -93,6 +93,7 @@ class UserSocket(socket: Socket) extends Thread ("userSocket") {
 				while(wantRun)
 				{					
 					val command =ClientCommands(in.readByte.toInt)
+					println("ClientCommand:"+command)
 					try {
 						command match {
 							case ClientCommands.getTypes => sendTypes()

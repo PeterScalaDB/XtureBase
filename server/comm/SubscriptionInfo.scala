@@ -17,3 +17,13 @@ extends SubscriptionInfo(user,id,parentRef)
 
 case class PropSubscription(override val user:UserEntry,override val id:Int,override val parentRef:Reference,propertyField:Byte) 
 extends SubscriptionInfo (user,id,parentRef)
+
+/** a subscription for path views
+ * 
+ */
+case class PathSubscription(override val user:UserEntry,override  val id:Int,val path:IndexedSeq[Reference]) 
+extends SingleSubscription(user,id,null) {
+	def updatePath(newPath:IndexedSeq[Reference]) = {
+		new PathSubscription(user,id,newPath)
+	}
+}

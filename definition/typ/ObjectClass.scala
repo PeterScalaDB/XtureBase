@@ -5,6 +5,7 @@ package definition.typ
 
 import definition.data._
 import definition.expression.EMPTY_EX
+import scala.collection.immutable.IndexedSeq
 
 /**
  *  description of a Class
@@ -62,7 +63,7 @@ class ObjectClass (val name:String,val id:Int,val description:String,nversions:L
   def createInstanceProperty(ref:Reference):InstanceProperties =
   {
   	val pArray=(for(i <- 0 until lastVersion.getPropFieldCount) 
-  		yield new PropertyFieldData(lastVersion.propField(i).single,Nil)).toArray
+  		yield new PropertyFieldData(lastVersion.propField(i).single,IndexedSeq.empty)).toArray
   	new InstanceProperties(ref,pArray)
   }
   

@@ -17,13 +17,21 @@ class ClassSubscriptionHandler(typID:Int) {
 	
 	def addSubscription(s:SubscriptionInfo) = s match {
 		case a:SingleSubscription => addSingleS(a)
-		case b:PropSubscription => addPropS(b)
+		case b:PropSubscription => addPropS(b)		
+	}
+	
+	def addPathSubscription(p:PathSubscription,ref:Reference) = {
+		if(singleSubsMap.contains(ref )) { // add to existing
+			val list=singleSubsMap(ref)
+			singleSubsMap.put(ref,p :: list)
+		} else // add new
+		singleSubsMap.put(ref ,List(p))
 	}
 	
 	def removeSubscription(s:SubscriptionInfo) = {
 		println("remove Subscription "+s)
 		s match {
-
+			case c:PathSubscription => removePathS(c)
 			case a:SingleSubscription => removeSingleS(a)
 			case b:PropSubscription => removePropS(b)
 		}
@@ -57,12 +65,27 @@ class ClassSubscriptionHandler(typID:Int) {
 	}
 	
 	def instanceDeleted(owner:OwnerReference,ref:Reference) = {
-		if(propSubsMap.contains(owner.ownerRef)) {
+		if(owner==null) { // check single subscriptions
+			if(singleSubsMap.contains(ref)) {
+				val list=singleSubsMap(ref)
+				for(subs <-list)
+					subs.user.queryHandler.notifyInstanceDeleted(subs,ref)
+				singleSubsMap.remove(ref)	
+			}				
+			if(propSubsMap.contains(ref)) { // a parent ref of a subscription is deleted
+				val list=propSubsMap(ref)
+				for(subs <-list)
+					subs.user.queryHandler.notifyInstanceDeleted(subs,ref)
+				propSubsMap.remove(ref)
+			}	
+		} // check property subscriptions
+		else if( propSubsMap.contains(owner.ownerRef)) {
 			val list=propSubsMap(owner.ownerRef)
 			for(subs <-list)
 				if(subs.propertyField ==owner.ownerField )
 					subs.user.queryHandler.notifyInstanceDeleted(subs,ref)
 		}
+		
 	}
 	
 	// ********************** Internal routines ***********************
@@ -91,10 +114,15 @@ class ClassSubscriptionHandler(typID:Int) {
 	private def removePropS(s:PropSubscription) = {
 		val list=propSubsMap(s.parentRef)
 		propSubsMap.put(s.parentRef,list - s)
+	}	
+	
+	def removePathS(s:PathSubscription) = {
+		for((k,list) <-singleSubsMap.iterator)
+			if(list.contains(s))
+				 singleSubsMap.put(k,list.filterNot (_ == s))
 	}
-	
-	
-	
-	
-	
+}
+
+object ClassSubscriptionHandler {
+	val ALLFIELDS= (-2).toByte
 }

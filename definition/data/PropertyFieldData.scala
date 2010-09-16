@@ -4,20 +4,21 @@
 package definition.data
 
 import java.io._
+import scala.collection.immutable.IndexedSeq
 /**
  * 
  */
-class PropertyFieldData (val isSingle:Boolean,val propertyList: List[Reference]) {
+class PropertyFieldData (val isSingle:Boolean,val propertyList: IndexedSeq[Reference]) {
 
 
 	def addPropertyInstance(ref:Reference) = {
 		if(isSingle && propertyList.length==1) 
 			throw new IllegalArgumentException("Cant add more than 1 Property to a single property data")					
-		new PropertyFieldData(isSingle,ref :: propertyList)			
+		new PropertyFieldData(isSingle, propertyList :+ ref)			
 	}
 
 	def removePropertyInstance(ref:Reference) = {
-    val newList=if(propertyList.length==1 && propertyList.head==ref) Nil
+    val newList=if(propertyList.length==1 && propertyList.head==ref) IndexedSeq.empty
     else propertyList.filter(x => x!=ref)
 		new PropertyFieldData(isSingle,newList)
 	}
@@ -52,9 +53,9 @@ object PropertyFieldData
 	def apply(file:DataInput) = {
 		val single=file.readBoolean
 		val count=file.readShort
-		var plist:List[Reference]=Nil
+		var plist:IndexedSeq[Reference]=IndexedSeq.empty
 		for (i <-0 until count)
-			plist=Reference(file) :: plist
+			plist= plist :+ Reference(file)
 			new PropertyFieldData(single,plist)
 	}
 

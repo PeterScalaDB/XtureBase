@@ -13,7 +13,9 @@ object ServerCommands extends Enumeration {
   val sendCommandResponse=Value("sendCommandResponse")
   //val sendOrderedData=Value("send ordered Data")
   val acceptSubscription=Value("Accept subscription")
+  //val acceptPathSubscription=Value("Accept path subscription")
   val sendSubscriptionNotification=Value("send notification")
+  //val sendPathSubsNotification=Value("send path notification")
   val wantQuit=Value("want quit")
 
 }

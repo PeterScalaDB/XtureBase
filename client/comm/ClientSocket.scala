@@ -59,6 +59,7 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 		{				
 			try {
 				val command =ServerCommands(in.readByte.toInt)
+				println("ServerCommand: "+command)
 				command match {
 					case ServerCommands.sendTypes  => readInTypes(in)
 					case ServerCommands.wantQuit => {quitApplication();return }					
@@ -75,7 +76,8 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 	}
 		
 	private def readInTypes(in: DataInputStream) = {
-		val xmlString=in.readUTF()		
+		val xmlString=in.readUTF()
+		//println(xmlString)
 		AllClasses.fromXML(scala.xml.XML.loadString(xmlString))
 		//println(AllClasses.toXML)
 	}

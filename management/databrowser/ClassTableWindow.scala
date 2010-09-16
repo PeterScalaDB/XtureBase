@@ -45,6 +45,7 @@ object ClassTableWindow extends SimpleSwingApplication
 
 		override def closeOperation() 
 		{
+			
 			StorageManager.shutDown()
 			super.closeOperation()
 		}

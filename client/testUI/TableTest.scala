@@ -16,6 +16,7 @@ import client.comm._
 import java.net._
 import java.io._
 import javax.swing.border._
+import scala.collection.immutable.IndexedSeq
 
 /**
  * 
@@ -35,12 +36,12 @@ object TableTest extends SimpleSwingApplication {
 		}		
 		title = "Table Test"
 		contents = mainPanel
-		bounds=new Rectangle(200,200,800,600)
+		bounds=new Rectangle(200,200,900,600)
 	}	
 	
 	val typEdit=new TextField("3")
 	val instEdit=new TextField("1")
-	val propEdit=new TextField("0")
+	val propEdit=new TextField("0")	
 	
 	val dataTable= new Table
 	{
@@ -48,6 +49,15 @@ object TableTest extends SimpleSwingApplication {
 		autoResizeMode=Table.AutoResizeMode.SubsequentColumns
 		selection.intervalMode=Table.IntervalMode.Single
 	}
+	
+	val pathMod=new PathModel()
+	val pathView=new ListView[InstanceData]()
+	val pathContr=new PathController(pathMod,pathView,new PathControllable {
+		def openData(parentRef:Reference) = {
+			println("controllable open ref " +parentRef)
+			tabModel.loadData(parentRef,propEdit.text.toByte)
+		}
+	})
 	
 	val mainPanel=	new BorderPanel()  // main panel
 	{			
@@ -75,6 +85,13 @@ object TableTest extends SimpleSwingApplication {
 				viewportView= dataTable
 				preferredSize=new Dimension(280,200)								
 			},BorderPanel.Position.Center) 
+		add (new BorderPanel(){
+			add (new ScrollPane() {
+				viewportView= pathView
+				preferredSize=new Dimension(200,200)
+			},BorderPanel.Position.Center)
+		},BorderPanel.Position.West
+		)
 	}
 	
 	
@@ -89,12 +106,18 @@ object TableTest extends SimpleSwingApplication {
 	}
 	
 	def loadData() = {
-		tabModel.loadData(Reference(typEdit.text.toInt,instEdit.text.toInt),propEdit.text.toByte)
+		val newRef=Reference(typEdit.text.toInt,instEdit.text.toInt)
+		//tabModel.loadData(newRef,propEdit.text.toByte)
+		pathContr.loadPath( IndexedSeq(newRef))
 	}
 	
 	def openData() = {
-		val row:Int=(dataTable.selection.rows.toArray).apply(0)
-		tabModel.loadData(tabModel.getInstance(row).ref,propEdit.text.toByte)
+		if(!dataTable.selection.rows.isEmpty) {
+		  val row:Int=dataTable.selection.rows.first		
+		  val newParentRef=tabModel.getInstance(row).ref	
+		  pathContr.addPathElement(newParentRef)
+		  	
+		}		
 	}
 	
 	def deleteInstance():Unit = {
