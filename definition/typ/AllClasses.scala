@@ -22,29 +22,17 @@ object AllClasses {
   def getClassList=classList
   
   // find a class by Name
-  def getClassByName(aname:String)= classList.valuesIterator.find(_.name ==aname) 
+  def getClassByName(aname:String):Option[ObjectClass]= classList.valuesIterator.find(_.name ==aname) 
   
   // find a class by class ID
   def getClassByID(aId:Int )= classList(aId)
   
-  // get a certain version of a class specified by name
-  def getClassVersion(className:String,version:Byte)= 
-  	getClassByName(className) match { 
-  	case Some(a) => a.getVersion(version) match 
-  	  {case Some(a) => a
-  	  case None => throw new RuntimeException("ClassVersion "+className+" V."+version+" not found !")}
-  	case None => throw new RuntimeException("ObjectClass " + className+" not found !" )}
-  	
-  def getClass(r:Reference,typeVersion:Byte) = 
-  {
-  	val cl = getClassByID(r.typ) 
-  	if (typeVersion==0) cl.lastVersion
-  	else cl.getVersion(typeVersion )
-  }
     
+  	
+      
   def toXML()=
   {
-  	<ClassList> {for (c<-classList) yield c._2.toXML  }  </ClassList>
+  	<ClassList> {for (c<-classList.valuesIterator) yield c.toXML  }  </ClassList>
   }
   
   def fromXML(node: scala.xml.Node)=
@@ -57,9 +45,9 @@ object AllClasses {
   }
   
   // resolves all superfields from all classes. Will be called after reading all classes from XLM
-  def resolveFields= for(cl <-classList; ver <-cl._2.versions)
+  def resolveFields= for(cl <-classList.valuesIterator)
   									 {
-  											ver.resolveSuperFields(this)
-  											ver.resolveSuperClassIDs(this)
+  											cl.resolveSuperFields()
+  											cl.resolveSuperClassIDs()
   									 }		
 }

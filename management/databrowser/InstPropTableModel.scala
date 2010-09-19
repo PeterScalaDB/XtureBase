@@ -15,8 +15,7 @@ import transaction.handling._
  */
 object InstPropTableModel extends AbstractTableModel {
 	
-	var theClass:ObjectClass=null
-	var theVersion:ClassVersion=null
+	var theClass:ObjectClass=null	
 	var propData:Option[InstanceProperties]=None
 	
 	
@@ -27,9 +26,8 @@ object InstPropTableModel extends AbstractTableModel {
 	}
 	
 	
-	def setPropData(nprop:Option[InstanceProperties],versionNr:Byte)
-	{
-		theVersion=theClass.getVersion(versionNr) match {case Some(a) => a;case None =>null}
+	def setPropData(nprop:Option[InstanceProperties])
+	{		
 		propData=nprop
 		//println("propData "+propData)
 		
@@ -40,8 +38,8 @@ object InstPropTableModel extends AbstractTableModel {
 	
 	def getRowCount():Int =
   {
-     if(theVersion==null) 0
-     else theVersion.getPropFieldCount    
+     if(theClass==null) 0
+     else theClass.getPropFieldCount    
   }
 	
 	
@@ -50,11 +48,11 @@ object InstPropTableModel extends AbstractTableModel {
 	
 	def getValueAt(row:Int,column:Int):java.lang.Object =
   {
-  	if(theVersion==null) " "
+  	if(theClass==null) " "
   	else 
     if(column==0)
     {  	
-    	  theVersion.propField(row).name      	
+    	  theClass.propField(row).name      	
     }
     else
     {	    	

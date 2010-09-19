@@ -26,7 +26,7 @@ object TypTableModel extends AbstractTableModel
 		classList.length
   }
   
-  def getColumnCount():Int = 4
+  def getColumnCount():Int = 3
   
   def getValueAt(row:Int,column:Int):java.lang.Object =
   {
@@ -34,8 +34,7 @@ object TypTableModel extends AbstractTableModel
   	column match {
   		case 0 => obj.id.asInstanceOf[AnyRef]
   		case 1 => obj.name
-  		case 2 => obj.description
-  		case 3 => obj.lastVersion.versNr.asInstanceOf[AnyRef]
+  		case 2 => obj.description  		
   		case _ => null
   	}
   }
@@ -45,8 +44,7 @@ object TypTableModel extends AbstractTableModel
   	column match {
   		case 0 => "ID"
   		case 1 => "Name"
-  		case 2 => "Beschreibung"
-  		case 3 => "Letzte Version"
+  		case 2 => "Beschreibung"  		
   		case _ => "***"
   	}
   }

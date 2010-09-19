@@ -13,6 +13,7 @@ import scala.collection.immutable.Vector
 class InstanceProperties(override val ref:Reference, val propertyFields:Array [PropertyFieldData])
       extends Referencable {
 	
+	//TODO: convert to indexseq
 	
 	override def write(file:DataOutput) =	{
 				

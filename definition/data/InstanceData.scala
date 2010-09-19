@@ -11,12 +11,10 @@ import definition.typ._
  * 
  * 
  */
-class InstanceData (override val ref:Reference,val classVersion:Byte,
+class InstanceData (override val ref:Reference,
 	val fieldData:Array[Expression],	 									
 	val owners:Array[OwnerReference]=Array()) extends Referencable
-	{
-
-	private var theClassVersion:ClassVersion=null
+	{	
 	private var fieldValuesCache:Array[Constant]=new Array(fieldData.length)
 
 
@@ -25,7 +23,7 @@ override def toString() = "inst" + ref.sToString+ "("+ fieldData.mkString(", ")+
 
 override def write(file:DataOutput) = 	{
 	//ref.write(file)
-	file.writeByte(classVersion)
+	
 	file.writeByte(fieldData.length)
 	for(field<-fieldData)
 	{			
@@ -46,11 +44,11 @@ override def write(file:DataOutput) = 	{
 def setField(fieldNr:Byte,newValue:Expression):InstanceData = 	{
 	val newArray:Array[Expression]=(for (i <- 0 until fieldData.length) 
 		yield (if (i==fieldNr) newValue else fieldData(i))).toArray
-		new InstanceData(ref,classVersion,newArray,owners)
+		new InstanceData(ref,newArray,owners)
 }
 
 def changeOwner(newOwners:Array[OwnerReference]) = {
-	new InstanceData(ref,classVersion,fieldData,newOwners)
+	new InstanceData(ref,fieldData,newOwners)
 }
 
 /** creates a copy of this instance
@@ -64,7 +62,7 @@ def changeOwner(newOwners:Array[OwnerReference]) = {
  * @return
  */
 def clone(newRef:Reference,newOwners:Array[OwnerReference]):InstanceData =	{
-	new InstanceData(newRef,classVersion,fieldData,newOwners)
+	new InstanceData(newRef,fieldData,newOwners)
 }
 
 /** replaces an ownerReferene with another ref and returns a new Instance with the new values
@@ -75,20 +73,13 @@ def clone(newRef:Reference,newOwners:Array[OwnerReference]):InstanceData =	{
 def changeOwner(fromRef:OwnerReference,toRef:OwnerReference):InstanceData = {
 	val newOwnerList= for (ref <- owners)
 		yield (if (ref==fromRef) toRef else ref)
-		new InstanceData(ref,classVersion,fieldData,owners)
+		new InstanceData(ref,fieldData,owners)
 }
 
 
-private def getClassVersion:ClassVersion =
+def getObjectClass():ObjectClass =
 {
-		if(theClassVersion==null) {
-			theClassVersion = ( AllClasses.getClassByID(ref.typ).getVersion(classVersion) match
-					{
-						case Some(a) => a
-						case None => throw new IllegalArgumentException("Classversion "+classVersion+" not found in "+ref)
-					})
-		}
-		theClassVersion
+	AllClasses.getClassByID(ref.typ) 			
 }
   /** returns the calculated result value of the term in a field
    * the field results are cached in an array. That is not pure functional and may cause problems.
@@ -104,21 +95,17 @@ private def getClassVersion:ClassVersion =
 	}
 	
 	def regenFieldCache(index:Int):Unit = {
-		fieldValuesCache(index)= {
-				val fieldType = getClassVersion.field(index).typ
+		fieldValuesCache(index)= {			  
+				val fieldType = getObjectClass().field(index).typ
 				val result=fieldData(index).getValue
 				//println("inst "+ref+" getfield "+index+" fieldType:"+fieldType+" result:" +result)
 				if(result.getType==fieldType|| result.getType==DataType.undefined )
 					result // return the value
 					else  // return converted value
 						Constant.createConversion(result,fieldType)		
-			}
-		  
-	}
-	
+			}		  
+	}	
 }
-
-
 
 
 object InstanceData 
@@ -126,8 +113,7 @@ object InstanceData
 	val transMan:ATransactionManager=null
 	// reads an instance from a DataInput
 
-	def read(nref:Reference,file:DataInput) = 	{		
-	val version=file.readByte
+	def read(nref:Reference,file:DataInput) = 	{			
 	val nfields=file.readByte
 	val fArray=new Array[Expression](nfields)		
 	for (n<- 0 until nfields)
@@ -136,7 +122,7 @@ object InstanceData
 		val ownArray=new Array[OwnerReference](nOwners)
 		for( o<- 0 until nOwners)
 			ownArray(o)= OwnerReference.read(file)
-	new InstanceData(nref,version,fArray,ownArray)
+	new InstanceData(nref,fArray,ownArray)
 }		
 
 }

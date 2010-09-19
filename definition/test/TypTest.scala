@@ -16,14 +16,13 @@ import server.config._
  * 
  */
 class TypTest extends JUnitSuite {
-	val oc=new ClassVersion(13,Array(FieldDefinition("GewerkName",DataType.StringTyp ),FieldDefinition("GewerkSumme",
-  		DataType.CurrencyTyp )),Array(PropertyFieldDefinition("Kinder",false,0)),Nil,3)
-	val o2=new ClassVersion(8,Array(FieldDefinition("GewerkName",DataType.StringTyp ),FieldDefinition("GewerkSumme",
-  		DataType.CurrencyTyp ),FieldDefinition("sonstwas",DataType.DateTyp ) ),Array(),List(("Hugo",5)),3)
-	val rudolfClass=new ObjectClass("Rudolf",3,"Rudolfs Klasse",List(oc,o2))
-	val h1=new ClassVersion(5,Array(FieldDefinition("Hugofeld",DataType.StringTyp ),FieldDefinition("HugoWert",
-  		DataType.DoubleTyp )),Array(PropertyFieldDefinition("Subelements",false,0)),Nil,7)
-	val hugoClass=new ObjectClass("Hugo",7,"hugos klasse", List(h1))
+	val rudolfClass=new ObjectClass("Rudolf",3,"Rudolfs Klasse",IndexedSeq(FieldDefinition("GewerkName",DataType.StringTyp ),
+		  FieldDefinition("GewerkSumme",DataType.DoubleTyp )),IndexedSeq(PropertyFieldDefinition("Kinder",false,0)),Seq.empty)
+	 
+	
+	
+	val hugoClass=new ObjectClass("Hugo",7,"hugos klasse",IndexedSeq(FieldDefinition("Hugofeld",DataType.StringTyp ),FieldDefinition("HugoWert",
+  		DataType.DoubleTyp )),IndexedSeq(PropertyFieldDefinition("Subelements",false,0)),IndexedSeq("Rudolf" ))
 	  
   
   @Test def FieldDefinitionTest()
@@ -32,13 +31,7 @@ class TypTest extends JUnitSuite {
   	assertEquals(FieldDefinition.fromXML(x.toXML),x)  	
   }
   
-  @Test def ClassVersionText()
-  {  	
-  	val ox=oc.toXML  	
-  	val oxx=ClassVersion.fromXML(ox,4)  	
-  	assertEquals(oxx.versNr ,oc.versNr )
-  	assertEquals(oxx.getFieldCount ,oc.getFieldCount )
-  }
+  
   
   @Test def ClassTest()
   {

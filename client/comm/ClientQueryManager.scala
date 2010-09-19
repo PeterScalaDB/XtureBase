@@ -242,7 +242,7 @@ object ClientQueryManager {
 			case NotificationType.instanceRemoved => {
 				val ref=Reference(in)
 				runInPool(subscriber.func(NotificationType.instanceRemoved,
-					IndexedSeq(new InstanceData(ref,0,Array())))) // empty instance
+					IndexedSeq(new InstanceData(ref,Array())))) // empty instance
 			}
 			case NotificationType.sendData => {
 				val list=readList(in)

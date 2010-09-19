@@ -115,7 +115,7 @@ object DataViewPanel extends BorderPanel
 				val r=new Reference(InstFieldTableModel.theClass.id,inst)
 				val i=StorageManager.getInstanceData(r)
 		    InstFieldTableModel.setInstance(i)
-		    InstPropTableModel.setPropData(StorageManager.getInstanceProperties(r),i.classVersion)
+		    InstPropTableModel.setPropData(StorageManager.getInstanceProperties(r))
 		    CollFuncTableModel.setCollData(StorageManager.getCollectingFuncData(r))
 			} 
 		}

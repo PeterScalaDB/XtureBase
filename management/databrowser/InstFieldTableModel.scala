@@ -17,7 +17,7 @@ object InstFieldTableModel extends AbstractTableModel
 {
   var theClass:ObjectClass=null
   var instance:InstanceData=null
-  var theVersion:ClassVersion=null
+  
 	
 	def setClass(newClass:ObjectClass) = 
 	{
@@ -28,17 +28,15 @@ object InstFieldTableModel extends AbstractTableModel
   def setInstance(newInst:InstanceData) =
   {
   	//println("instmodel set Instance "+newInst)
-  	instance=newInst
-  	if(instance==null) theVersion=null
-  	else theVersion=theClass.getVersion(instance.classVersion) match {case Some(a) => a;case None =>null}
+  	instance=newInst  	
   	//println("Set inst "+theVersion)
   	fireTableStructureChanged()
   }
 		
   def getRowCount():Int =
   {
-     if(theVersion==null) 0
-     else theVersion.getFieldCount+ 2     
+     if(theClass==null) 0
+     else theClass.getFieldCount+ 1     
   }
      
   override def isCellEditable(rowIndex:Int,columnIndex:Int) = (rowIndex>1) && (columnIndex==1)
@@ -49,21 +47,21 @@ object InstFieldTableModel extends AbstractTableModel
   
   def getValueAt(row:Int,column:Int):java.lang.Object =
   {
-  	if(theVersion==null) " "
+  	if(instance==null) " "
   	else 
     column match {
   		case 0 =>    	row match{
-    		case 0 => "Version"
-    		case 1 => "Owner"
-    		case _ => theVersion.field(row-2).name    	    	
+    		
+    		case 0 => "Owner"
+    		case _ => theClass.field(row-1).name    	    	
       }
   		case 1 => row match{
-    		case 0 => instance.classVersion.asInstanceOf[AnyRef]
-    		case 1 => instance.owners.mkString(", ")
-    		case _ => instance.fieldData(row-2).getTerm 
+    		
+    		case 0 => instance.owners.mkString(", ")
+    		case _ => instance.fieldData(row-1).getTerm 
     	}
-  		case 2 => if(row<2) " " else { 
-  			instance.fieldValue(row-2).toString
+  		case 2 => if(row<1) " " else { 
+  			instance.fieldValue(row-1).toString
   		}
   		case _ => "bla"
   	}
@@ -75,7 +73,7 @@ object InstFieldTableModel extends AbstractTableModel
   {
   	if((row>1)&&(column==1)&& instance!=null)
   	{
-  		val f:Byte=(row-2).toByte  		
+  		val f:Byte=(row-1).toByte  		
   		
   		TransactionManager.doTransaction {	
   			TransactionManager.tryWriteInstanceField(instance.ref,f,StringParser.parse(obj.toString))

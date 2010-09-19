@@ -19,7 +19,7 @@ import definition.expression._
 class SimpleTableModel extends TableModel {
 	var parentRef:Reference=null
 	var propField:Byte=0
-	var classVers:ClassVersion=null
+	var objClass:ObjectClass=null
 	var dataList:Option[IndexedSeq[InstanceData]] = None
 	var subscriptionID= -1
 	var allowedClass=0
@@ -32,9 +32,9 @@ class SimpleTableModel extends TableModel {
 		
 		parentRef=nparentRef
 		propField=npropField
-		val parentClassVers=AllClasses.getClassByID(parentRef.typ).lastVersion
-		allowedClass=parentClassVers.propField(propField).allowedClass
-		classVers=AllClasses.getClassByID(allowedClass).lastVersion
+		val parentClass=AllClasses.getClassByID(parentRef.typ)
+		allowedClass=parentClass.propField(propField).allowedClass
+		objClass=AllClasses.getClassByID(allowedClass)
 		
 		var updateStructure=true
 		
@@ -94,15 +94,15 @@ class SimpleTableModel extends TableModel {
   }
 
   def getColumnCount(): Int = { 
-  	if(classVers==null) 0
-  	else classVers.getFieldCount+1
+  	if(objClass==null) 0
+  	else objClass.getFieldCount+1
   }
 
   def getColumnName(columnIndex: Int): String = { 
-  	if(classVers==null) ""
+  	if(objClass==null) ""
   	else 
   		if(columnIndex==0) "Ref"
-  		else classVers.field(columnIndex-1).name  		
+  		else objClass.field(columnIndex-1).name  		
   }
 
   def getColumnClass(columnIndex: Int): Class[String] = { classOf[String] }
@@ -120,7 +120,7 @@ class SimpleTableModel extends TableModel {
   	for(list <-dataList) {
   	  if(rowIndex>=list.size) return null
   	  if(columnIndex==0) return list(rowIndex).ref.sToString
-  	  if(columnIndex>classVers.getFieldCount) return null
+  	  if(columnIndex>objClass.getFieldCount) return null
   	  return list(rowIndex).fieldData(columnIndex-1).getValue.toString	
   	}
   	return null

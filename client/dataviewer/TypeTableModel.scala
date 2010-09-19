@@ -18,7 +18,7 @@ import client.comm._
  * 
  */
 class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableModel {
-	val classVers=AllClasses.getClassByID(typ).lastVersion
+	val objClass=AllClasses.getClassByID(typ)
 	var dataList:Seq[InstanceData]= _
 	
 	val table=new Table(){		
@@ -86,7 +86,7 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 	}
 	
 	def getColumnCount= {
-		classVers.getFieldCount
+		objClass.getFieldCount
 	}
 	
 	def getValueAt(row:Int,col:Int) = {
@@ -117,7 +117,7 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
   }
 	
 	override def getColumnName(col:Int) = {
-		classVers.field(col).name
+		objClass.field(col).name
 	}
 	
 	

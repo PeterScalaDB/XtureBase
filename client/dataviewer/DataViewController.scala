@@ -16,7 +16,7 @@ import scala.swing._
 class DataViewController  extends PathControllable  {
 	private var loaded=false
 	var parentRef:Reference= _
-	var mainClass:ClassVersion = _
+	var mainClass:ObjectClass = _
 	
 	val propertyModels =scala.collection.mutable.ArrayBuffer[PropertyModel]()
 	var numUsedModels=0
@@ -32,20 +32,25 @@ class DataViewController  extends PathControllable  {
 	  if(loaded) shutDown()
 	  selectedInstance=null
 	  parentRef=nparentRef
-	  mainClass=AllClasses.getClassByID(parentRef.typ).lastVersion
+	  mainClass=AllClasses.getClassByID(parentRef.typ)
 	  for(i <- 0 until mainClass.getPropFieldCount) {
 	  	val propFieldInfo=mainClass.propField(i)
 	  	val mod=getPropModel
 	  	mod.load(propFieldInfo.allowedClass,i.toByte,propFieldInfo.name)
 	  	panel.contents+=mod.panel
 	  }
+	  updateHeight()
 	  loaded =true
 	}
 	
 	def updateHeight() = {
-		panel.preferredSize=new Dimension(10,getHeight) 
-		panel.revalidate
-		panel.repaint
+		javax.swing.SwingUtilities.invokeLater(new Runnable(){
+			def run= {
+			  panel.preferredSize=new Dimension(10,getHeight)		
+			  panel.revalidate
+			  panel.repaint	
+			}
+		})	
 	}
 	
 	def getHeight=propertyModels.take(numUsedModels).foldRight(0){(n,result)=> result+n.getHeight}
@@ -64,8 +69,7 @@ class DataViewController  extends PathControllable  {
 	
 	def shutDown() = {
 		panel.contents.clear
-		panel.revalidate
-		panel.repaint
+		updateHeight()
 		for(i <-0 until numUsedModels) propertyModels(i).shutDown()
 		// save the models for later use		
 		numUsedModels=0		
