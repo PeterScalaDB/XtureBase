@@ -448,23 +448,26 @@ object TransactionManager {
 		if(!fieldMatchSet.isEmpty) {
 			//println("matches")
 			var parentInstData=ActionList.getInstanceData(owner.ownerRef)
-			val oldParentValues:Array[Constant]= new Array[Constant](parentInstData.fieldData .size)
+			if (parentInstData!=null)
+			{
+				val oldParentValues:Array[Constant]= new Array[Constant](parentInstData.fieldData .size)
 				for(i <-fieldMatchSet) oldParentValues(i)= parentInstData.fieldValue(i)
-			val newCollDataList=
-			(for(res <-collData.callResultList )
-				yield if( res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
-		  		 myClass.inheritsFrom(res.childType))  {
-		  	      val (newRes,value) = collData.childDeleted(res,childInstance.ref ,childInstance.fieldValue(res.childField ))
-		  	      //println("ChildDeleted newRes:"+newRes+ " new Value:"+value)
-		  	      parentInstData=updateOwnerCollFunc(parentInstData,newRes,value)		  	      
-		  	      newRes
-		    }	
-		  	else res).toList
-		  val newResultSet=new CollFuncResultSet(owner.ownerRef,newCollDataList)
-		  ActionList.addTransactionData(owner.ownerRef ,new DataChangeAction(Some(parentInstData),None,None,Some(newResultSet)))
-		  // pass on to owners
-		  for(fieldNr <-fieldMatchSet;if(parentInstData.fieldData(fieldNr).getValue!=oldParentValues(fieldNr)))
-		  	passOnChangedValue(parentInstData,fieldNr.toByte,oldParentValues(fieldNr),parentInstData.fieldData(fieldNr).getValue)
+				val newCollDataList=
+					(for(res <-collData.callResultList )
+						yield if( res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
+								myClass.inheritsFrom(res.childType))  {
+							val (newRes,value) = collData.childDeleted(res,childInstance.ref ,childInstance.fieldValue(res.childField ))
+							//println("ChildDeleted newRes:"+newRes+ " new Value:"+value)
+							parentInstData=updateOwnerCollFunc(parentInstData,newRes,value)		  	      
+							newRes
+						}	
+						else res).toList
+						val newResultSet=new CollFuncResultSet(owner.ownerRef,newCollDataList)
+				ActionList.addTransactionData(owner.ownerRef ,new DataChangeAction(Some(parentInstData),None,None,Some(newResultSet)))
+				// pass on to owners
+				for(fieldNr <-fieldMatchSet;if(parentInstData.fieldData(fieldNr).getValue!=oldParentValues(fieldNr)))
+					passOnChangedValue(parentInstData,fieldNr.toByte,oldParentValues(fieldNr),parentInstData.fieldData(fieldNr).getValue)
+			}
 		}
 	}
 	

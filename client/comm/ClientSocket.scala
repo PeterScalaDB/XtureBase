@@ -134,7 +134,7 @@ object ClientSocket {
   	println("quick:" + ClientQueryManager.queryInstance(Reference(3,1), -1).mkString(","))
   	var substID=0
   	substID=ClientQueryManager.createSubscription(Reference(3,3),0) { 
-  		(notification:NotificationType.Value,data:Array[InstanceData])=>
+  		(notification:NotificationType.Value,data:IndexedSeq[InstanceData])=>
   		println("Get data id:"+substID+ " Type:"+notification)
   		
   		
@@ -143,7 +143,7 @@ object ClientSocket {
   		for(elem <-data ) {
   			println(elem)
   			ClientQueryManager.createSubscription(elem.ref,0){ 
-  				(notification:NotificationType.Value,data:Array[InstanceData]) =>
+  				(notification:NotificationType.Value,data:IndexedSeq[InstanceData]) =>
   				println("Sub 1st:"+data.size)  		
   				
   				println("quick inside:" + ClientQueryManager.queryInstance(Reference(3,2), -1).mkString(","))

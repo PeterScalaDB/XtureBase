@@ -14,6 +14,7 @@ import server.storage._
 import scala.collection.mutable.HashMap
 import transaction.handling._
 import server.test.SimpleProfiler
+import scala.Console
 
 /** manages communications with a client
  * 
@@ -53,7 +54,7 @@ class UserSocket(socket: Socket) extends Thread ("userSocket") {
 						writeOut("User "+userName+" not known")
 						return
 					}
-					val user= UserList.list(userName)
+					val user= UserList.list(userName)					
 					if(! (passWord==user.password)) {
 						writeOut("Wrong password")
 						return
@@ -93,7 +94,7 @@ class UserSocket(socket: Socket) extends Thread ("userSocket") {
 				while(wantRun)
 				{					
 					val command =ClientCommands(in.readByte.toInt)
-					println("ClientCommand:"+command)
+					println("#"+user.id+"# ClientCommand:"+command)
 					try {
 						command match {
 							case ClientCommands.getTypes => sendTypes()
@@ -289,5 +290,5 @@ class UserSocket(socket: Socket) extends Thread ("userSocket") {
 			println("tell Quit to "+userName)
 			sendData(ServerCommands.wantQuit ) {out =>}
 		}
-
 }
+

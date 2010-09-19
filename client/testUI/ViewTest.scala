@@ -17,39 +17,28 @@ import java.net._
 import java.io._
 import javax.swing.border._
 import scala.collection.immutable.IndexedSeq
+import client.dataviewer._
 
-/**
+/** tests the instance dataviewer
  * 
  */
-object TableTest extends SimpleSwingApplication {
-	var sock:ClientSocket=null
-	val tabModel=new SimpleTableModel()
+object ViewTest extends SimpleSwingApplication {
+	var sock:ClientSocket=null	
 	
 	
-	
-	val typEdit=new TextField("3")
+	val typEdit=new TextField("10")
 	val instEdit=new TextField("1")
 	val propEdit=new TextField("0")	
 	
-	val dataTable= new Table
-	{
-		model=tabModel
-		autoResizeMode=Table.AutoResizeMode.SubsequentColumns
-		selection.intervalMode=Table.IntervalMode.Single
-	}
+	val viewController=new DataViewController()
 	
 	val pathMod=new PathModel()
 	val pathView=new ListView[InstanceData]()
-	val pathContr=new PathController(pathMod,pathView,new PathControllable {
-		def openData(parentRef:Reference) = {
-			println("controllable open ref " +parentRef)
-			tabModel.loadData(parentRef,propEdit.text.toByte)
-		}
-	})
+	val pathContr=new PathController(pathMod,pathView,viewController)
 	
 	val mainPanel=	new BorderPanel()  // main panel
 	{			
-		add ( new GridPanel(1,8) //top rail
+		add ( new GridPanel(1,9) //top rail
 		{
 			hGap=10
 			border=BorderFactory.createEmptyBorder(10,10,10,10);
@@ -58,20 +47,22 @@ object TableTest extends SimpleSwingApplication {
 			val deleteBut =new Button("delete Instance")
 			val stressBut = new Button("stress test")
 			val copyBut = new Button("copy")
-			contents += typEdit += instEdit += propEdit += loadBut += openBut += deleteBut += stressBut+=copyBut
-			listenTo(loadBut,deleteBut,stressBut,copyBut,openBut)
+			val createBut= new Button("create")
+			contents += typEdit += instEdit += propEdit += loadBut += openBut += deleteBut += stressBut+=copyBut+=createBut
+			listenTo(loadBut,deleteBut,stressBut,copyBut,openBut,createBut)
 			reactions += {
 					case ButtonClicked(`loadBut`) => loadData
 					case ButtonClicked(`openBut`) => openData
 					case ButtonClicked(`deleteBut`) => deleteInstance
 					case ButtonClicked(`stressBut`) => stressTest
 					case ButtonClicked(`copyBut`) => copyData
+					case ButtonClicked(`createBut`) => createInstance
 			}
 		},BorderPanel.Position.North)
 		add (new ScrollPane()  
 			{
-				viewportView= dataTable
-				preferredSize=new Dimension(280,200)								
+				viewportView= viewController.panel
+				preferredSize=new Dimension(280,500)								
 			},BorderPanel.Position.Center) 
 		add (new BorderPanel(){
 			add (new ScrollPane() {
@@ -115,19 +106,21 @@ object TableTest extends SimpleSwingApplication {
 		pathContr.loadPath( IndexedSeq(newRef))
 	}
 	
+	def createInstance() = {
+		ClientQueryManager.createInstance(typEdit.text.toInt,Array(new OwnerReference(propEdit.text.toByte,viewController.parentRef)))
+	}
+	
 	def openData() = {
-		if(!dataTable.selection.rows.isEmpty) {
-		  val row:Int=dataTable.selection.rows.first		
-		  val newParentRef=tabModel.getInstance(row).ref	
+		if(viewController.selectedInstance !=null) {		  		
+		  val newParentRef=viewController.selectedInstance.ref	
 		  pathContr.addPathElement(newParentRef)
 		  	
 		}		
 	}
 	
 	def deleteInstance():Unit = {
-		if(dataTable.selection.rows.isEmpty) return
-		val row:Int=dataTable.selection.rows.head
-		val r=ClientQueryManager.deleteInstance(tabModel.getInstance(row).ref)
+		if(viewController.selectedInstance ==null) return		
+		val r=ClientQueryManager.deleteInstance(viewController.selectedInstance.ref)
 		println("Delete:"+r  )
 	}
 	
@@ -136,12 +129,12 @@ object TableTest extends SimpleSwingApplication {
 		val starttime:Long = System.currentTimeMillis();
 		val owner=Array(new OwnerReference(propEdit.text.toByte,Reference(typEdit.text.toInt,instEdit.text.toInt)))
 		
-		if(tabModel.dataList !=null)
+		
 		for(i <- 0 until 500)
 		{				
-				val id=ClientQueryManager.createInstance(tabModel.allowedClass,owner)
+				/*val id=ClientQueryManager.createInstance(tabModel.allowedClass,owner)
   			ClientQueryManager.writeInstanceField(Reference(tabModel.allowedClass,id),0,StringConstant("Test Object "+i))
-  			ClientQueryManager.writeInstanceField(Reference(tabModel.allowedClass,id),1,DoubleConstant(i.toDouble/100))
+  			ClientQueryManager.writeInstanceField(Reference(tabModel.allowedClass,id),1,DoubleConstant(i.toDouble/100))*/
 		}
 		val endtime = System.currentTimeMillis()
 		println("Stresstest time:"+(endtime-starttime))
@@ -151,10 +144,9 @@ object TableTest extends SimpleSwingApplication {
 		val fromOwner=OwnerReference(propEdit.text.toByte,Reference(typEdit.text.toInt,instEdit.text.toInt))
 		val toOwnerList:Array[String]= JOptionPane.showInputDialog(null, "to owner: typ,instance,field ").split(",");
 		val toOwner=OwnerReference(toOwnerList(2).toByte,Reference(toOwnerList(0).toInt,toOwnerList(1).toLong))
-		if(dataTable.selection.rows.isEmpty) return
-		val row:Int=(dataTable.selection.rows.toArray).apply(0)
+		if(viewController.selectedInstance==null) return		
 		val starttime:Long = System.currentTimeMillis();
-		val inst=ClientQueryManager.copyInstance(tabModel.getInstance(row).ref,fromOwner,toOwner)	
+		val inst=ClientQueryManager.copyInstance(viewController.selectedInstance.ref,fromOwner,toOwner)	
 		val endtime = System.currentTimeMillis()
 		println("copy time:"+(endtime-starttime))
 		println("inst:"+inst)

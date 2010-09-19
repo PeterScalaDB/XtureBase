@@ -14,6 +14,7 @@ object ClientCommands extends Enumeration {
   val startSubscription=Value("Start Subscription")
   val changeSubscription=Value("Change Subscription")
   val stopSubscription=Value("Stop Subscription")
+  val pauseSubscription=Value("Pause Subscription")
   val startPathSubscription=Value("Start Path Subscription")
   val pathSubs_openChild=Value("open Child")
   val pathSubs_jumpUp=Value("Jump up")

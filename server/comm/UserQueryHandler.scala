@@ -17,6 +17,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	userSocket.registerCommandHandler(ClientCommands.changeSubscription )(changeSubscription)
 	userSocket.registerCommandHandler(ClientCommands.startPathSubscription )(newPathSubscription)
 	userSocket.registerCommandHandler(ClientCommands.stopSubscription  )(stopSubscription)
+	userSocket.registerCommandHandler(ClientCommands.pauseSubscription  )(pauseSubscription)
 	userSocket.registerCommandHandler(ClientCommands.pathSubs_openChild )(pathSubs_openChild)
 	userSocket.registerCommandHandler(ClientCommands.pathSubs_jumpUp  )(pathSubs_jumpUp)
 	userSocket.registerCommandHandler(ClientCommands.pathSubs_changePath  )(pathSubs_changePath)
@@ -116,6 +117,12 @@ class UserQueryHandler(userSocket: UserSocket) {
 		val subsID=in.readInt
 		println("Stop Subscription "+subsID)
 		CommonSubscriptionHandler.removeSubscription(subsID)
+	}
+	
+	private def pauseSubscription(in:DataInputStream) = {		
+		val subsID=in.readInt
+		println("Stop Subscription "+subsID)
+		CommonSubscriptionHandler.pauseSubscription(subsID)
 	}
 	
 	def notifyInstanceChanged(subs:SubscriptionInfo,data:InstanceData) = {

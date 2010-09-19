@@ -149,8 +149,8 @@ class ClassVersion (val versNr:Byte,
 	}
 		
 	
-	def getFields :Array[FieldDefinition] = vsuperFields++ fields
-	def getPropFields : Array[PropertyFieldDefinition] = vsuperPropFields ++ propFields
+	private def getFields :Array[FieldDefinition] = vsuperFields++ fields
+	private def getPropFields : Array[PropertyFieldDefinition] = vsuperPropFields ++ propFields
 	
 	def field(ix:Int) =
 	{

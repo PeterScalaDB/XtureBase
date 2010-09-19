@@ -16,7 +16,7 @@ import scala.collection.immutable.IndexedSeq
  */
 object ClientQueryManager {
 	//type InstArrayFunc=(Array[InstanceData])=> Unit
-	type UpdateFunc=(NotificationType.Value,Array[InstanceData])=>Unit
+	type UpdateFunc=(NotificationType.Value,IndexedSeq[InstanceData])=>Unit
 	
 	//type PathUpdateFunc=(PathNotificationType.Value,Array[InstanceData])=>Unit
 	
@@ -24,7 +24,7 @@ object ClientQueryManager {
 	case class Subscriber(func: UpdateFunc)
 	//case class PathSubscriber(func:PathUpdateFunc)
 	
-	private val queryQueue = new SynchronousQueue[Array[InstanceData]]()	
+	private val queryQueue = new SynchronousQueue[IndexedSeq[InstanceData]]()	
 	private val newSubscriberQueue=new ArrayBlockingQueue[Subscriber](3)
 	private val subscriptionMap=new ConcurrentHashMap[Int,Subscriber]()
 	//private val newPathSubscriberQueue=new ArrayBlockingQueue[PathSubscriber](3)
@@ -51,7 +51,7 @@ object ClientQueryManager {
 	
 		
 		
-	def queryInstance(ref:Reference,propertyField:Byte):Array[InstanceData] = 	{		
+	def queryInstance(ref:Reference,propertyField:Byte):IndexedSeq[InstanceData] = 	{		
 		sock.sendData(ClientCommands.queryInstance ) {out =>			
 			//println("Sending Query request "+ref + " "+Thread.currentThread)
 			ref.write(out)
@@ -119,12 +119,20 @@ object ClientQueryManager {
 	
 	
 	def removeSubscription(subsID:Int) = {
-		Thread.dumpStack
+		//Thread.dumpStack
 		sock.sendData(ClientCommands.stopSubscription ) {out =>
 			out.writeInt(subsID)			
 		}
-		if(subscriptionMap.contains(subsID)) subscriptionMap.remove(subsID)		
+		if(subscriptionMap.containsKey(subsID)) subscriptionMap.remove(subsID)		
 		else println("ERROR: subscription "+subsID+" not found when removing")
+	}
+	
+	
+	def pauseSubscription(subsID:Int) = {
+		//Thread.dumpStack
+		sock.sendData(ClientCommands.pauseSubscription ) {out =>
+			out.writeInt(subsID)			
+		}		
 	}
 	
 	
@@ -179,16 +187,15 @@ object ClientQueryManager {
 	
 	// ************************************* Internal routines *************************************
 	
-	private def readArray(in:DataInputStream):Array[InstanceData] = {
+	private def readList(in:DataInputStream):IndexedSeq[InstanceData] = {
 			val numData=in.readInt
-			val retArray=new Array[InstanceData](numData)
-					for(i <- 0 until numData) retArray(i)=InstanceData.read(Reference(in), in)
-			retArray
+			for(i <- 0 until numData) yield InstanceData.read(Reference(in), in)
+			
 		}
 	
 	
 	private def handleQueryResults(in:DataInputStream) = 	{
-		val data=readArray(in)
+		val data=readList(in)
 		println("Handling Query result data size:"+data.size+ " "+Thread.currentThread)
 		
 		queryQueue.put(data)
@@ -198,7 +205,7 @@ object ClientQueryManager {
 	
 	private def handleAcceptSubscription(in:DataInputStream) = {
 		val subsID:Int=in.readInt
-		val data=readArray(in)
+		val data=readList(in)
 		println("Handling accept subs subsID:"+subsID)
 		
 		val subs:Subscriber=newSubscriberQueue.take()			
@@ -226,19 +233,19 @@ object ClientQueryManager {
 		NotificationType(in.readInt) match {
 			case NotificationType.FieldChanged => {
 				val inst=InstanceData.read(Reference(in),in)
-				runInPool(subscriber.func(NotificationType.FieldChanged,Array(inst)))
+				runInPool(subscriber.func(NotificationType.FieldChanged,IndexedSeq(inst)))
 			}
 			case NotificationType.childAdded => {
 				val inst=InstanceData.read(Reference(in),in)
-				runInPool(subscriber.func(NotificationType.childAdded,Array(inst)))
+				runInPool(subscriber.func(NotificationType.childAdded,IndexedSeq(inst)))
 			}
 			case NotificationType.instanceRemoved => {
 				val ref=Reference(in)
 				runInPool(subscriber.func(NotificationType.instanceRemoved,
-					Array(new InstanceData(ref,0,Array())))) // empty instance
+					IndexedSeq(new InstanceData(ref,0,Array())))) // empty instance
 			}
 			case NotificationType.sendData => {
-				val list=readArray(in)
+				val list=readList(in)
 				runInPool(subscriber.func(NotificationType.sendData,list))
 			}
 			

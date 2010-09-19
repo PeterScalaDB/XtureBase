@@ -10,8 +10,8 @@ import java.io._
  */
 case class CommandError(name:String,operationID:Int,reasonID:Int) extends Exception(name) {
 	
-	def write(out:DataOutput) = {
-		out.writeUTF(name)
+	def write(out:DataOutput) = {		
+		out.writeUTF(if(name==null) "" else name)
 		out.writeInt(operationID)
 		out.writeInt(reasonID)
 	}

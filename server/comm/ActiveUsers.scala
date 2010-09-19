@@ -17,13 +17,13 @@ object ActiveUsers {
    var wantQuit=false
    var finalFunc: ()=>Unit=null
    
-   def isOnline(userID:Int):Boolean =	 {
-  		 list.contains(userID)
+   def isOnline(userID:Int):Boolean =	 {  	 	 
+  		 list.containsKey(userID)
   	 }
    
    def addUser(newEntry:UserEntry) =  	 {
   	   list.put(newEntry.info.id,newEntry)
-  	   println("Listsize: "+list.size)
+  	   println("addUser "+newEntry+" Listsize: "+list.size)
   	 }
    
    def getUserSocket(userID:Int) = list.get(userID).thread
@@ -34,7 +34,7 @@ object ActiveUsers {
   	 val entry=list.get(userID)  	 
   	 list.remove(userID)
   	 CommonSubscriptionHandler.userLogsOff(userID)
-  	 println("List size: "+list.size+" " +wantQuit)
+  	 println("Remove user "+userID+"List size: "+list.size+" " +wantQuit)
   	 checkFinish()
    }
    

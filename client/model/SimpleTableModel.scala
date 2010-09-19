@@ -20,7 +20,7 @@ class SimpleTableModel extends TableModel {
 	var parentRef:Reference=null
 	var propField:Byte=0
 	var classVers:ClassVersion=null
-	var dataList:Option[Array[InstanceData]] = None
+	var dataList:Option[IndexedSeq[InstanceData]] = None
 	var subscriptionID= -1
 	var allowedClass=0
 	
@@ -40,9 +40,9 @@ class SimpleTableModel extends TableModel {
 		
 		if(subscriptionID<0)
 		subscriptionID=ClientQueryManager.createSubscription(parentRef,propField) {
-			(notType:NotificationType.Value,data: Array[InstanceData]) => {
+			(notType:NotificationType.Value,data: IndexedSeq[InstanceData]) => {
 				
-				println("modification :"+notType+ " "+data.map(a => a.ref.sToString).mkString(",")+" "+Thread.currentThread.getName +
+				println("Table modification :"+notType+ " "+(if(data.isEmpty)" [Empty] "else   data.first.ref)+", ... "+Thread.currentThread.getName +
 						" subsID:"+subscriptionID)
 				//println()
 				if(notType== NotificationType.sendData) dataList=Some(data)
@@ -52,7 +52,7 @@ class SimpleTableModel extends TableModel {
 						case NotificationType.FieldChanged => {
 							val newRef=data(0).ref
 							for(i <-list.indices)
-								if(newRef==list(i).ref) list(i)=data(0)
+								if(newRef==list(i).ref) dataList=Some(list updated (i,data(0)))
 						}
 							
 						case NotificationType.instanceRemoved => {

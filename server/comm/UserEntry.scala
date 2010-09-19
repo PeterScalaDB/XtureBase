@@ -8,4 +8,6 @@ import server.config._
 /** a member of the ActiveUsers list
  * 
  */
-case class UserEntry(info:UserInfo,thread:UserSocket,queryHandler:UserQueryHandler)
+case class UserEntry(info:UserInfo,thread:UserSocket,queryHandler:UserQueryHandler) {
+	override def toString = "User "+info.name+" ("+info.id+")"
+}

@@ -73,8 +73,9 @@ object CommonSubscriptionHandler {
 		 subscriptionList(subsID) match {
 			 case subs:PathSubscription => {
 				 val newList=subs.path :+ newRef
-				 subscriptionList(subsID)= subs.updatePath(newList)
-				 classHandlerMap(newRef.typ).addPathSubscription(subs,newRef)
+				 val newSubs=subs.updatePath(newList)
+				 subscriptionList(subsID)= newSubs
+				 classHandlerMap(newRef.typ).addPathSubscription(newSubs,newRef)
 				 newList
 			 }
 			 case _ => {
@@ -113,29 +114,37 @@ object CommonSubscriptionHandler {
 				 // add new entries
 				val newSubs=subs.updatePath(newPath)
 				for (n <- newPath)
-					classHandlerMap(n.typ).addPathSubscription(subs,n) 
+					classHandlerMap(n.typ).addPathSubscription(newSubs,n) 
 				 subscriptionList(subsID)= newSubs				 
 			 }
 			 case _ => println("Subscription "+subsID+" is no path subscription when changing Path to"+newPath.mkString("/"))
 		 }
 	}
 	
-	
-	
+		
 	
 	def removeSubscription(id:Int) = 
+		listLock.synchronized {		
+			doRemove(id)						
+			subscriptionList(id)=null			
+		}
+	
+	
+	def pauseSubscription(id:Int) = 
 		listLock.synchronized {	
-			val subs=subscriptionList(id)
-			if(subs==null) throw new IllegalArgumentException("Removing Subscription "+id+" but it is null")
+			doRemove(id)						
+		} 
+	
+	private def doRemove(id:Int) = {
+	  	val subs=subscriptionList(id)
+			if(subs==null) throw new IllegalArgumentException("Removing Subscription "+id+" but it is null")			
 			subs match {
 				case p:PathSubscription => 
 				for (el <-p.path)
 					classHandlerMap(el.typ ).removeSubscription(p)
-				case a => classHandlerMap(a.parentRef.typ).removeSubscription(a) 
+				case a => classHandlerMap(a.parentRef.typ).removeSubscription(a)					
 			}
-						
-			subscriptionList(id)=null			
-		}
+	}
 	
 	
 	def getSubscriptionInfo(id:Int):SubscriptionInfo =

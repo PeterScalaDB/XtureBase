@@ -17,13 +17,13 @@ import javax.swing.SwingUtilities
 class PathModel extends AbstractListModel {
 	
 	var subsID= -1
-	var dataList:Option[Array[InstanceData]]= None
+	var dataList:Option[IndexedSeq[InstanceData]]= None
 	
 	private [model] def loadPath(newPath:IndexedSeq[Reference])(readyFunc:() => Unit) = {
 		if(subsID== -1) {
 			subsID= ClientQueryManager.createPathSubscription(newPath) { 
-				(ntype: NotificationType.Value,data:Array[InstanceData]) => {
-					println("Path notification:"+ntype)
+				(ntype: NotificationType.Value,data:IndexedSeq[InstanceData]) => {
+					println("Path notification:"+ntype+" subsID:"+subsID+" data:"+data.map(_.ref).mkString(","))
 					val oldSize=dataList match { case Some(list) => list.size;case None => 0 }
 					ntype match {
 						case NotificationType.sendData  => dataList=Some(data) 
@@ -31,7 +31,7 @@ class PathModel extends AbstractListModel {
 							val searchRef=data(0).ref
 							for (list <- dataList)
 								for(i <- list.indices)								
-									if(searchRef ==list(i).ref) list(i)=data(0)
+									if(searchRef ==list(i).ref) dataList=Some(list updated(i,data(0)))
 						}
 						case NotificationType.instanceRemoved => {
 							val searchRef=data(0).ref							

@@ -15,12 +15,16 @@ class ClassSubscriptionHandler(typID:Int) {
 	// subscriptions to parents
 	var propSubsMap=Map[Reference,List[PropSubscription]]()
 	
-	def addSubscription(s:SubscriptionInfo) = s match {
-		case a:SingleSubscription => addSingleS(a)
-		case b:PropSubscription => addPropS(b)		
+	def addSubscription(s:SubscriptionInfo) = {
+		println("csm addSubs:"+s)
+		s match {
+			case a:SingleSubscription => addSingleS(a)
+			case b:PropSubscription => addPropS(b)
+		}				
 	}
 	
 	def addPathSubscription(p:PathSubscription,ref:Reference) = {
+		println("csm addPathSubs:"+p+ " => "+ref)
 		if(singleSubsMap.contains(ref )) { // add to existing
 			val list=singleSubsMap(ref)
 			singleSubsMap.put(ref,p :: list)
@@ -28,8 +32,7 @@ class ClassSubscriptionHandler(typID:Int) {
 		singleSubsMap.put(ref ,List(p))
 	}
 	
-	def removeSubscription(s:SubscriptionInfo) = {
-		println("remove Subscription "+s)
+	def removeSubscription(s:SubscriptionInfo) = {		
 		s match {
 			case c:PathSubscription => removePathS(c)
 			case a:SingleSubscription => removeSingleS(a)
@@ -107,16 +110,26 @@ class ClassSubscriptionHandler(typID:Int) {
 	}
 	
 	private def removeSingleS(s:SingleSubscription) = {
-		val list=singleSubsMap(s.parentRef)
-		singleSubsMap.put(s.parentRef,list - s)
+		println("csm remove singleSubs:"+s)
+		if(singleSubsMap.contains(s.parentRef)) {
+			val list=singleSubsMap(s.parentRef)
+			if(list.contains(s))
+				singleSubsMap.put(s.parentRef,list - s)
+		}
+		else println("Entry for "+s.parentRef+" not found")
 	}
 	
 	private def removePropS(s:PropSubscription) = {
+		println("csm remove propSubs:"+s)
+		if(propSubsMap.contains(s.parentRef)) {
 		val list=propSubsMap(s.parentRef)
-		propSubsMap.put(s.parentRef,list - s)
+		if(list.contains(s))
+			propSubsMap.put(s.parentRef,list - s)
+		} else println("Entry for "+s.parentRef+" not found")
 	}	
 	
 	def removePathS(s:PathSubscription) = {
+		println("csm remove pathSubs:"+s)
 		for((k,list) <-singleSubsMap.iterator)
 			if(list.contains(s))
 				 singleSubsMap.put(k,list.filterNot (_ == s))

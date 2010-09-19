@@ -37,7 +37,7 @@ class TypTest extends JUnitSuite {
   	val ox=oc.toXML  	
   	val oxx=ClassVersion.fromXML(ox,4)  	
   	assertEquals(oxx.versNr ,oc.versNr )
-  	assertEquals(oxx.getFields ,oc.getFields )
+  	assertEquals(oxx.getFieldCount ,oc.getFieldCount )
   }
   
   @Test def ClassTest()
