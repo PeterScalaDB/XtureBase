@@ -52,9 +52,9 @@ object TransactionManager {
 	def tryCreateInstance(typ:Int,owners:Array[OwnerReference],notifyRefandColl:Boolean) =	{	
 		if(!running ) throw new IllegalArgumentException("No transaction defined ")
 		//TODO: Check if the child type is allowed in the owner property fields
-		SimpleProfiler.startMeasure("Create")
+		//SimpleProfiler.startMeasure("Create")
 		val newInst=StorageManager.createInstance(typ,owners)
-		SimpleProfiler.measure("stored")
+		//SimpleProfiler.measure("stored")
 		ActionList.addTransactionData(newInst.ref,new CreateAction(newInst.ref,Some(newInst) ))		
 		// notify owners
 		for(owner <-owners)
@@ -64,7 +64,7 @@ object TransactionManager {
 		if(notifyRefandColl)
 			for(i <- 0 until newInst.fieldData.size;if (newInst.fieldData(i)!=EMPTY_EX))
 				passOnChangedValue(newInst,i.toByte,EMPTY_EX,newInst.fieldData(i).getValue)
-		SimpleProfiler.measure("notif owner")
+		//SimpleProfiler.measure("notif owner")
 		newInst
 	}
 	
@@ -80,7 +80,7 @@ object TransactionManager {
 			).addChildInstance(owner.ownerField ,newInst.ref) 
 			
 		  ActionList.addTransactionData(owner.ownerRef,DataChangeAction(None,Some(newProp)))
-		  CommonSubscriptionHandler.instanceCreated(owner,newInst)
+		  
 	}
 	
 	private def tryWriteInstanceData(data:InstanceData) =	{
@@ -95,10 +95,10 @@ object TransactionManager {
 	 */
 	def tryWriteInstanceField(ref:Reference,fieldNr:Byte,newExpression:Expression):Boolean = {
 		if(!running ) throw new IllegalArgumentException("No transaction defined ")
-		SimpleProfiler.startMeasure("Change inst")
+		//SimpleProfiler.startMeasure("Change inst")
 		var theExpression=newExpression
 		val instD=ActionList.getInstanceData(ref)
-		SimpleProfiler.measure("load")
+		//SimpleProfiler.measure("load")
 		// check for FieldReferences
 		val oldRefList=instD.fieldData(fieldNr).getElementList[FieldReference](DataType.FieldRefTyp,Nil)
 		val newRefList=newExpression.getElementList[FieldReference](DataType.FieldRefTyp,Nil)	
@@ -120,7 +120,7 @@ object TransactionManager {
 		
 		for( r <- addedRefs)
 		  addLinkRef(ref,fieldNr,r)
-		SimpleProfiler.measure("refCheck")
+		//SimpleProfiler.measure("refCheck")
 		 // Check for CollFunctionCalls 
 		val oldCollCalls= instD.fieldData(fieldNr).getElementList[CollectingFuncCall](DataType.CollFunctionCall,Nil)
 		if( !oldCollCalls.isEmpty) println("oldCollCalls "+oldCollCalls)
@@ -142,7 +142,7 @@ object TransactionManager {
 		} else remCollData
 			    
 		if (newCollData!=null) ActionList.addTransactionData(ref,new DataChangeAction(None,None,None,Some(newCollData))) 
-		SimpleProfiler.measure("collcheck")	  
+		//SimpleProfiler.measure("collcheck")	  
 		//safe the old field value  
 		val oldValue=instD.fieldData(fieldNr).getValue   				  
 		// set field in instance to new expression
@@ -153,7 +153,7 @@ object TransactionManager {
 		// pass on the changed value to referencing instances
 		val newValue=theExpression.getValue
 		if(newValue!=oldValue) passOnChangedValue(newInst,fieldNr,oldValue,newValue)
-		SimpleProfiler.measure("passOn")
+		//SimpleProfiler.measure("passOn")
 		true
 	}
 	
@@ -185,7 +185,7 @@ object TransactionManager {
 			}
 		}
 		// notify Subscriptions
-		CommonSubscriptionHandler.instanceChanged(newInst)
+		//CommonSubscriptionHandler.instanceChanged(newInst)
 	}	
 	
 	private def passOnNewInstanceToCollFuncParents(newInst:InstanceData)
@@ -370,7 +370,7 @@ object TransactionManager {
 	
 	
 	/*private def notifyCollFunc_ChildAdded(owner:OwnerReference,collData:CollFuncResultSet,childInst:InstanceData)= {
-		val myClass=AllClasses.getClassByID(childInst.ref.typ)
+		val myClass=AllClasses.get.getClassByID(childInst.ref.typ)
 		var matches=false
 		// check if the child matches to any of the collFuncResults 
 		for(res <-collData.callResultList )
@@ -406,7 +406,7 @@ object TransactionManager {
 	 */
 	private def notifyCollFunc_ChildChanged(owner:OwnerReference,collData:CollFuncResultSet,childRef:Reference,childField:Byte,
 	                                       oldValue:Constant,newValue:Constant)= {
-		val myClass=AllClasses.getClassByID(childRef.typ)
+		val myClass=AllClasses.get.getClassByID(childRef.typ)
 		
 		var fieldMatchSet:Set[Int]=Set()
 		// check if the child matches to any of the collFuncResults 
@@ -437,7 +437,7 @@ object TransactionManager {
 	
 	
 	private def notifyCollFunc_ChildDeleted(owner:OwnerReference,collData:CollFuncResultSet,childInstance:InstanceData) = {
-		val myClass=AllClasses.getClassByID(childInstance.ref.typ)
+		val myClass=AllClasses.get.getClassByID(childInstance.ref.typ)
 		var fieldMatchSet:Set[Int]=Set()
 		for(res <-collData.callResultList )
 		{
@@ -489,7 +489,7 @@ object TransactionManager {
   	if(!running ) throw new IllegalArgumentException("No transaction defined ")
   	val instD=ActionList.getInstanceData(ref)
   	// mark this instance as deleted
-  	ActionList.addTransactionData(ref,new DeleteAction(ref ))
+  	ActionList.addTransactionData(ref,new DeleteAction(instD))
 
   	// notify owners
   	for(owner <-instD.owners)
@@ -584,7 +584,7 @@ object TransactionManager {
 		
 		// change the owner ref inside of the instance data
 		
-		ActionList.addTransactionData(subRef, new DataChangeAction(Some( instData.changeOwner(fromOwner,toOwner)),None,None))
+		ActionList.addTransactionData(subRef, new DataChangeAction(Some( instData.changeSingleOwner(fromOwner,toOwner)),None,None))
 	}
 	
 	
@@ -643,7 +643,7 @@ object TransactionManager {
   			).removeChildInstance(fromOwner.ownerField ,subRef)
   	ActionList.addTransactionData(fromOwner.ownerRef,DataChangeAction(None,Some(newProp)))
   	//  notify subscriptions
-  	CommonSubscriptionHandler.instanceDeleted(fromOwner,subRef)
+  	//CommonSubscriptionHandler.instanceDeleted(fromOwner,subRef)
 	}
 	
 	/**

@@ -11,9 +11,8 @@ import definition.typ._
  * 
  * 
  */
-class InstanceData (override val ref:Reference,
-	val fieldData:Array[Expression],	 									
-	val owners:Array[OwnerReference]=Array()) extends Referencable
+class InstanceData (override val ref:Reference,	val fieldData:Array[Expression],	 									
+	val owners:Array[OwnerReference]=Array(),val hasChildren:Boolean) extends Referencable
 	{	
 	private var fieldValuesCache:Array[Constant]=new Array(fieldData.length)
 
@@ -34,6 +33,11 @@ override def write(file:DataOutput) = 	{
 	for(owner<-owners)
 		owner.write(file)	
 }
+	
+ def writeWithChildInfo(file:DataOutput) = {
+	write(file)
+	file.writeBoolean(hasChildren)
+}
 
 /** changes the value of a single field and returns a new instance object with the new value
  *  
@@ -44,11 +48,15 @@ override def write(file:DataOutput) = 	{
 def setField(fieldNr:Byte,newValue:Expression):InstanceData = 	{
 	val newArray:Array[Expression]=(for (i <- 0 until fieldData.length) 
 		yield (if (i==fieldNr) newValue else fieldData(i))).toArray
-		new InstanceData(ref,newArray,owners)
+		new InstanceData(ref,newArray,owners,hasChildren)
 }
 
 def changeOwner(newOwners:Array[OwnerReference]) = {
-	new InstanceData(ref,fieldData,newOwners)
+	new InstanceData(ref,fieldData,newOwners,hasChildren)
+}
+
+def setHasChildren(newValue:Boolean) = {
+	new InstanceData(ref,fieldData,owners,newValue)
 }
 
 /** creates a copy of this instance
@@ -62,7 +70,7 @@ def changeOwner(newOwners:Array[OwnerReference]) = {
  * @return
  */
 def clone(newRef:Reference,newOwners:Array[OwnerReference]):InstanceData =	{
-	new InstanceData(newRef,fieldData,newOwners)
+	new InstanceData(newRef,fieldData,newOwners,hasChildren)
 }
 
 /** replaces an ownerReferene with another ref and returns a new Instance with the new values
@@ -70,16 +78,16 @@ def clone(newRef:Reference,newOwners:Array[OwnerReference]):InstanceData =	{
  * @param fromRef the old ref to remove
  * @param toRef the new ref that replaces the old one
  */
-def changeOwner(fromRef:OwnerReference,toRef:OwnerReference):InstanceData = {
+def changeSingleOwner(fromRef:OwnerReference,toRef:OwnerReference):InstanceData = {
 	val newOwnerList= for (ref <- owners)
 		yield (if (ref==fromRef) toRef else ref)
-		new InstanceData(ref,fieldData,owners)
+		new InstanceData(ref,fieldData,newOwnerList,hasChildren)
 }
 
 
-def getObjectClass():ObjectClass =
+def getObjectClass():AbstractObjectClass =
 {
-	AllClasses.getClassByID(ref.typ) 			
+	AllClasses.get.getClassByID(ref.typ) 			
 }
   /** returns the calculated result value of the term in a field
    * the field results are cached in an array. That is not pure functional and may cause problems.
@@ -113,17 +121,29 @@ object InstanceData
 	val transMan:ATransactionManager=null
 	// reads an instance from a DataInput
 
-	def read(nref:Reference,file:DataInput) = 	{			
-	val nfields=file.readByte
-	val fArray=new Array[Expression](nfields)		
-	for (n<- 0 until nfields)
-		fArray(n)=Expression.read(file)
+	def readFields(file:DataInput)= {
+		val nfields=file.readByte
+		val fArray=new Array[Expression](nfields)
+		for (n<- 0 until nfields)
+			fArray(n)=Expression.read(file)
+		fArray		
+	}
+	
+	def readOwners(file:DataInput) = {
 		val nOwners=file.readByte
 		val ownArray=new Array[OwnerReference](nOwners)
 		for( o<- 0 until nOwners)
 			ownArray(o)= OwnerReference.read(file)
-	new InstanceData(nref,fArray,ownArray)
-}		
+			ownArray
+	}
+	
+	def read(nref:Reference,file:DataInput,nhasChildren:Boolean) = 		
+			new InstanceData(nref,readFields(file),readOwners(file),nhasChildren)	
+	
+	def readWithChildInfo(nref:Reference,file:DataInput)= 
+			new InstanceData(nref,readFields(file),readOwners(file),file.readBoolean)
+		
+		
 
 }
 
@@ -141,5 +161,5 @@ case class OwnerReference(val ownerField:Byte, //in what property field of the o
 }
 
 object OwnerReference {
-	def read(in:DataInput) = new OwnerReference(in.readByte,Reference(in)) 
+	def read(in:DataInput) = new OwnerReference(in.readByte,Reference(in))	
 }

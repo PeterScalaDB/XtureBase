@@ -5,7 +5,7 @@ package transaction.handling
 import server.storage.TransLogHandler
 
 import server.comm._
-import server.storage.StorageManager
+import server.storage._
 import server.config._
 import definition.typ.AllClasses
 
@@ -22,10 +22,11 @@ object SessionManager {
   
   
   def init() = {
-  	AllClasses.fromXML( xml.XML.loadFile(FSPaths.configDir+"types.xml" ))
+  	val sc=new ServerClassList( xml.XML.loadFile(FSPaths.configDir+"types.xml" ))
+  	AllClasses.set(sc)  	
   	UserList.fromXML(xml.XML.loadFile(FSPaths.configDir+"users.xml" ))
-  	StorageManager.init(AllClasses.getClassList)
-  	CommonSubscriptionHandler.init(AllClasses.getClassList)
+  	StorageManager.init(sc.classList)
+  	CommonSubscriptionHandler.init(AllClasses.get.getClassList.toMap)
   	println("Max Trans:"+TransLogHandler.transID)
   	
   	Runtime.getRuntime.addShutdownHook(new Thread {

@@ -43,26 +43,38 @@ class ContainerFileHandler [T <: Referencable] (val fileName:String,factory: (Re
 	 */
 	def readInstance(ref:Reference,pos:Long,size:Int):T =
 	{
+		readInBuffer(ref,pos,size)
+		factory(ref,dataInStream)
+	}
+	
+	protected def readInBuffer(ref:Reference,pos:Long,size:Int) = {
 		if(size>readBuffer.size) {
 			readBuffer=new Array[Byte](size+128)
 			inBufferStream=new ByteArrayInputStream(readBuffer)
 			dataInStream=new DataInputStream(inBufferStream)
-		}		
-		
+		}				
 		theFile.seek(pos)
 		theFile.read(readBuffer,0,size)
-		inBufferStream.reset		
-		factory(ref,dataInStream)
-	}
+		inBufferStream.reset
+	}	
 	
-	
-	
+		
 	def shutDown()=
 	{
 		theFile.close
 	}
 
 }
+
+class BoolContFileHandler [T <: Referencable] (override val fileName:String,withBoolFactory: (Reference,DataInput,Boolean) => T) extends
+	  ContainerFileHandler[T](fileName,null)	
+	{
+		def readWithBool(ref:Reference,pos:Long,size:Int,boolValue:Boolean):T = {
+			readInBuffer(ref,pos,size)
+			withBoolFactory(ref,dataInStream,boolValue)
+		}		
+	}
+
 
 class MyByteStream(nsize:Int) extends ByteArrayOutputStream(nsize) {
 	def buffer=buf

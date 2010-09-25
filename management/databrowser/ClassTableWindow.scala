@@ -21,7 +21,7 @@ object ClassTableWindow extends SimpleSwingApplication
 	def dataInit()=
 	{		
 		SessionManager.init()
-		TypTableModel.setClassList(AllClasses.getClassList.valuesIterator.toArray)		
+		TypTableModel.setClassList(AllClasses.get.getClassList.valuesIterator.toArray)		
 	}
 
 	val classTable= new Table

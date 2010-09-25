@@ -41,10 +41,11 @@ object TableTest extends SimpleSwingApplication {
 	val pathMod=new PathModel()
 	val pathView=new ListView[InstanceData]()
 	val pathContr=new PathController(pathMod,pathView,new PathControllable {
-		def openData(parentRef:Reference) = {
+		def openData(parentRef:Reference,selected:Option[Reference]) = {
 			println("controllable open ref " +parentRef)
 			tabModel.loadData(parentRef,propEdit.text.toByte)
 		}
+		def registerOpenChildCallBack(callBack: Reference => Unit) = {}
 	})
 	
 	val mainPanel=	new BorderPanel()  // main panel

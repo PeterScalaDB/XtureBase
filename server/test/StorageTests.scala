@@ -20,16 +20,17 @@ import server.comm._
 class StorageTests extends JUnitSuite 
 {
 
-	@Before def init() =	{		
-
-		AllClasses.fromXML( xml.XML.loadFile(FSPaths.configDir+"types.xml"))
-		StorageManager.init(AllClasses.getClassList)
-		CommonSubscriptionHandler.init(AllClasses.getClassList)
+	@Before def init() =	{
+		val sc=new ServerClassList(xml.XML.loadFile(FSPaths.configDir+"types.xml"))
+    AllClasses.set(sc)
+		
+		StorageManager.init(sc.classList)
+		CommonSubscriptionHandler.init(AllClasses.get.getClassList.toMap)
 	}
 
 	@Test def storageManTest() =  {  	
-		assert(AllClasses.getClassList.size>0)
-		println(AllClasses.getClassList)
+		assert(AllClasses.get.getClassList.size>0)
+		println(AllClasses.get.getClassList.toMap)
 	}
 
 	@Test def createTest() =  {  	

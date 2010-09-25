@@ -15,11 +15,11 @@ import transaction.handling._
  */
 object InstFieldTableModel extends AbstractTableModel 
 {
-  var theClass:ObjectClass=null
+  var theClass:AbstractObjectClass=null
   var instance:InstanceData=null
   
 	
-	def setClass(newClass:ObjectClass) = 
+	def setClass(newClass:AbstractObjectClass) = 
 	{
 		theClass=newClass
 		fireTableStructureChanged()

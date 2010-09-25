@@ -189,14 +189,14 @@ object ClientQueryManager {
 	
 	private def readList(in:DataInputStream):IndexedSeq[InstanceData] = {
 			val numData=in.readInt
-			for(i <- 0 until numData) yield InstanceData.read(Reference(in), in)
+			for(i <- 0 until numData) yield InstanceData.readWithChildInfo(Reference(in), in)
 			
 		}
 	
 	
 	private def handleQueryResults(in:DataInputStream) = 	{
 		val data=readList(in)
-		println("Handling Query result data size:"+data.size+ " "+Thread.currentThread)
+		//println("Handling Query result data size:"+data.size+ " "+Thread.currentThread)
 		
 		queryQueue.put(data)
 		
@@ -206,7 +206,7 @@ object ClientQueryManager {
 	private def handleAcceptSubscription(in:DataInputStream) = {
 		val subsID:Int=in.readInt
 		val data=readList(in)
-		println("Handling accept subs subsID:"+subsID)
+		//println("Handling accept subs subsID:"+subsID)
 		
 		val subs:Subscriber=newSubscriberQueue.take()			
 		subscriptionMap.put(subsID,subs)
@@ -232,17 +232,17 @@ object ClientQueryManager {
 		
 		NotificationType(in.readInt) match {
 			case NotificationType.FieldChanged => {
-				val inst=InstanceData.read(Reference(in),in)
+				val inst=InstanceData.readWithChildInfo(Reference(in),in)
 				runInPool(subscriber.func(NotificationType.FieldChanged,IndexedSeq(inst)))
 			}
 			case NotificationType.childAdded => {
-				val inst=InstanceData.read(Reference(in),in)
+				val inst=InstanceData.readWithChildInfo(Reference(in),in)
 				runInPool(subscriber.func(NotificationType.childAdded,IndexedSeq(inst)))
 			}
 			case NotificationType.instanceRemoved => {
 				val ref=Reference(in)
 				runInPool(subscriber.func(NotificationType.instanceRemoved,
-					IndexedSeq(new InstanceData(ref,Array())))) // empty instance
+					IndexedSeq(new InstanceData(ref,Array(),Array(),false)))) // empty instance
 			}
 			case NotificationType.sendData => {
 				val list=readList(in)
@@ -298,7 +298,7 @@ object ClientQueryManager {
 		else {
 			val result:Option[Constant]= if(in.readBoolean) Some(Expression.readConstant(in))
 																 else None
-		  println("command Response "+result+" "+Thread.currentThread)
+		  //println("command Response "+result+" "+Thread.currentThread)
 		
 		  commandResultQueue.put(result)
 		}

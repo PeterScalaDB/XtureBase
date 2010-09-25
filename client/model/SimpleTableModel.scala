@@ -19,7 +19,7 @@ import definition.expression._
 class SimpleTableModel extends TableModel {
 	var parentRef:Reference=null
 	var propField:Byte=0
-	var objClass:ObjectClass=null
+	var objClass:AbstractObjectClass=null
 	var dataList:Option[IndexedSeq[InstanceData]] = None
 	var subscriptionID= -1
 	var allowedClass=0
@@ -32,9 +32,9 @@ class SimpleTableModel extends TableModel {
 		
 		parentRef=nparentRef
 		propField=npropField
-		val parentClass=AllClasses.getClassByID(parentRef.typ)
+		val parentClass=AllClasses.get.getClassByID(parentRef.typ)
 		allowedClass=parentClass.propField(propField).allowedClass
-		objClass=AllClasses.getClassByID(allowedClass)
+		objClass=AllClasses.get.getClassByID(allowedClass)
 		
 		var updateStructure=true
 		

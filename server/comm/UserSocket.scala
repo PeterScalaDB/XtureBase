@@ -138,7 +138,7 @@ class UserSocket(socket: Socket) extends Thread ("userSocket") {
 		private def sendTypes() = 	{
 			println("Sending Types to "+userName)
 			sendData(ServerCommands.sendTypes) {out=>
-				out.writeUTF(AllClasses.toXML().toString())
+				out.writeUTF(AllClasses.get.asInstanceOf[ServerClassList].toXML().toString())
 			}
 		}
 
@@ -173,7 +173,7 @@ class UserSocket(socket: Socket) extends Thread ("userSocket") {
 				error=new CommandError(e.toString,ClientCommands.writeField.id,0)
 			}
 			sendData(ServerCommands.sendCommandResponse ) {out =>
-			println("send write")
+			println("sendCommandResponse writeField "+ref+" "+expr)
 			 if(error!=null) {
 				 out.writeBoolean(true)
 				 error.write(out)	
@@ -207,7 +207,7 @@ class UserSocket(socket: Socket) extends Thread ("userSocket") {
 				error=new CommandError(e.toString,ClientCommands.createInstance.id,0)
 			}
 			sendData(ServerCommands.sendCommandResponse ) {out =>
-			println("send create" +result)
+			println("sendCommandResponse create typ "+typ+" result:" +result)
 			 if(error!=null) {
 				 out.writeBoolean(true)
 				 error.write(out)	
@@ -256,13 +256,13 @@ class UserSocket(socket: Socket) extends Thread ("userSocket") {
 			val fromOwner=OwnerReference.read(in)
 			val toOwner=OwnerReference.read(in)
 			var instID=0L
-			SimpleProfiler.startMeasure("start copy")
+			//SimpleProfiler.startMeasure("start copy")
 			try {
 				val ret=TransactionManager.doTransaction {
 					instID=TransactionManager.tryCopyInstance(ref,fromOwner,toOwner,true)
 					if(instID<0)
 						error=new CommandError("Unknown Issue",ClientCommands.copyInstance.id,0)
-					SimpleProfiler.measure("preparing ready")
+					//SimpleProfiler.measure("preparing ready")
 				}
 				for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.copyInstance.id,0)
 			} 

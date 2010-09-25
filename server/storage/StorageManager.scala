@@ -17,14 +17,14 @@ import server.test.SimpleProfiler
  */
 object StorageManager {
   var ixHandlerList:Map[Int,ClassIndexHandler]=Map()
-  val dataFileHandler=new ContainerFileHandler("InstData.dat",InstanceData.read)
+  val dataFileHandler=new BoolContFileHandler[InstanceData]("InstData.dat",InstanceData.read)
   val propFileHandler=new ContainerFileHandler("PropData.dat",InstanceProperties.read)
   val linkFileHandler=new ContainerFileHandler("ExternLinks.dat",ReferencingLinks.read)
   val collFuncFileHandler=new ContainerFileHandler("collFuncs.dat",CollFuncResultSet.read)
   var shuttedDown=false
   var inited=false
   
-  def init(classList:Map[Int,ObjectClass] ) =
+  def init(classList:Map[Int,ServerObjectClass] ) =
   {
   	if(ixHandlerList.isEmpty||shuttedDown)
   	{
@@ -56,7 +56,7 @@ object StorageManager {
   	    val rec=handler.getInstanceRecord(ref.instance )
   	    if (rec.dataPos == 0 && rec.dataLength==0) throw new 
   	               IllegalArgumentException("get Instance() instance "+ref+" is deleted")
-  	    val instObj=dataFileHandler.readInstance(ref,rec.dataPos,rec.dataLength)
+  	    val instObj=dataFileHandler.readWithBool(ref,rec.dataPos,rec.dataLength,(rec.propPos !=0)&&(rec.propLength !=0) )
   	    //println(" cacheMiss:"+instObj)
   	    handler.instCache.putInstanceData(instObj)
   	    instObj
@@ -85,12 +85,12 @@ object StorageManager {
    *  @param created was this instance created during this transaction and should a created
    *  record be stored in the transaction log 
    */
-  def writeInstance(data:InstanceData,created:Boolean)=  {
+  def writeInstance(data:InstanceData,created:Boolean):Unit =  {  	
   	val (pos,size)=dataFileHandler.writeInstance(data)
   	val handler= getHandler(data.ref.typ)
   	handler.writeData(data.ref.instance, pos, size,created)
   	handler.instCache.putInstanceData(data)  	
-  	SimpleProfiler.measure("writeInst")
+  	//SimpleProfiler.measure("writeInst")
   }
   
   /** deletes an instace from the index
@@ -137,12 +137,20 @@ object StorageManager {
   }
   
   def writeInstanceProperties(data:InstanceProperties)= {
-  	val (pos,size)=propFileHandler.writeInstance(data)
-  	//println("Write prop Pos:"+pos+ " Size:"+size)
+  	val hasChildren=data.hasChildren
+  	val (pos,size)= if(hasChildren)propFileHandler.writeInstance(data)
+  									else (0L,0)// if there are no children, delete this property data set  	
+  	
   	val handler= getHandler(data.ref.typ)
+  	// check instanceData in instanceCache
+  	handler.instCache.getInstanceData(data.ref.instance) match
+  	{ // if it has no correct information about hasChildren, update it
+  		case Some(a) => if(a.hasChildren!=hasChildren) handler.instCache.putInstanceData(a.setHasChildren(hasChildren))
+  		case None => // not in cache, nothing to change
+  	}
   	handler.writePropertiesData(data.ref.instance, pos, size)
   	handler.propCache.putInstanceData(data)
-  	SimpleProfiler.measure("wprop")
+  	//SimpleProfiler.measure("wprop")
   }
   
   // *************************************************************************************

@@ -6,6 +6,7 @@ package transaction.handling
 import definition.data._
 import server.storage._
 import server.test.SimpleProfiler
+import server.comm.CommonSubscriptionHandler
 //import scala.collection.immutable.ListMap
 
 /** manages the List of actions of a transaction
@@ -39,21 +40,39 @@ def commitAllData() = {
 		for(trans <- theList.valuesIterator)
 			trans match {
 				case CreateAction(ref,a,b,co) => { // Instances get created during the Try-Phase of the transaction
-					for (data <-a)  StorageManager.writeInstance(data,true) // if instdata is defined, write
-					for (pdata <-b)  StorageManager.writeInstanceProperties(pdata) // if propdata is defined, write
+					for (pdata <-b){
+						StorageManager.writeInstanceProperties(pdata) // if propdata is defined, write						
+					}
+					for (data <-a) {
+						StorageManager.writeInstance(data,true) // if instdata is defined, write
+						val sendData =if(b.isDefined && b.get.hasChildren !=data.hasChildren) data.setHasChildren(b.get.hasChildren)
+						   else data
+						for(owner <-data.owners)
+							CommonSubscriptionHandler.instanceCreated(owner,sendData)
+					}
+					
 					for (c <- co) StorageManager.writeCollectingFuncData(c)
 				}
 				case DataChangeAction(in,pr,li,co) => {
-					for(i <- in) StorageManager.writeInstance(i,false); // if instance is defined, write
+					for(i <- in){
+						StorageManager.writeInstance(i,false); // if instance is defined, write
+						val sendData =if(pr.isDefined && pr.get.hasChildren !=i.hasChildren) i.setHasChildren(pr.get.hasChildren)
+						   else i
+						CommonSubscriptionHandler.instanceChanged(sendData)
+					}
 					for(p <- pr) StorageManager.writeInstanceProperties(p) // if properties ...
 					for(l <- li) StorageManager.writeReferencingLinks(l)
 					for(c <- co) StorageManager.writeCollectingFuncData(c)
 				}
 				
-				case DeleteAction(ref) => StorageManager.deleteInstance(ref.typ,ref.instance )
+				case DeleteAction(inst) => {
+					StorageManager.deleteInstance(inst.ref.typ,inst.ref.instance )
+					for(owner <-inst.owners)
+					CommonSubscriptionHandler.instanceDeleted(owner,inst.ref)
+				}
 				//TODO: delete link, property and collFunc data !
 		}
-		SimpleProfiler.finish("commit "+theList.size)
+		//SimpleProfiler.finish("commit "+theList.size)
 		reset()
 	} catch { case e:Exception => TransactionManager.breakTransaction() }
 }

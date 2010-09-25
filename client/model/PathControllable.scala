@@ -9,5 +9,6 @@ import definition.data._
  * 
  */
 trait PathControllable {
-	def openData(parentRef:Reference)
+	def openData(parentRef:Reference,selectRef:Option[Reference])
+	def registerOpenChildCallBack(callBack: (Reference)=> Unit)
 }

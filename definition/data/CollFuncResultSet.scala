@@ -130,7 +130,7 @@ class CollFuncResultSet(override val ref:Reference,
 				var result=func.emptyValue // init loop variable
 				for(cRef <- prop.propertyFields(propField ).propertyList ) // run through all children
 					{print(" checking "+cRef)
-					if ( AllClasses.getClassByID(cRef.typ).inheritsFrom(cType) ) // when they fit
+					if ( AllClasses.get.getClassByID(cRef.typ).inheritsFrom(cType) ) // when they fit
 					{ //TODO: check the class Version to find out inheritance of children !
 						val instData=ActionList.getInstanceData(cRef)
 						println(" fits "+instData)
@@ -153,7 +153,7 @@ class CollFuncResultSet(override val ref:Reference,
 			case Some(prop) => { // if there are children
 				//val result:List[(Reference,Constant)]= 
 					(for(cRef <- prop.propertyFields(call.propertyField ).propertyList ; // run through all children
-						if ( AllClasses.getClassByID(cRef.typ).inheritsFrom(call.childType) );
+						if ( AllClasses.get.getClassByID(cRef.typ).inheritsFrom(call.childType) );
 					  //TODO: check the class Version to find out inheritance of children !
 						val instData=ActionList.getInstanceData(cRef);if instData!=null )// when they fit
 					yield (ref,instData.fieldValue(call.childField )) ).toList					

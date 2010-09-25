@@ -36,23 +36,25 @@ object ViewTest extends SimpleSwingApplication {
 	val pathView=new ListView[InstanceData]()
 	val pathContr=new PathController(pathMod,pathView,viewController)
 	
+	val actionPan= new ActionPanel
+	
 	val mainPanel=	new BorderPanel()  // main panel
 	{			
-		add ( new GridPanel(1,9) //top rail
+		add ( new GridPanel(1,8) //top rail
 		{
 			hGap=10
 			border=BorderFactory.createEmptyBorder(10,10,10,10);
 			val loadBut =new Button("load")
-			val openBut = new Button("open")
+			//val openBut = new Button("open")
 			val deleteBut =new Button("delete Instance")
 			val stressBut = new Button("stress test")
 			val copyBut = new Button("copy")
 			val createBut= new Button("create")
-			contents += typEdit += instEdit += propEdit += loadBut += openBut += deleteBut += stressBut+=copyBut+=createBut
-			listenTo(loadBut,deleteBut,stressBut,copyBut,openBut,createBut)
+			contents += typEdit += instEdit += propEdit += loadBut +=  deleteBut += stressBut+=copyBut+=createBut
+			listenTo(loadBut,deleteBut,stressBut,copyBut,createBut)
 			reactions += {
 					case ButtonClicked(`loadBut`) => loadData
-					case ButtonClicked(`openBut`) => openData
+					//case ButtonClicked(`openBut`) => openData
 					case ButtonClicked(`deleteBut`) => deleteInstance
 					case ButtonClicked(`stressBut`) => stressTest
 					case ButtonClicked(`copyBut`) => copyData
@@ -71,6 +73,14 @@ object ViewTest extends SimpleSwingApplication {
 			},BorderPanel.Position.Center)
 		},BorderPanel.Position.West
 		)
+		add( new BorderPanel() {
+			preferredSize=new Dimension(120,100)
+			add(new Label("Funktionen:"),BorderPanel.Position.North)
+			add (new ScrollPane() {
+				viewportView= actionPan				
+			},BorderPanel.Position.Center)
+			
+		},BorderPanel.Position.East)
 	}
 	
 	val top = new MainFrame ()
@@ -97,6 +107,7 @@ object ViewTest extends SimpleSwingApplication {
   	sock.start()
   	ClientQueryManager.setClientSocket(sock)
   	Thread.`yield`()
+  	viewController.registerSelectListener(actionPan)
   	super.startup(args)
 	}
 	
@@ -110,14 +121,7 @@ object ViewTest extends SimpleSwingApplication {
 		ClientQueryManager.createInstance(typEdit.text.toInt,Array(new OwnerReference(propEdit.text.toByte,viewController.parentRef)))
 	}
 	
-	def openData() = {
-		if(viewController.selectedInstance !=null) {		  		
-		  val newParentRef=viewController.selectedInstance.ref	
-		  pathContr.addPathElement(newParentRef)
-		  	
-		}		
-	}
-	
+		
 	def deleteInstance():Unit = {
 		if(viewController.selectedInstance ==null) return		
 		val r=ClientQueryManager.deleteInstance(viewController.selectedInstance.ref)

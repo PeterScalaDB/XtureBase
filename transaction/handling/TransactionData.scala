@@ -23,5 +23,5 @@ case class DataChangeAction(var newInstData:Option[InstanceData],
 														var newLinksData:Option[ReferencingLinks]=None,
 														var newCollData:Option[CollFuncResultSet]=None) extends TransactionData
 
-case class DeleteAction(ref:Reference) extends TransactionData
+case class DeleteAction(inst:InstanceData) extends TransactionData
 

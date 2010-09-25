@@ -13,35 +13,54 @@ import scala.swing._
  *  manages the general loading of data
  * 
  */
+
+trait SelectListener {
+	def selectionChanged(instList:Seq[InstanceData])
+}
+
 class DataViewController  extends PathControllable  {
 	private var loaded=false
 	var parentRef:Reference= _
-	var mainClass:ObjectClass = _
+	var mainClass:AbstractObjectClass = _
 	
 	val propertyModels =scala.collection.mutable.ArrayBuffer[PropertyModel]()
 	var numUsedModels=0
 	
 	val panel=new BoxPanel(Orientation.Vertical)
 	
-	var selectedInstance: InstanceData= _
+	var selectedInstance: InstanceData= _ // to be deleted
+	
+	var openChildCallBack:(Reference)=> Unit = _
+	var selectListener:SelectListener= _
 	
 	/** is called by PathModel when another instance should be loaded
 	 *  @param parentRef the new Instance to be loaded
+	 *  @param selectRef reference of an instance that should be selected
 	 */
-	def openData(nparentRef:Reference) = {
+	def openData(nparentRef:Reference,selectRef:Option[Reference]) = {
 	  if(loaded) shutDown()
 	  selectedInstance=null
 	  parentRef=nparentRef
-	  mainClass=AllClasses.getClassByID(parentRef.typ)
+	  mainClass=AllClasses.get.getClassByID(parentRef.typ)
 	  for(i <- 0 until mainClass.getPropFieldCount) {
 	  	val propFieldInfo=mainClass.propField(i)
 	  	val mod=getPropModel
-	  	mod.load(propFieldInfo.allowedClass,i.toByte,propFieldInfo.name)
+	  	mod.load(propFieldInfo.allowedClass,i.toByte,propFieldInfo.name,selectRef)
 	  	panel.contents+=mod.panel
 	  }
 	  updateHeight()
+	  if(!selectRef.isDefined && selectListener!=null) selectListener.selectionChanged(null)
 	  loaded =true
 	}
+	
+	def registerOpenChildCallBack(callBack: (Reference)=> Unit) = {
+		openChildCallBack=callBack
+	}
+	
+	def registerSelectListener(listener:SelectListener) = {
+		selectListener=listener
+	}
+	
 	
 	def updateHeight() = {
 		javax.swing.SwingUtilities.invokeLater(new Runnable(){
@@ -76,9 +95,20 @@ class DataViewController  extends PathControllable  {
 		loaded=false		
 	}
 	
-	def selectionChanged(tabMod:TypeTableModel,proMod:PropertyModel,inst:InstanceData) = {
-		println("sel: propfield:"+proMod.propertyField+" typ:"+tabMod.typ +" "+inst)
-		selectedInstance=inst
+	def selectionChanged(tabMod:TypeTableModel,proMod:PropertyModel,instList:Seq[InstanceData]):Unit = {
+		//println("sel: propfield:"+proMod.propertyField+" typ:"+tabMod.typ +" \n"+instList.mkString)
+		for(i <- 0 until numUsedModels;val mod=propertyModels(i))
+			mod.deselect(tabMod.typ)
+		if(selectListener!=null) selectListener.selectionChanged(instList)	
+		//selectedInstance=inst
+	}
+	
+	/** sends a message to the path controller that it should open a child instance
+	 * 
+	 * @param ref the reference of the child instance
+	 */
+	def openChild(ref:Reference) = {
+		if(openChildCallBack!=null) openChildCallBack(ref)
 	}
 	
 

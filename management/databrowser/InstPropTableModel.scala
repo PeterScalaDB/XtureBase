@@ -15,11 +15,11 @@ import transaction.handling._
  */
 object InstPropTableModel extends AbstractTableModel {
 	
-	var theClass:ObjectClass=null	
+	var theClass:AbstractObjectClass=null	
 	var propData:Option[InstanceProperties]=None
 	
 	
-	def setClass(newClass:ObjectClass) = 
+	def setClass(newClass:AbstractObjectClass) = 
 	{
 		theClass=newClass
 		fireTableStructureChanged()

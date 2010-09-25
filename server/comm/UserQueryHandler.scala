@@ -76,6 +76,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 			userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 			  out.writeInt(subsID )
 			  out.writeInt(NotificationType.sendData .id)
+			  println("pathsubs openchild subsid:"+subsID+" "+list.mkString)
 				writePathElements(out,subsID,list)
 		  }
 	}
@@ -90,7 +91,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 			out.writeInt(refList.size)
 			for(i <- refList.indices){
 				refList(i).write(out)
-				instList(i).write(out)							
+				instList(i).writeWithChildInfo(out)							
 			}
 		} catch {
 			case e: Exception => e.printStackTrace;out.writeInt(0)
@@ -121,32 +122,32 @@ class UserQueryHandler(userSocket: UserSocket) {
 	
 	private def pauseSubscription(in:DataInputStream) = {		
 		val subsID=in.readInt
-		println("Stop Subscription "+subsID)
+		println("pause Subscription "+subsID)
 		CommonSubscriptionHandler.pauseSubscription(subsID)
 	}
 	
 	def notifyInstanceChanged(subs:SubscriptionInfo,data:InstanceData) = {
-		//println("Notify changed "+subs)
+		println("Notify changed "+subs+" "+data.ref)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 			out.writeInt(subs.id )
 			out.writeInt(NotificationType.FieldChanged.id)
 			data.ref.write(out)
-			data.write(out)
+			data.writeWithChildInfo(out)
 		}
 	}	
 	
 	def notifyInstanceAdded(subs:SubscriptionInfo,data:InstanceData) = {
-		//println("Notify added "+subs)
+		println("Notify added "+subs+" "+data.ref)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 		out.writeInt(subs.id)
 		out.writeInt(NotificationType.childAdded.id )
 		data.ref.write(out)
-		data.write(out)
+		data.writeWithChildInfo(out)
 		}
 	}
 	
 	def notifyInstanceDeleted(subs:SubscriptionInfo,ref:Reference) = {
-		println("Notify deleted "+subs)
+		println("Notify deleted "+subs+" "+ref)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 		out.writeInt(subs.id)
 		out.writeInt(NotificationType.instanceRemoved.id )
@@ -170,7 +171,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 				val inst= StorageManager.getInstanceData(ref)				
 				out.writeInt(1)
 				ref.write(out)
-				inst.write(out)				
+				inst.writeWithChildInfo(out)				
 			}
 			catch {
 				case e: Exception => println(e); out.writeInt(0)
@@ -190,7 +191,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 						for(i <-childRefs.indices)
 						{
 							childRefs(i).write(out)
-							instList(i).write(out)
+							instList(i).writeWithChildInfo(out)
 						}					
 					}
 					case None => out.writeInt(0) 

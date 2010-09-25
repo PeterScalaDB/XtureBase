@@ -13,9 +13,9 @@ import definition.data._
  */
 object TypTableModel extends AbstractTableModel 
 {
-	var classList:Array [ObjectClass]=Array()
+	var classList:Array [AbstractObjectClass]=Array()
 	
-	def setClassList(newList:Array [ObjectClass]) = 
+	def setClassList(newList:Array [AbstractObjectClass]) = 
 	{
 		classList=newList
 		fireTableStructureChanged()

@@ -13,7 +13,7 @@ import java.io._
  * 
  */
 
-class ClassIndexHandler(val theClass:ObjectClass)
+class ClassIndexHandler(val theClass:ServerObjectClass)
 {
 	val fileName=new File(FSPaths.dataDir+theClass.name+".idx")	
 	val theFile= new RandomAccessFile(fileName,"rwd") 

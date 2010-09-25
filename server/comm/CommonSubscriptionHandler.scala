@@ -17,7 +17,7 @@ object CommonSubscriptionHandler {
 	
 	private var classHandlerMap:Map[Int,ClassSubscriptionHandler]=Map()
 	
-	def init (classList:Map[Int,ObjectClass] ) =   {
+	def init (classList:Map[Int,AbstractObjectClass] ) =   {
   	if(classHandlerMap.isEmpty)
   	{  		
   	  classHandlerMap=classHandlerMap++( for (i <-classList.valuesIterator) yield (i.id -> new ClassSubscriptionHandler(i.id)))

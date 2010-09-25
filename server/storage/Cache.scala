@@ -5,7 +5,7 @@ package server.storage
 
 import definition.data._
 import server.storage._
-import definition.typ.ObjectClass
+import definition.typ.AbstractObjectClass
 import scala.collection.mutable.ArraySeq
 import scala.reflect.Manifest
 

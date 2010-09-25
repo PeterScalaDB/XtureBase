@@ -6,9 +6,9 @@ package client.comm
 import definition.comm._
 import java.net._
 import java.io._
-import definition.typ.AllClasses
 import definition.data._
 import definition.expression._
+import definition.typ.{AllClasses,ClientClasses}
 import scala.actors._
 import scala.collection.mutable.HashMap
 
@@ -59,7 +59,7 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 		{				
 			try {
 				val command =ServerCommands(in.readByte.toInt)
-				println("ServerCommand: "+command)
+				//println("ServerCommand: "+command)
 				command match {
 					case ServerCommands.sendTypes  => readInTypes(in)
 					case ServerCommands.wantQuit => {quitApplication();return }					
@@ -78,8 +78,8 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 	private def readInTypes(in: DataInputStream) = {
 		val xmlString=in.readUTF()
 		//println(xmlString)
-		AllClasses.fromXML(scala.xml.XML.loadString(xmlString))
-		//println(AllClasses.toXML)
+		AllClasses.set(new ClientClasses(scala.xml.XML.loadString(xmlString)))		
+		//println(AllClasses.get.toXML)
 	}
 	
 	

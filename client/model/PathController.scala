@@ -15,6 +15,7 @@ import javax.swing.SwingUtilities
 class PathController (val model:PathModel, val view:ListView[InstanceData],val listener:PathControllable) {
 	var oldIndex= -1
 	@scala.volatile var updating=false
+	listener.registerOpenChildCallBack(openChildFromListener)
 	view.peer.setModel(model)
 	view.selection.intervalMode=ListView.IntervalMode.Single
 	view.listenTo(view.selection)
@@ -34,11 +35,15 @@ class PathController (val model:PathModel, val view:ListView[InstanceData],val l
 		//println(" indices:"+view.selection.indices)
 		if (!updating &&  (newPos!=oldIndex) && (newPos < model.getSize) ) {
 			// change Subscription only to the remaining elements
-			if(newPos<oldIndex)			
-			model.jumpUp(newPos)
+			val selectRef:Option[Reference] = 
+			if(newPos<oldIndex) {
+				val ret=Some(model.getInstanceAt(newPos+1).ref) // select last pos below newPos
+				model.jumpUp(newPos)
+				ret
+			} else None
 			oldIndex=newPos
 			// notify listener
-			listener.openData(model.getInstanceAt(newPos).ref)
+			listener.openData(model.getInstanceAt(newPos).ref,selectRef)
 		}
 		if (updating) {			
 			if(newPos!=model.getSize-1) {
@@ -54,7 +59,7 @@ class PathController (val model:PathModel, val view:ListView[InstanceData],val l
 		updating=true
 		model.loadPath(newPath)(selectLastLine)
 		//view.selectIndices( newPath.size-1)		
-		listener.openData(newPath.last)
+		listener.openData(newPath.last,None)
 	}
 	
 	def selectLastLine():Unit = {
@@ -75,8 +80,12 @@ class PathController (val model:PathModel, val view:ListView[InstanceData],val l
 	def addPathElement(newElement:Reference) = {
 		updating=true
 		model.addPathElement(newElement)		
-		listener.openData(newElement)
+		listener.openData(newElement,None)
 	}
+	
+	// callback routine to be called from the listener
+	def openChildFromListener(ref:Reference) = addPathElement(ref)
+	
          
 	def shutDown() = {
 		model.shutDown()

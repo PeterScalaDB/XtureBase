@@ -28,10 +28,18 @@ class PropertyModel(val mainController:DataViewController) {
 		add(titleLabel,BorderPanel.Position.North)
 		add(tableArea,BorderPanel.Position.Center)
 	}
+	var selectRef:Option[Reference]=None
 	
-	
-	def load(nallowedClass:Int,fieldToLoad:Byte,fieldName:String) = {
+	/** loads data into the propertyModel
+	 * 
+	 * @param nallowedClass what classes are allowed to be in this model
+	 * @param fieldToLoad what property field to load
+	 * @param fieldName name of the property field
+	 * @param selRef reference of an instance that should optionally be selected
+	 */
+	def load(nallowedClass:Int,fieldToLoad:Byte,fieldName:String,selRef:Option[Reference]) = {
 		if(loaded) shutDown()
+		selectRef=selRef
 		allowedClass=nallowedClass
 		propertyField=fieldToLoad
 		titleLabel.text="Property ("+fieldToLoad+") "+fieldName+ " allowedClass:"+allowedClass
@@ -46,14 +54,15 @@ class PropertyModel(val mainController:DataViewController) {
 	
 	def callBack(notType:NotificationType.Value,data: IndexedSeq[InstanceData]) = {
 				
-		println("Property modification :"+notType+ " "+(if(data.isEmpty)" [Empty] "else   data.first.ref)+", ... "+	" subsID:"+subscriptionID)
+		//println("Proberty modification :"+notType+ " "+(if(data.isEmpty)" [Empty] "else   data.first.ref)+", ... "+	
+		//		 "subsID:"+subscriptionID+ " ** "+ Thread.currentThread.getName)
 		//println()				
 		notType match {
 			case NotificationType.sendData => {
 				val grouped=data.view.groupBy(_.ref.typ)
 				for((i,data) <-grouped.iterator) {
 					val mod=createTableModel(i)
-					mod.setDataList(data)
+					mod.setDataList(data,selectRef)
 				}					
 			}
 			case NotificationType.childAdded => {
@@ -75,6 +84,7 @@ class PropertyModel(val mainController:DataViewController) {
 	}
 	
 	def createTableModel(typ:Int) = {
+		//println("create new model")
 		val newMod= if(tableModMap.contains(typ)) tableModMap(typ)
 		else {
 			val anewMod=new TypeTableModel(typ,this)
@@ -99,6 +109,11 @@ class PropertyModel(val mainController:DataViewController) {
 		tableArea.contents.clear
 		tableModMap.clear
 		loaded=false
+	}
+	
+	def deselect(selectedType:Int) = {
+		//println("des")
+		for(m <-tableModMap.valuesIterator;if(m.typ!=selectedType)) m.deselect()
 	}
 	
 	def getHeight=tableModMap.size*100+40

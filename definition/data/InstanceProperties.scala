@@ -42,6 +42,11 @@ class InstanceProperties(override val ref:Reference, val propertyFields:Array [P
 		new InstanceProperties(ref,newFields)   
 	}
 	
+	def hasChildren:Boolean = {
+		for (p <-propertyFields) if(! p.propertyList.isEmpty ) return true
+		return false
+	}
+	
 	   
 }
 
