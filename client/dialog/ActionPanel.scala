@@ -1,7 +1,7 @@
 /**
  * Author: Peter Started:25.09.2010
  */
-package client.testUI
+package client.dialog
 
 import scala.swing._
 import definition.typ._
@@ -9,10 +9,16 @@ import scala.swing.event._
 import collection.mutable.ArrayBuffer
 import definition.data._
 import client.dataviewer._
+import client.comm.ClientQueryManager
 
 /** a panel showing all possible panels
  * 
  */
+
+trait ActionPanListener {
+	def startActionDialog(actionName:String,question:ParamQuestion)
+}
+
 class ActionPanel extends BoxPanel(scala.swing.Orientation.Vertical) with SelectListener {
 	//var actionList:Seq[AbstractAction]= _
 	val buttonList= new ArrayBuffer[ActionButton]()
@@ -20,17 +26,24 @@ class ActionPanel extends BoxPanel(scala.swing.Orientation.Vertical) with Select
 	var lastClass:Int= _
 	var buttonSize=new Dimension(110,30)
 	var nullSize=new Dimension(0,0)
+	var instList:Seq[InstanceData] = _
+	var listenerSet=collection.mutable.HashSet[ActionPanListener]()
 	
 	reactions += {
-		case ButtonClicked(e:ActionButton) => {
-			println("Button " +e.text+" clicked")
+		case ButtonClicked(e:ActionButton) => if(instList!=null){			
+			if (e.question ==None ) {
+				println("Execute action " +e.text)
+				ClientQueryManager.executeAction(instList,e.text,Seq())
+			}
+			else listenerSet foreach (_.startActionDialog(e.text,e.question.get))
 		}
 	
 	}
 	
-	def selectionChanged(instList:Seq[InstanceData]) = {
+	def selectionChanged(ninstList:Seq[InstanceData]) = {
 		//println("select "+instList)
-		if(instList==null || instList.isEmpty) hideActions
+		instList=ninstList
+		if(instList==null || instList.isEmpty || instList.first==null) hideActions
 		else setClass(instList.first.ref.typ)
 	}
 	
@@ -73,6 +86,10 @@ class ActionPanel extends BoxPanel(scala.swing.Orientation.Vertical) with Select
 		retButton.question=action.question
 		usedButtons += 1
 		retButton
+	}
+	
+	def registerActionPanListener(listener:ActionPanListener) = {
+		listenerSet+=listener
 	}
  
 	class ActionButton extends Button {	

@@ -45,6 +45,7 @@ object Constant
 		case DataType.LongTyp => new LongConstant(value.toLong)
 		case DataType.DoubleTyp => new DoubleConstant(value.toDouble)   
 		case DataType.StringTyp => new StringConstant(value.toString)
+		case DataType.BoolTyp => new BoolConstant(value.toBoolean)
 		case _ => throw new IllegalArgumentException("Conversion to type "+toType+" is not supported yet")
 		}	
 }

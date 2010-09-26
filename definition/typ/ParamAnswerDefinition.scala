@@ -6,10 +6,10 @@ package definition.typ
 /**
  * 
  */
-class ParamAnswerDefinition(dataType:DataType.Value,followQuestion:Option[ParamQuestion]) {
+class ParamAnswerDefinition(val name:String,val dataType:DataType.Value,val followQuestion:Option[ParamQuestion]) {
 	
 	def toXML():scala.xml.Node = {
-		<Answer typ= {dataType.id.toString}>
+		<Answer typ= {dataType.id.toString} name={name}>
 		{followQuestion match {
 			case Some(d)=> d.toXML()
 			case None =>
@@ -23,6 +23,6 @@ object ParamAnswerDefinition {
 	def fromXML(node: scala.xml.Node):ParamAnswerDefinition = {
 		val dtype=(node \"@typ").text.toInt
 		val question=for(qfield <-(node \"Question")) yield ParamQuestion.fromXML(qfield) 
-		new ParamAnswerDefinition(DataType(dtype),if(question.isEmpty)None else Some(question.first))
+		new ParamAnswerDefinition((node \"@name").text,DataType(dtype),if(question.isEmpty)None else Some(question.first))
 	}
 }

@@ -23,6 +23,7 @@ object ClientCommands extends Enumeration {
   val writeField=Value("write Field")
   val deleteInstance=Value("delete Instance")
   val copyInstance=Value("copy Instance")
+  val executeAction=Value("execute Action")
   val logOut=Value("logout")
   
 }

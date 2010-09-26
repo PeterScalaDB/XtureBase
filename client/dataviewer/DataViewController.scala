@@ -31,7 +31,7 @@ class DataViewController  extends PathControllable  {
 	var selectedInstance: InstanceData= _ // to be deleted
 	
 	var openChildCallBack:(Reference)=> Unit = _
-	var selectListener:SelectListener= _
+	var selectListener= collection.mutable.HashSet[SelectListener]()
 	
 	/** is called by PathModel when another instance should be loaded
 	 *  @param parentRef the new Instance to be loaded
@@ -49,7 +49,7 @@ class DataViewController  extends PathControllable  {
 	  	panel.contents+=mod.panel
 	  }
 	  updateHeight()
-	  if(!selectRef.isDefined && selectListener!=null) selectListener.selectionChanged(null)
+	  if(!selectRef.isDefined) selectListener foreach(_.selectionChanged(null))
 	  loaded =true
 	}
 	
@@ -58,14 +58,14 @@ class DataViewController  extends PathControllable  {
 	}
 	
 	def registerSelectListener(listener:SelectListener) = {
-		selectListener=listener
+		selectListener += listener
 	}
 	
 	
 	def updateHeight() = {
 		javax.swing.SwingUtilities.invokeLater(new Runnable(){
 			def run= {
-			  panel.preferredSize=new Dimension(10,getHeight)		
+			  //panel.preferredSize=new Dimension(10,getHeight)		
 			  panel.revalidate
 			  panel.repaint	
 			}
@@ -99,7 +99,7 @@ class DataViewController  extends PathControllable  {
 		//println("sel: propfield:"+proMod.propertyField+" typ:"+tabMod.typ +" \n"+instList.mkString)
 		for(i <- 0 until numUsedModels;val mod=propertyModels(i))
 			mod.deselect(tabMod.typ)
-		if(selectListener!=null) selectListener.selectionChanged(instList)	
+		 selectListener foreach(_.selectionChanged(instList))	
 		//selectedInstance=inst
 	}
 	

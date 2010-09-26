@@ -21,6 +21,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	userSocket.registerCommandHandler(ClientCommands.pathSubs_openChild )(pathSubs_openChild)
 	userSocket.registerCommandHandler(ClientCommands.pathSubs_jumpUp  )(pathSubs_jumpUp)
 	userSocket.registerCommandHandler(ClientCommands.pathSubs_changePath  )(pathSubs_changePath)
+	
 
 	private def handleQuery(in:DataInputStream) = {
 		val parentRef:Reference=Reference(in)
@@ -125,6 +126,9 @@ class UserQueryHandler(userSocket: UserSocket) {
 		println("pause Subscription "+subsID)
 		CommonSubscriptionHandler.pauseSubscription(subsID)
 	}
+	
+	
+	
 	
 	def notifyInstanceChanged(subs:SubscriptionInfo,data:InstanceData) = {
 		println("Notify changed "+subs+" "+data.ref)

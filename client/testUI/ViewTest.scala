@@ -18,6 +18,7 @@ import java.io._
 import javax.swing.border._
 import scala.collection.immutable.IndexedSeq
 import client.dataviewer._
+import client.dialog._
 
 /** tests the instance dataviewer
  * 
@@ -64,7 +65,7 @@ object ViewTest extends SimpleSwingApplication {
 		add (new ScrollPane()  
 			{
 				viewportView= viewController.panel
-				preferredSize=new Dimension(280,500)								
+				//preferredSize=new Dimension(280,500)								
 			},BorderPanel.Position.Center) 
 		add (new BorderPanel(){
 			add (new ScrollPane() {
@@ -81,6 +82,7 @@ object ViewTest extends SimpleSwingApplication {
 			},BorderPanel.Position.Center)
 			
 		},BorderPanel.Position.East)
+		add( DialogManager.dialogPanel,BorderPanel.Position.South)
 	}
 	
 	val top = new MainFrame ()
@@ -102,12 +104,16 @@ object ViewTest extends SimpleSwingApplication {
 	override def startup(args: Array[String]) = {		
 		if(args.length<4 ) { println("Usage: TableTest host portnr name password"); quit() }
 		top.title= "Table Test ["+args(2)+"]"
+		// connect components
+		actionPan.registerActionPanListener(DialogManager)
+		viewController.registerSelectListener(actionPan)
+		viewController.registerSelectListener(DialogManager)
 		//println(top.title)
 		sock=new ClientSocket(InetAddress.getByName(args(0)),args(1).toInt,args(2),args(3))
   	sock.start()
   	ClientQueryManager.setClientSocket(sock)
   	Thread.`yield`()
-  	viewController.registerSelectListener(actionPan)
+  	
   	super.startup(args)
 	}
 	

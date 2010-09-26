@@ -1,4 +1,4 @@
-h1. Welcome to the %{color:blue}AtectBase% project !
+h1. Welcome to the %{color:blue}XtureBase% project !
 
 
 The aim of this project is to create a *database* that:

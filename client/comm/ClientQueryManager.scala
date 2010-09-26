@@ -184,6 +184,17 @@ object ClientQueryManager {
 		commandResultQueue.take() 
 	}
 	
+	def executeAction(instList:Seq[InstanceData],actionName:String,params:Seq[(String,Constant)])= {
+		sock.sendData(ClientCommands.executeAction) { out =>
+			out.writeInt(instList.size)
+			instList foreach(_.ref.write(out))
+			out.writeUTF(actionName)
+			out.writeInt(params.size)
+			params foreach((x) => {out.writeUTF(x._1); x._2 .write(out)})
+		}
+		commandResultQueue.take() 	
+	}
+	
 	
 	// ************************************* Internal routines *************************************
 	

@@ -116,6 +116,6 @@ class PropertyModel(val mainController:DataViewController) {
 		for(m <-tableModMap.valuesIterator;if(m.typ!=selectedType)) m.deselect()
 	}
 	
-	def getHeight=tableModMap.size*100+40
+	def getHeight=tableModMap.values.foldRight(0){(n,result)=> result+n.scroller.preferredSize.height} 
 
 }

@@ -13,17 +13,19 @@ import definition.expression._
  */
 class TestActionModule extends ActionModule {
 	
-	val thirdQuestion=new ParamQuestion("thirdQuestion",Seq(new ParamAnswerDefinition(DataType.LongTyp,None)))
+	val thirdQuestion=new ParamQuestion("thirdQuestion",Seq(new ParamAnswerDefinition("Große Zahl eingeben:",DataType.LongTyp,None)))
 	
-	val oneAction=new ActionImpl("Löschen",Some(new ParamQuestion("what int",Seq(new ParamAnswerDefinition(DataType.IntTyp,None)))),doOneAction)
-	val otherAction=new ActionImpl("Verschieben",Some(new ParamQuestion("what next",Seq(new ParamAnswerDefinition(DataType.IntTyp,None),
-		new ParamAnswerDefinition(DataType.StringTyp,Some(thirdQuestion))))),doOtherAction)
+	val oneAction=new ActionImpl("Kopieren",Some(new ParamQuestion("what int",Seq(new ParamAnswerDefinition("Zahl eingeben:",DataType.IntTyp,None)))),doOneAction)
+	val otherAction=new ActionImpl("Verschieben",Some(new ParamQuestion("what next",Seq(new ParamAnswerDefinition("Zahl eingeben:",DataType.IntTyp,None),
+		new ParamAnswerDefinition("Text eingeben:",DataType.StringTyp,Some(thirdQuestion))))),doOtherAction)
 	
-	def getActionCount:Int={println("TestModule getActionCount" );2}
+	val quietAction=new ActionImpl("Gleichbleiben",None,doQuietAction)
+	def getActionCount:Int=3
 	
 	def getAction(ix:Int):ActionImpl = ix match {
 		case 0 => oneAction
 		case 1 => otherAction
+		case 2 => quietAction
 		case _ => null
 	}
 	
@@ -36,6 +38,11 @@ class TestActionModule extends ActionModule {
 	def doOtherAction(data:Seq[InstanceData],param:Seq[Constant]):Boolean = {
 		println("Doing Action two with parameters:"+param.mkString(",")+"data")
 		println(data.mkString(","))
+		true
+	}
+	
+	def doQuietAction(data:Seq[InstanceData],param:Seq[Constant]):Boolean = {
+		println("Do quiet action "+data.map(_.ref).mkString(","))
 		true
 	}
 	

@@ -68,7 +68,9 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 
 	def setDataList(data:Seq[InstanceData],selectInstance:Option[Reference]) =  {
 		listLock.synchronized {
-			dataList=data		
+			
+			dataList=data
+			calcSize()
 			selfSelectChanged=false
 			selfAdded=false
 			selectedInstances.buf=data
@@ -84,6 +86,12 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 				case _ =>
 			}
 		}
+	}
+	
+	def calcSize() = {
+		scroller.preferredSize=new Dimension(100,(if (dataList==null || dataList.isEmpty)2 else dataList.size+2)*22)
+		scroller.minimumSize=scroller.preferredSize
+		scroller.revalidate
 	}
 
 	def changeInstance(newInst:InstanceData):Unit = listLock.synchronized {
@@ -110,7 +118,9 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 		selectedInstances.buf=dataList
 		//println("added "+dataList.size+" "+Thread.currentThread+ " "+table.selection.rows)
 		val newSize=dataList.size
+		
 		runSw{fireTableRowsInserted(newSize,newSize)
+			calcSize()
 			if(selfAdded){ 
 				propMod.mainController.selectionChanged(TypeTableModel.this,propMod,Array(newInst))
 				selfAdded=false
@@ -125,6 +135,7 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 		else {
 			dataList=dataList filterNot(_.ref ==ref)
 			selectedInstances.buf=dataList
+			calcSize
 			runSw{fireTableRowsDeleted(pos,pos)}
 		}
 	}
