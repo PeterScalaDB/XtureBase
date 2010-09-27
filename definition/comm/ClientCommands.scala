@@ -25,5 +25,6 @@ object ClientCommands extends Enumeration {
   val copyInstance=Value("copy Instance")
   val executeAction=Value("execute Action")
   val logOut=Value("logout")
-  
+  val getUserSettings=Value("get user settings")
+  val writeUserSettings=Value("write user settings")  
 }

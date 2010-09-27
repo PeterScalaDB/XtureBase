@@ -37,6 +37,8 @@ object ClientQueryManager {
 	
 	private var sock:ClientSocket=null
 	private val myPool=Executors.newCachedThreadPool() 
+	private var setupListenerMap=collection.mutable.HashSet[Function0[Unit]]()
+	private val storeSettingsListenerMap= collection.mutable.HashSet[Function0[Unit]]()
 	
 	def setClientSocket(newSock:ClientSocket) = {
 		sock=newSock
@@ -83,7 +85,7 @@ object ClientQueryManager {
 		}
 	}
 	
-	def createPathSubscription(path:IndexedSeq[Reference])(updateFunc:UpdateFunc) = {
+	def createPathSubscription(path:Seq[Reference])(updateFunc:UpdateFunc) = {		
 		sock.sendData(ClientCommands.startPathSubscription ) {out =>
 			newSubscriberQueue.add( Subscriber(updateFunc))
 			out.writeInt(path.size)
@@ -109,7 +111,7 @@ object ClientQueryManager {
 		}
 	}
 	
-	def pathSubs_changePath(subsID:Int,newPath:IndexedSeq[Reference]) = {
+	def pathSubs_changePath(subsID:Int,newPath:Seq[Reference]) = {
 		sock.sendData(ClientCommands.pathSubs_jumpUp  ) { out =>
 			out.writeInt(subsID)
 			out.writeInt(newPath.size)
@@ -314,6 +316,23 @@ object ClientQueryManager {
 		  commandResultQueue.put(result)
 		}
 	}
+	
+	def registerSetupListener(listener:Function0[Unit]) {
+		setupListenerMap+=listener
+	}
+	
+	def registerStoreSettingsListener(listener:Function0[Unit]) {
+		storeSettingsListenerMap+=listener
+	}
+	
+	def notifySetupListeners() = runInPool{
+		setupListenerMap.foreach(a => a())
+	}
+	
+	def notifyStoreSettingsListeners() = {
+		storeSettingsListenerMap.foreach(a => a())
+	}
+	
 	
 	/** runs a given function in a new Thread from the ThreadPool
 	 *  to avoid deadlocks

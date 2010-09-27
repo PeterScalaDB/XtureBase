@@ -17,9 +17,9 @@ import javax.swing.SwingUtilities
 class PathModel extends AbstractListModel {
 	
 	var subsID= -1
-	var dataList:Option[IndexedSeq[InstanceData]]= None
+	var dataList:Option[Seq[InstanceData]]= None
 	
-	private [model] def loadPath(newPath:IndexedSeq[Reference])(readyFunc:() => Unit) = {
+	private [model] def loadPath(newPath:Seq[Reference])(readyFunc:() => Unit) = {
 		if(subsID== -1) {
 			subsID= ClientQueryManager.createPathSubscription(newPath) { 
 				(ntype: NotificationType.Value,data:IndexedSeq[InstanceData]) => {

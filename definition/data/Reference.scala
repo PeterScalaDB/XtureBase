@@ -10,7 +10,7 @@ import java.io.{DataInput,DataOutput}
  */
 case class Reference (typ:Int, instance:Long) 
 {
-   def sToString() = "["+typ+", "+instance+"]"
+   def sToString() = "("+typ+", "+instance+")"
    
    def write(file: DataOutput ) = { 
   	 file.writeInt(typ);file.writeLong(instance)

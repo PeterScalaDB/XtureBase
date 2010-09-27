@@ -38,6 +38,8 @@ private var userName=""
 	registerCommandHandler(ClientCommands.deleteInstance)(wantDeleteInstance)
 	registerCommandHandler(ClientCommands.copyInstance)(wantCopyInstance)
 	registerCommandHandler(ClientCommands.executeAction  )(executeAction)	
+	registerCommandHandler(ClientCommands.getUserSettings  )(getUserSettings)
+	registerCommandHandler(ClientCommands.writeUserSettings  )(writeUserSettings)
 
 
 	override def run ():Unit = { // receiving loop
@@ -315,6 +317,34 @@ private var userName=""
 			out.writeBoolean(false) // no result						  
 		}
 	}			 
+	}
+	
+	def getUserSettings(in:DataInputStream) = {
+		val file=new File(FSPaths.configDir+userName+".set")
+		sendData(ServerCommands.sendUserSettings ) {out =>
+			if(!file.exists) out.writeInt(0)
+			else if(file.length==0) out.writeInt(0)
+			else {
+				val in=new FileInputStream(file)
+				val l=file.length.toInt
+				println("read Settings: "+l)
+				val readBuffer= new Array[Byte](l)
+				in.read(readBuffer,0,l)
+				out.writeInt(l)
+				out.write(readBuffer,0,l)
+				in.close				
+			}
+		}
+	}
+	
+	def writeUserSettings(in:DataInputStream) = {		
+		val file=new File(FSPaths.configDir+userName+".set")
+		val length=in.readInt
+		val readBuffer=new Array[Byte](length)
+		in.read(readBuffer,0,length)
+		val out=new FileOutputStream(file)
+		out.write(readBuffer,0,length)
+		out.close	
 	}
 
 

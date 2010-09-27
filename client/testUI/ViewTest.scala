@@ -137,15 +137,9 @@ object ViewTest extends SimpleSwingApplication {
 	def stressTest() = {
 		val numLoops=100
 		val starttime:Long = System.currentTimeMillis();
-		val owner=Array(new OwnerReference(propEdit.text.toByte,Reference(typEdit.text.toInt,instEdit.text.toInt)))
+		val owner=Array(new OwnerReference(propEdit.text.toByte,Reference(typEdit.text.toInt,instEdit.text.toInt)))		
 		
 		
-		for(i <- 0 until 500)
-		{				
-				/*val id=ClientQueryManager.createInstance(tabModel.allowedClass,owner)
-  			ClientQueryManager.writeInstanceField(Reference(tabModel.allowedClass,id),0,StringConstant("Test Object "+i))
-  			ClientQueryManager.writeInstanceField(Reference(tabModel.allowedClass,id),1,DoubleConstant(i.toDouble/100))*/
-		}
 		val endtime = System.currentTimeMillis()
 		println("Stresstest time:"+(endtime-starttime))
 	}

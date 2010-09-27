@@ -23,9 +23,7 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 	private val socket = new Socket(serverAddress, port)
 	val out =  new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()))
 	private val outStreamLock : AnyRef = new Object()
-	var wantQuit=false
-	
-	
+	var wantQuit=false		
 	type CommandHandlerFunc= (DataInputStream)=>Unit
 	
 	
@@ -42,7 +40,9 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 			 val retValue=in.readUTF()
 			 if(retValue !="welcome" ) {println("not welcome, message: "+retValue); return }
 			 println("Logged in to "+serverAddress)
-			 sendData(ClientCommands.getTypes ){out =>}
+			 sendData(ClientCommands.getTypes ){out =>}			 
+			 sendData(ClientCommands.getUserSettings ){out =>}
+			 Thread.`yield`()
 			 handleCommands(in)
 		 }
 		 catch {
@@ -59,9 +59,10 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 		{				
 			try {
 				val command =ServerCommands(in.readByte.toInt)
-				//println("ServerCommand: "+command)
+				println("ServerCommand: "+command)
 				command match {
 					case ServerCommands.sendTypes  => readInTypes(in)
+					case ServerCommands.sendUserSettings => readUserSettings(in)
 					case ServerCommands.wantQuit => {quitApplication();return }					
 					case a => if (commandHandlerMap.contains(a)) 
 						              commandHandlerMap(a)(in)						             
@@ -82,6 +83,21 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 		//println(AllClasses.get.toXML)
 	}
 	
+	private def readUserSettings(in:DataInputStream) = {
+		val length=in.readInt
+		print(length +" ")
+		val buffer=new Array[Byte](length)
+		if(length>0) in.read(buffer,0,length)
+		val s= new String(buffer)
+		UserSettings.parse(s)
+		println("reading user settings "+UserSettings.writeProperties)
+				
+		ClientQueryManager.notifySetupListeners
+	}
+	
+	
+	
+	
 	
 	
 	
@@ -96,8 +112,15 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 	
 	def quitApplication() = 	{
 		// Shutdown all data
+		// save changes in user settings
+		ClientQueryManager.notifyStoreSettingsListeners()		
 		// store user settings
-		
+		println("writing settings")
+		sendData(ClientCommands.writeUserSettings ) {out =>
+			val buffer =UserSettings.writeProperties.getBytes
+			out.writeInt(buffer.length)
+			out.write(buffer,0,buffer.length)
+		}
 		// logout
 		println("Logging out")
 		wantQuit=true

@@ -8,6 +8,7 @@ import scala.swing._
 import scala.swing.event._
 import scala.collection.immutable._
 import javax.swing.SwingUtilities
+import client.comm.{ClientQueryManager,UserSettings}
 
 /** manages the connection of a PathModel and a ListView
  * 
@@ -20,19 +21,25 @@ class PathController (val model:PathModel, val view:ListView[InstanceData],val l
 	view.selection.intervalMode=ListView.IntervalMode.Single
 	view.listenTo(view.selection)
 	view.reactions += {
-		case ListSelectionChanged(list,range,live) => { 
-			//println("Range:"+range+" lead:"+view.selection.leadIndex+" anch:"+view.selection.anchorIndex);
-			
-			if (!live&& !view.selection.indices.isEmpty) selectionChanged(view.selection.indices.first)
-			//println("#####################################")
-			//Thread.dumpStack
-		}
-		
+		case ListSelectionChanged(list,range,live) => {			
+			if (!live&& !view.selection.indices.isEmpty) selectionChanged(view.selection.indices.first)			
+		}		
 	}
 	
-	def selectionChanged(newPos:Int)= {
-		//println(" sel changed newpos:"+newPos+" oldIx:"+oldIndex+" model size:"+model.getSize+" updating:"+updating+" "+Thread.currentThread)
-		//println(" indices:"+view.selection.indices)
+	ClientQueryManager.registerSetupListener(() => {
+		val p=UserSettings.getListProperty("pathController","currentPath",Seq(Reference(10,1)))
+		println("loading path "+p)
+		loadPath(p)
+	})
+	ClientQueryManager.registerStoreSettingsListener(() => {
+		UserSettings.setListProperty("pathController","currentPath",model.dataList match {
+			case Some(list) => list.map(_.ref).asInstanceOf[collection.immutable.Seq[Reference]]
+			case None => Seq(Reference(10,1))
+		})		
+	})
+	
+	
+	def selectionChanged(newPos:Int)= {		
 		if (!updating &&  (newPos!=oldIndex) && (newPos < model.getSize) ) {
 			// change Subscription only to the remaining elements
 			val selectRef:Option[Reference] = 
@@ -55,7 +62,7 @@ class PathController (val model:PathModel, val view:ListView[InstanceData],val l
 		}
 	}
 	
-	def loadPath(newPath:IndexedSeq[Reference]) = {
+	def loadPath(newPath:Seq[Reference]) = {
 		updating=true
 		model.loadPath(newPath)(selectLastLine)
 		//view.selectIndices( newPath.size-1)		
