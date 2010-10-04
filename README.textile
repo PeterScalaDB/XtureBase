@@ -12,6 +12,11 @@ The aim of this project is to create a *database* that:
 * automatically notifies clients about commited data changes, so there are live updates
 * provides an easy programming model to build vertical applications on top
 
+My short term goal is to create a simple 2d graphical editor, to test the database and UI concept
+The long term objective is to create a multifunctional database to describe a building in a graphical and textual way and store all related data in one place
+
+The database is written in "Scala":http://www.scala-lang.org/
+
 Read more:
 
 "Database specification":http://wiki.github.com/PeterScalaDB/AtectBase/database-specification
