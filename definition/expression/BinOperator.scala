@@ -33,6 +33,9 @@ object BinOperator
   				case DataType.LongTyp => Some(new LongConstant (left.toLong +right.toLong))
   				case DataType.DoubleTyp => Some(new DoubleConstant (left.toDouble + right.toDouble ))
   				case DataType.StringTyp => Some(new StringConstant (left.toString + right.toString ))
+  				case DataType.VectorTyp => if(right.getType==DataType.VectorTyp) {
+  					Some(left.asInstanceOf[VectorConstant]+right.asInstanceOf[VectorConstant])
+  				} else throw new IllegalArgumentException( "Cant add Datatype "+left.getType+" to Vectors ")
   				case _ =>  throw new IllegalArgumentException( "Wrong Datatype "+left.getType+" for add operation ")
   			} 			
 			}
@@ -43,7 +46,10 @@ object BinOperator
 				{
   				case DataType.IntTyp => Some(new IntConstant (left.toInt -right.toInt))
   				case DataType.LongTyp => Some(new LongConstant (left.toLong -right.toLong))
-  				case DataType.DoubleTyp => Some(new DoubleConstant (left.toDouble - right.toDouble ))  				
+  				case DataType.DoubleTyp => Some(new DoubleConstant (left.toDouble - right.toDouble ))
+  				case DataType.VectorTyp => if(right.getType==DataType.VectorTyp) {
+  					Some(left.asInstanceOf[VectorConstant]-right.asInstanceOf[VectorConstant])
+  				} else throw new IllegalArgumentException( "Cant add Datatype "+left.getType+" to Vectors ")
   				case _ =>  throw new IllegalArgumentException( "Wrong Datatype "+left.getType+" for add operation ")
   			} 			
 			}
@@ -54,7 +60,14 @@ object BinOperator
   			{
   				case DataType.IntTyp => Some(new IntConstant (left.toInt *right.toInt))
   				case DataType.LongTyp => Some(new LongConstant (left.toLong *right.toLong))
-  				case DataType.DoubleTyp => Some(new DoubleConstant (left.toDouble * right.toDouble ))  				
+  				case DataType.DoubleTyp => Some(new DoubleConstant (left.toDouble * right.toDouble ))
+  				case DataType.VectorTyp => {
+  					val leftVector=left.asInstanceOf[VectorConstant]
+  					if(right.getType==DataType.VectorTyp) 
+  						Some(DoubleConstant(leftVector*right.asInstanceOf[VectorConstant]))
+  					else Some(leftVector*right.toDouble)  					
+  				}
+  					 
   				case _ =>  throw new IllegalArgumentException( "Wrong Datatype "+left.getType+" for add operation ")
   			} 			
 			}

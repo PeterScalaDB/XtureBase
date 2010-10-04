@@ -21,4 +21,10 @@ object ParamQuestion {
 		val answers=for(afield <-(node \"Answer")) yield ParamAnswerDefinition.fromXML(afield)
 		new ParamQuestion(name,answers)
 	}
+	
+	def makeQuestion(parms:List[(String,(String,DataType.Value))]):Option[ParamQuestion] = {
+		val firstQ=parms.head
+		new Some(ParamQuestion(firstQ._1,Seq(
+			new ParamAnswerDefinition(firstQ._2._1,firstQ._2._2,if(parms.tail.isEmpty) None else makeQuestion(parms.tail)))))
+	}
 }

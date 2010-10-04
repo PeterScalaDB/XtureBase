@@ -48,7 +48,10 @@ object TransactionManager {
 		
 	
 	
-	
+	/** creates a new Instance
+	 * @param typ the class id of the new instance
+	 * @param notifyRefandColl should referencing links and collFuncs be notified about the new instance
+	 */
 	def tryCreateInstance(typ:Int,owners:Array[OwnerReference],notifyRefandColl:Boolean) =	{	
 		if(!running ) throw new IllegalArgumentException("No transaction defined ")
 		//TODO: Check if the child type is allowed in the owner property fields

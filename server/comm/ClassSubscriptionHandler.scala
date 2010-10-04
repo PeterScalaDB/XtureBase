@@ -114,7 +114,7 @@ class ClassSubscriptionHandler(typID:Int) {
 		if(singleSubsMap.contains(s.parentRef)) {
 			val list=singleSubsMap(s.parentRef)
 			if(list.contains(s))
-				singleSubsMap.put(s.parentRef,list - s)
+				singleSubsMap.put(s.parentRef,list.filterNot(_ ==  s))
 		}
 		else println("Entry for "+s.parentRef+" not found")
 	}
@@ -124,7 +124,7 @@ class ClassSubscriptionHandler(typID:Int) {
 		if(propSubsMap.contains(s.parentRef)) {
 		val list=propSubsMap(s.parentRef)
 		if(list.contains(s))
-			propSubsMap.put(s.parentRef,list - s)
+			propSubsMap.put(s.parentRef,list.filterNot(_ == s))
 		} else println("Entry for "+s.parentRef+" not found")
 	}	
 	

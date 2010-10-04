@@ -36,7 +36,7 @@ object InstFieldTableModel extends AbstractTableModel
   def getRowCount():Int =
   {
      if(theClass==null) 0
-     else theClass.getFieldCount+ 1     
+     else theClass.fields.size+ 1     
   }
      
   override def isCellEditable(rowIndex:Int,columnIndex:Int) = (rowIndex>1) && (columnIndex==1)
@@ -53,7 +53,7 @@ object InstFieldTableModel extends AbstractTableModel
   		case 0 =>    	row match{
     		
     		case 0 => "Owner"
-    		case _ => theClass.field(row-1).name    	    	
+    		case _ => theClass.fields(row-1).name    	    	
       }
   		case 1 => row match{
     		

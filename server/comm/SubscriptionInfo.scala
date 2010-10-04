@@ -12,8 +12,26 @@ import server.comm._
  */
 abstract class SubscriptionInfo(val user:UserEntry,val id:Int,val parentRef:Reference) 
 
-case class SingleSubscription(override val user:UserEntry,override  val id:Int,override val parentRef:Reference) 
-extends SubscriptionInfo(user,id,parentRef)
+class SingleSubscription(override val user:UserEntry,override  val id:Int,override val parentRef:Reference) 
+extends SubscriptionInfo(user,id,parentRef) {
+	override def equals(other: Any) = other match {
+		case that: SingleSubscription => that.canEqual(this) && this.user == that.user && this.id==that.id && this.parentRef==that.parentRef
+		case _ => false
+	}
+	override def hashCode = 41 * user.hashCode + 1041*id+4041*parentRef.hashCode+3
+	override def toString = "SingleSubs("+id+ " ref: "+parentRef+")"
+	def canEqual(that: SingleSubscription) = true  
+}
+object SingleSubsciption {
+	// Boilerplate automatically provided by case class you may want to retain
+	def apply(user:UserEntry,id:Int,parentRef:Reference) = new SingleSubscription(user,id,parentRef)
+	
+	// Your extractor
+	def unapply(el: SingleSubscription) = Some(el.user,el.id,el.parentRef)
+	
+}
+
+
 
 case class PropSubscription(override val user:UserEntry,override val id:Int,override val parentRef:Reference,propertyField:Byte) 
 extends SubscriptionInfo (user,id,parentRef)

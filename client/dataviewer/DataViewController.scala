@@ -42,8 +42,8 @@ class DataViewController  extends PathControllable  {
 	  selectedInstance=null
 	  parentRef=nparentRef
 	  mainClass=AllClasses.get.getClassByID(parentRef.typ)
-	  for(i <- 0 until mainClass.getPropFieldCount) {
-	  	val propFieldInfo=mainClass.propField(i)
+	  for(i <- 0 until mainClass.propFields.size) {
+	  	val propFieldInfo=mainClass.propFields(i)
 	  	val mod=getPropModel
 	  	mod.load(propFieldInfo.allowedClass,i.toByte,propFieldInfo.name,selectRef)
 	  	panel.contents+=mod.panel

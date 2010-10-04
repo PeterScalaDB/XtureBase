@@ -19,6 +19,7 @@ import javax.swing.border._
 import scala.collection.immutable.IndexedSeq
 import client.dataviewer._
 import client.dialog._
+import client.graphicsView._
 
 /** tests the instance dataviewer
  * 
@@ -39,41 +40,71 @@ object ViewTest extends SimpleSwingApplication {
 	
 	val actionPan= new ActionPanel
 	
-	val mainPanel=	new BorderPanel()  // main panel
+	val testGraphList=new ListView[GraphElem]()
+	
+	var lastSelected:Seq[InstanceData]=Seq.empty
+	
+	val graphViewPan=new BorderPanel () {
+		preferredSize=new Dimension(400,200)
+		add(new ScrollPane() {
+			preferredSize=new Dimension(200,200)
+			viewportView=testGraphList
+			testGraphList.peer.setModel(TestGraphListModel)
+		},BorderPanel.Position.Center)
+	}
+	
+	val pathScroller =new ScrollPane() {
+				viewportView= pathView
+				pathView.fixedCellHeight=30
+				preferredSize=new Dimension(200,200)
+				def callback(nsize:Int):Unit= {
+					//println(size+" "+pathView.peer.getFixedCellHeight())
+					preferredSize=new Dimension(400,(nsize+1)*30 )
+					maximumSize=preferredSize
+					mainPanel.revalidate
+					peer.invalidate
+				}
+				pathContr.registerSizeChangeListener(callback)
+			}
+	
+	val mainPanel:BorderPanel=	new BorderPanel()  // main panel
 	{			
 		add ( new GridPanel(1,8) //top rail
 		{
 			hGap=10
 			border=BorderFactory.createEmptyBorder(10,10,10,10);
 			val loadBut =new Button("load")
-			//val openBut = new Button("open")
-			val deleteBut =new Button("delete Instance")
-			val stressBut = new Button("stress test")
+			val openGraphBut = new Button("open Graph")
+			//val deleteBut =new Button("delete Instance")
+			//val stressBut = new Button("stress test")
 			val copyBut = new Button("copy")
 			val createBut= new Button("create")
-			contents += typEdit += instEdit += propEdit += loadBut +=  deleteBut += stressBut+=copyBut+=createBut
-			listenTo(loadBut,deleteBut,stressBut,copyBut,createBut)
+			contents += typEdit += instEdit += propEdit += loadBut +=  copyBut+=createBut +=openGraphBut
+			listenTo(loadBut,copyBut,createBut,openGraphBut)
 			reactions += {
 					case ButtonClicked(`loadBut`) => loadData
-					//case ButtonClicked(`openBut`) => openData
-					case ButtonClicked(`deleteBut`) => deleteInstance
-					case ButtonClicked(`stressBut`) => stressTest
+					case ButtonClicked(`openGraphBut`) => openGraphData
+					//case ButtonClicked(`deleteBut`) => deleteInstance
+					//case ButtonClicked(`stressBut`) => stressTest
 					case ButtonClicked(`copyBut`) => copyData
 					case ButtonClicked(`createBut`) => createInstance
 			}
 		},BorderPanel.Position.North)
-		add (new ScrollPane()  
+		
+		add (graphViewPan,BorderPanel.Position.Center) 
+		
+		add (new BorderPanel(){
+			add (pathScroller,BorderPanel.Position.North)
+			add (new ScrollPane()  
 			{
 				viewportView= viewController.panel
+				viewController.registerSelectListener(new SelectListener{
+					def selectionChanged(instList:Seq[InstanceData])= lastSelected=instList
+				})
 				//preferredSize=new Dimension(280,500)								
 			},BorderPanel.Position.Center) 
-		add (new BorderPanel(){
-			add (new ScrollPane() {
-				viewportView= pathView
-				preferredSize=new Dimension(200,200)
-			},BorderPanel.Position.Center)
-		},BorderPanel.Position.West
-		)
+		},BorderPanel.Position.West)
+		
 		add( new BorderPanel() {
 			preferredSize=new Dimension(120,100)
 			add(new Label("Funktionen:"),BorderPanel.Position.North)
@@ -115,6 +146,10 @@ object ViewTest extends SimpleSwingApplication {
   	Thread.`yield`()
   	
   	super.startup(args)
+	}
+	
+	def openGraphData() = if(lastSelected.size>0){
+		TestGraphListModel.load(lastSelected(0).ref,0.toByte)
 	}
 	
 	def loadData() = {

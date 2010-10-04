@@ -25,4 +25,6 @@ object ParamAnswerDefinition {
 		val question=for(qfield <-(node \"Question")) yield ParamQuestion.fromXML(qfield) 
 		new ParamAnswerDefinition((node \"@name").text,DataType(dtype),if(question.isEmpty)None else Some(question.first))
 	}
+	
+	
 }

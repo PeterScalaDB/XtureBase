@@ -104,7 +104,7 @@ def getObjectClass():AbstractObjectClass =
 	
 	def regenFieldCache(index:Int):Unit = {
 		fieldValuesCache(index)= {			  
-				val fieldType = getObjectClass().field(index).typ
+				val fieldType = getObjectClass().fields(index).typ
 				val result=fieldData(index).getValue
 				//println("inst "+ref+" getfield "+index+" fieldType:"+fieldType+" result:" +result)
 				if(result.getType==fieldType|| result.getType==DataType.undefined )
@@ -154,10 +154,11 @@ case class OwnerReference(val ownerField:Byte, //in what property field of the o
 	//is this instance stored 
 	val ownerRef:Reference) { // reference of the owner instance
 	
-		def write(out:DataOutput) = {
-			out.writeByte(ownerField)
-			ownerRef.write(out)
-	}
+	def write(out:DataOutput) = {
+		out.writeByte(ownerField)
+		ownerRef.write(out)
+	}	
+	
 }
 
 object OwnerReference {

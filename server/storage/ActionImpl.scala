@@ -12,19 +12,35 @@ import definition.expression._
  */
 
 class ActionImpl(val name:String,override val question:Option[ParamQuestion],
-	val func:(Seq[InstanceData],Seq[Constant]) => Boolean) extends AbstractAction  {
-	
+	val func:(InstanceData,Seq[(String,Constant)]) => Boolean) extends AbstractAction  {
+	def isIterator=true
 	def toXML = 
    { 
 		println("Write Action "+name+ "  "+question)
-  	 <Action  name={name} >
+  	 <Action  name={name} iter= {"0"}   >
+  	 { question match {
+  		 case Some(q)=>q.toXML()
+  		 case _ =>  		 
+  		 }
+  	 }
+  	 </Action>
+   }
+}
+	
+class ActionIterator(val name:String,override val question:Option[ParamQuestion],
+	val func:(Seq[InstanceData],Seq[(String,Constant)]) => Boolean) extends AbstractAction  {
+	def isIterator=true	
+	def toXML = 
+   { 
+		println("Write Action "+name+ "  "+question)
+  	 <Action  name={name} iter={"1"}  >
   	 { question match {
   		 case Some(q)=>q.toXML()
   		 case _ =>  		 
   		 }
   	 }
   	 </Action> 
-   } 
+   }	
 	
 
 }

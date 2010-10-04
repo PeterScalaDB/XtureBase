@@ -11,13 +11,13 @@ import scala.collection.immutable.IndexedSeq
 /**
  *  description of a Class
  */
-class ClientObjectClass (val name:String,val id:Int,val description:String,protected val fields:Seq[FieldDefinition],
-	 protected val propFields:Seq[PropertyFieldDefinition],protected val actions:Seq[ActionDescription], protected val superClasses:Seq[String])
+class ClientObjectClass (val name:String,val id:Int,val description:String,protected val ownFields:Seq[FieldDefinition],
+	 protected val ownPropFields:Seq[PropertyFieldDefinition],protected val theActions:Seq[ActionDescription], protected val superClasses:Seq[String])
 	 extends AbstractObjectClass
 {  
    println("Class "+name+" actions:"+actions.mkString(","))
    
-   
+   def ownActions=theActions.iterator
   
   //TODO: check class Version when testing inheritance. InstanceProperties needs to store the class versions
   	

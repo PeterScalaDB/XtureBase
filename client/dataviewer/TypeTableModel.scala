@@ -76,7 +76,7 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 			selectedInstances.buf=data
 			selectedInstances.setFilter(Array())
 		}
-		runSw {
+		/*propMod.runSw*/ 
 			fireTableStructureChanged()
 			selectInstance match {
 				case Some(ref) =>if(ref.typ == typ){
@@ -85,11 +85,12 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 				}
 				case _ =>
 			}
-		}
+		
 	}
 	
 	def calcSize() = {
-		scroller.preferredSize=new Dimension(100,(if (dataList==null || dataList.isEmpty)2 else dataList.size+2)*22)
+		scroller.preferredSize=new Dimension(100,table.preferredSize.height+30)
+		//scroller.preferredSize=new Dimension(100,(if (dataList==null || dataList.isEmpty)2 else dataList.size+2)*22)
 		scroller.minimumSize=scroller.preferredSize
 		scroller.revalidate
 	}
@@ -105,8 +106,8 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 		else  { 
 			dataList=dataList.updated(pos,newInst)
 			selectedInstances.buf=dataList
-			runSw{fireTableRowsUpdated(pos,pos)
-				}
+			/*propMod.runSw*/fireTableRowsUpdated(pos,pos)
+				
 		}	
 	}
 
@@ -119,7 +120,7 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 		//println("added "+dataList.size+" "+Thread.currentThread+ " "+table.selection.rows)
 		val newSize=dataList.size
 		
-		runSw{fireTableRowsInserted(newSize,newSize)
+		/*propMod.runSw*/{fireTableRowsInserted(newSize,newSize)
 			calcSize()
 			if(selfAdded){ 
 				propMod.mainController.selectionChanged(TypeTableModel.this,propMod,Array(newInst))
@@ -136,7 +137,7 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 			dataList=dataList filterNot(_.ref ==ref)
 			selectedInstances.buf=dataList
 			calcSize
-			runSw{fireTableRowsDeleted(pos,pos)}
+			/*propMod.runSw*/fireTableRowsDeleted(pos,pos)
 		}
 	}
 
@@ -148,7 +149,7 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 	}
 
 	def getColumnCount= listLock.synchronized{
-		objClass.getFieldCount+1
+		objClass.fields.size+1
 	}
 
 	def getValueAt(row:Int,col:Int):Object = listLock.synchronized{
@@ -184,13 +185,13 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 	}
 
 	override def getColumnName(col:Int) = listLock.synchronized {
-		if(col==0) "ch" else objClass.field(col-1).name
+		if(col==0) "ch" else objClass.fields(col-1).name
 	}
 
 
 	def parseValue(columnIndex:Int,value:Object):Expression = {
 		if(value==null)EMPTY_EX else
-			if (objClass.field(columnIndex-1).typ==DataType.StringTyp)
+			if (objClass.fields(columnIndex-1).typ==DataType.StringTyp)
 				try {
 					StringParser.parse( value.toString) 
 				} 
@@ -213,9 +214,7 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 
 	}
 
-	def runSw (func: =>Unit) = SwingUtilities.invokeLater(new Runnable {
-		def run = func
-	})
+	
 
 
 	class SelectList[A](var buf: Seq[A],private var filterSet:Array[Int]=Array()) 

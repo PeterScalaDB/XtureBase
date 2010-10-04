@@ -65,6 +65,7 @@ object Expression
 			case DataType.FunctionCall => FunctionCall(file)
 			case DataType.CollFunctionCall => CollectingFuncCall(file)
 			case DataType.BoolTyp => new BoolConstant(file.readBoolean)
+			case DataType.VectorTyp => new VectorConstant(file.readDouble,file.readDouble,file.readDouble)
 			case _ => EMPTY_EX
 		}		
 	}
@@ -76,7 +77,8 @@ object Expression
 			case DataType.LongTyp => new LongConstant(file.readLong)
 			case DataType.DoubleTyp => new DoubleConstant(file.readDouble)
 			case DataType.StringTyp => new StringConstant(file.readUTF)
-	    case DataType.BoolTyp => new BoolConstant(file.readBoolean)		
+	    case DataType.BoolTyp => new BoolConstant(file.readBoolean)
+	    case DataType.VectorTyp => new VectorConstant(file.readDouble,file.readDouble,file.readDouble)
 			case _ => EMPTY_EX
 		}		
 	}

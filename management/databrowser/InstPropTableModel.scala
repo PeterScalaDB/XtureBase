@@ -39,7 +39,7 @@ object InstPropTableModel extends AbstractTableModel {
 	def getRowCount():Int =
   {
      if(theClass==null) 0
-     else theClass.getPropFieldCount    
+     else theClass.propFields.size
   }
 	
 	
@@ -52,7 +52,7 @@ object InstPropTableModel extends AbstractTableModel {
   	else 
     if(column==0)
     {  	
-    	  theClass.propField(row).name      	
+    	  theClass.propFields(row).name      	
     }
     else
     {	    	

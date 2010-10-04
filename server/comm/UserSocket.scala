@@ -289,7 +289,7 @@ private var userName=""
 	private def executeAction(in:DataInputStream) = {
 		var error:CommandError=null	
 		val numInstances=in.readInt
-		val instList=for(i <-0 until numInstances) yield Reference(in)
+		val instList=for(i <-0 until numInstances) yield StorageManager.getInstanceData(Reference(in))
 		val actionName=in.readUTF
 		val numParams=in.readInt
 		val paramList=for(i <-0 until numParams) 
@@ -297,8 +297,19 @@ private var userName=""
 		
 		try {
 			val ret=TransactionManager.doTransaction {
-		    println("Execute Action "+actionName+ "instances:"+instList.mkString(","))
-		    println("params: "+paramList.mkString(","))		
+				println("Execute Action "+actionName+ "instances:"+instList.mkString(","))
+		    println("params: "+paramList.mkString(","))
+		    AllClasses.get.getClassByID(instList.head.ref.typ).actions(actionName ) match {
+					case a:ActionImpl => // simple action, order of execution is not important
+						for ((typ,partList) <- instList.groupBy(_.ref.typ))
+							{
+								val theAction= AllClasses.get.getClassByID(typ).actions(actionName).asInstanceOf[ActionImpl]
+								partList.foreach(a => theAction.func(a,paramList))
+							}
+					case b:ActionIterator => // Iterator, runs through all instances in given order 
+						b.func(instList,paramList) 
+				}		
+		    		
 			}
 			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.executeAction.id,0)
 		} 

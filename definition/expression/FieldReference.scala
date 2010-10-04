@@ -15,7 +15,7 @@ import java.io._
 case class FieldReference(remType:Option[Int],remInst:Option[Long],remField:Byte,var cachedValue:Constant=EMPTY_EX) extends Expression {
 
 
-	val term:String = { 
+	lazy val term:String = { 
 	"#" + (remType match {
 		case Some(t) => "T"+ t.toString
 		case _ => "" }) + 

@@ -27,6 +27,8 @@ abstract class AllClasses [B <:AbstractObjectClass] (node: scala.xml.Node)  {
   // find a class by Name
   def getClassByName(aname:String):Option[AbstractObjectClass]= classList.valuesIterator.find(_.name ==aname) 
   
+  def getClassIDByName(aname:String):Int = getClassByName(aname).get.id
+  
   // find a class by class ID
   def getClassByID(aId:Int )= classList(aId)     
   
@@ -34,11 +36,9 @@ abstract class AllClasses [B <:AbstractObjectClass] (node: scala.xml.Node)  {
   def fromXML(node: scala.xml.Node):Map[Int,B]
   
   // resolves all superfields from all classes. Will be called after reading all classes from XLM
-  def resolveFields()= for(cl <-classList.valuesIterator)
-  									 {
-  											cl.resolveSuperFields()
-  											cl.resolveSuperClassIDs()
-  									 }		
+  def resolveFields()= for(cl <-classList.valuesIterator) cl.resolveSuperFields()
+  											
+  									 		
 }
 
 

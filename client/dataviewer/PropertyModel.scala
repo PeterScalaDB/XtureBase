@@ -8,6 +8,7 @@ import definition.typ._
 import definition.comm._
 import client.comm._
 import scala.swing._
+import javax.swing.SwingUtilities
 
 /** manages all data changes of a property field of a instance
  * the PropertyModels are specialized on a certain allowed class
@@ -51,9 +52,15 @@ class PropertyModel(val mainController:DataViewController) {
 		loaded=true
 	}
 	
+	def runSw (func: =>Unit) = 
+		SwingUtilities.invokeLater(new Runnable { def run =
+			func
+	})
 	
-	def callBack(notType:NotificationType.Value,data: IndexedSeq[InstanceData]) = {
-				
+	
+	
+	def callBack(notType:NotificationType.Value,data: IndexedSeq[InstanceData]) = 
+		runSw {		
 		//println("Proberty modification :"+notType+ " "+(if(data.isEmpty)" [Empty] "else   data.first.ref)+", ... "+	
 		//		 "subsID:"+subscriptionID+ " ** "+ Thread.currentThread.getName)
 		//println()				
@@ -81,7 +88,7 @@ class PropertyModel(val mainController:DataViewController) {
 				tableModMap(typ).removeInstance(data(0).ref)							
 			}		
 		}
-	}
+	} 
 	
 	def createTableModel(typ:Int) = {
 		//println("create new model")

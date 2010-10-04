@@ -23,6 +23,7 @@ object DataType extends Enumeration
 	val FieldRefTyp=Value("FieldRef")
 	val FunctionCall=Value("FuncCall")
 	val CollFunctionCall=Value("CollFuncCall")
+	val VectorTyp=Value("Vector")
 	
 	def isCompatible(one:Value,other:Value):Boolean ={		
 		if(one.id>other.id) return isCompatible(other,one)

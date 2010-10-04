@@ -27,6 +27,8 @@ trait Constant extends Expression {
   
   def toBoolean:Boolean 
   
+  def toVector=new VectorConstant(0,0,0)
+  
   def convertTo(toType:DataType.Value):Constant = Constant.createConversion(this,toType)
 
 }

@@ -15,6 +15,8 @@ import client.comm.{ClientQueryManager,UserSettings}
  */
 class PathController (val model:PathModel, val view:ListView[InstanceData],val listener:PathControllable) {
 	var oldIndex= -1
+	
+	var sizeChangeListeners= collection.mutable.HashSet[(Int)=>Unit]()
 	@scala.volatile var updating=false
 	listener.registerOpenChildCallBack(openChildFromListener)
 	view.peer.setModel(model)
@@ -60,6 +62,7 @@ class PathController (val model:PathModel, val view:ListView[InstanceData],val l
 			oldIndex=newPos
 			updating=false		
 		}
+		notifySizeListeners()
 	}
 	
 	def loadPath(newPath:Seq[Reference]) = {
@@ -67,6 +70,7 @@ class PathController (val model:PathModel, val view:ListView[InstanceData],val l
 		model.loadPath(newPath)(selectLastLine)
 		//view.selectIndices( newPath.size-1)		
 		listener.openData(newPath.last,None)
+		notifySizeListeners()
 	}
 	
 	def selectLastLine():Unit = {
@@ -88,6 +92,7 @@ class PathController (val model:PathModel, val view:ListView[InstanceData],val l
 		updating=true
 		model.addPathElement(newElement)		
 		listener.openData(newElement,None)
+		notifySizeListeners()
 	}
 	
 	// callback routine to be called from the listener
@@ -96,5 +101,12 @@ class PathController (val model:PathModel, val view:ListView[InstanceData],val l
          
 	def shutDown() = {
 		model.shutDown()
+	}
+	
+	def registerSizeChangeListener(func:(Int)=>Unit) = sizeChangeListeners += func
+	
+	private def notifySizeListeners() = {
+		val size=model.getSize
+		for(func <-sizeChangeListeners) func(size)
 	}
 }

@@ -28,6 +28,8 @@ class ActionPanel extends BoxPanel(scala.swing.Orientation.Vertical) with Select
 	var nullSize=new Dimension(0,0)
 	var instList:Seq[InstanceData] = _
 	var listenerSet=collection.mutable.HashSet[ActionPanListener]()
+	xLayoutAlignment=0.5d
+  yLayoutAlignment=0.5d
 	
 	reactions += {
 		case ButtonClicked(e:ActionButton) => if(instList!=null){			
@@ -48,16 +50,14 @@ class ActionPanel extends BoxPanel(scala.swing.Orientation.Vertical) with Select
 	}
 	
   def setClass(classID:Int):Unit = {
-  	visible=true
-  	xLayoutAlignment=0.5d
-  	yLayoutAlignment=0.5d
+  	visible=true  	
   	if (classID==lastClass) return // keep the actions 
   	shutDown()  
   	
   	val theClass = AllClasses.get.getClassByID(classID)
   	//println("class "+classID+" num:"+theClass.getActionCount)
-  	for(a <-0 until theClass.getActionCount)
-  		contents += getButton(theClass.action(a)) 
+  	for(a <-theClass.actions.valuesIterator)
+  		contents += getButton(a) 
   	revalidate
   	repaint
   }

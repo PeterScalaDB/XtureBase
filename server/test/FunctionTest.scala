@@ -40,7 +40,7 @@ class FunctionTest  extends JUnitSuite  {
 	
 	@Test def moduleTest():Unit = {
 		val inst=StorageManager.getInstanceData(Reference(3,1))
-		AllClasses.get.getClassByID(3).action(0).asInstanceOf[ActionImpl].func(IndexedSeq(inst),IndexedSeq(StringConstant("Hallo")))
+		AllClasses.get.getClassByID(3).actions.head.asInstanceOf[ActionImpl].func(inst,IndexedSeq(("Param1",StringConstant("Hallo"))))
 	}
   
 }

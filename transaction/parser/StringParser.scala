@@ -48,7 +48,7 @@ class StringParser extends JavaTokenParsers {
   def factor : Parser[Expression] =  	   
   	   doubleNumber ^^ {y => DoubleConstant(y.replace(',','.').toDouble) } |
        intNumber ^^ {x => IntConstant(x.toInt)} |       
-        "(" ~> expr <~ ")" | fieldRef | function | collFunction | failure("Unknown Element")
+        "(" ~> expr <~ ")" | fieldRef | function | collFunction | vector | failure("Unknown Element")
        
 	def paramList:Parser[List[Expression]] =
 		 ((expr ~ ";" ~ expr) ^^ {  case ex~ semi~ list => List(ex,list) }) |
@@ -61,6 +61,10 @@ class StringParser extends JavaTokenParsers {
   																					case name ~ propField ~ childType ~ childField => 
   																					CollectingFuncCall(name,propField.toByte,childType.toInt,childField.toByte) 
                                          }
+  def vector: Parser[Expression] = 
+  	( ("""[Vv][\[]""".r~> doubleNumber <~";") ~ (doubleNumber <~";") ~ (doubleNumber <~"]")  ) ^^ {
+  																					case x ~ y ~ z  => VectorConstant(x.toDouble,y.toDouble,z.toDouble) 		
+  																			 }	
 }
 
 object StringParser extends StringParser

@@ -33,7 +33,7 @@ class SimpleTableModel extends TableModel {
 		parentRef=nparentRef
 		propField=npropField
 		val parentClass=AllClasses.get.getClassByID(parentRef.typ)
-		allowedClass=parentClass.propField(propField).allowedClass
+		allowedClass=parentClass.propFields(propField).allowedClass
 		objClass=AllClasses.get.getClassByID(allowedClass)
 		
 		var updateStructure=true
@@ -95,14 +95,14 @@ class SimpleTableModel extends TableModel {
 
   def getColumnCount(): Int = { 
   	if(objClass==null) 0
-  	else objClass.getFieldCount+1
+  	else objClass.fields.size+1
   }
 
   def getColumnName(columnIndex: Int): String = { 
   	if(objClass==null) ""
   	else 
   		if(columnIndex==0) "Ref"
-  		else objClass.field(columnIndex-1).name  		
+  		else objClass.fields(columnIndex-1).name  		
   }
 
   def getColumnClass(columnIndex: Int): Class[String] = { classOf[String] }
@@ -120,7 +120,7 @@ class SimpleTableModel extends TableModel {
   	for(list <-dataList) {
   	  if(rowIndex>=list.size) return null
   	  if(columnIndex==0) return list(rowIndex).ref.sToString
-  	  if(columnIndex>objClass.getFieldCount) return null
+  	  if(columnIndex>objClass.fields.size) return null
   	  return list(rowIndex).fieldData(columnIndex-1).getValue.toString	
   	}
   	return null

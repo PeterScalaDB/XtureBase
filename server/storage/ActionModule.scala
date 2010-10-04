@@ -3,13 +3,13 @@
  */
 package server.storage
 
+import definition.typ.AbstractAction
+
 /** superclass of all user-defined modules defining actions for classes
  * 
  */
-trait ActionModule {
-	def getActionCount:Int
-	
-	def getAction(ix:Int):ActionImpl
+trait ActionModule {	
+	def getActionsIterator:Iterator[AbstractAction]
 }
 
 object ActionModule {

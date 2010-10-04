@@ -10,6 +10,7 @@ import definition.expression._
 import java.util.concurrent._
 import java.io._
 import scala.collection.immutable.IndexedSeq
+import javax.swing.SwingUtilities
 
 /** manages Queries and Subscriptions
  * 
@@ -18,15 +19,20 @@ object ClientQueryManager {
 	//type InstArrayFunc=(Array[InstanceData])=> Unit
 	type UpdateFunc=(NotificationType.Value,IndexedSeq[InstanceData])=>Unit
 	
+	type FactUpdateFunc[T<: ReadableClass]=(NotificationType.Value,IndexedSeq[T])=>Unit
+	
 	//type PathUpdateFunc=(PathNotificationType.Value,Array[InstanceData])=>Unit
 	
-	//case class Query(func: InstArrayFunc)		
-	case class Subscriber(func: UpdateFunc)
+	//case class Query(func: InstArrayFunc)
+	trait Subscriber
+	case class SimpleSubscriber(func: UpdateFunc) extends Subscriber
+	case class FactSubscriber[T<: ReadableClass](factory:SubscriptionFactory[T],func: FactUpdateFunc[T]) extends Subscriber
 	//case class PathSubscriber(func:PathUpdateFunc)
 	
 	private val queryQueue = new SynchronousQueue[IndexedSeq[InstanceData]]()	
 	private val newSubscriberQueue=new ArrayBlockingQueue[Subscriber](3)
 	private val subscriptionMap=new ConcurrentHashMap[Int,Subscriber]()
+	//private val factSubsMap=new ConcurrentHashMap[Int,FactSubscriber[_ <: ReadableClass]]()
 	//private val newPathSubscriberQueue=new ArrayBlockingQueue[PathSubscriber](3)
 	//private val pathSubscriptionMap=new ConcurrentHashMap[Int,PathSubscriber]()
 	
@@ -69,7 +75,18 @@ object ClientQueryManager {
 	 */
 	def createSubscription(parentRef:Reference,propertyField:Byte)(updateFunc: UpdateFunc):Int = {		
 		sock.sendData(ClientCommands.startSubscription ) {out =>
-			newSubscriberQueue.add( Subscriber(updateFunc))
+			newSubscriberQueue.add( SimpleSubscriber(updateFunc))
+			//println("adding subscription "+parentRef+ " "+Thread.currentThread)
+			parentRef.write(out)
+			out.writeByte(propertyField)
+		}
+		subscriptionAcceptQueue.take()
+	}
+	
+	def createFactSubscription[T <:ReadableClass](parentRef:Reference,propertyField:Byte,factory:SubscriptionFactory[T])
+	(updateFunc: FactUpdateFunc[T]):Int = {		
+		sock.sendData(ClientCommands.startSubscription ) {out =>
+			newSubscriberQueue.add( FactSubscriber(factory,updateFunc))
 			//println("adding subscription "+parentRef+ " "+Thread.currentThread)
 			parentRef.write(out)
 			out.writeByte(propertyField)
@@ -87,7 +104,7 @@ object ClientQueryManager {
 	
 	def createPathSubscription(path:Seq[Reference])(updateFunc:UpdateFunc) = {		
 		sock.sendData(ClientCommands.startPathSubscription ) {out =>
-			newSubscriberQueue.add( Subscriber(updateFunc))
+			newSubscriberQueue.add( SimpleSubscriber(updateFunc))
 			out.writeInt(path.size)
 			for(el <-path) el.write(out)
 		}
@@ -202,10 +219,13 @@ object ClientQueryManager {
 	
 	private def readList(in:DataInputStream):IndexedSeq[InstanceData] = {
 			val numData=in.readInt
-			for(i <- 0 until numData) yield InstanceData.readWithChildInfo(Reference(in), in)
-			
+			for(i <- 0 until numData) yield InstanceData.readWithChildInfo(Reference(in), in)			
 		}
 	
+	private def readListWithFactory[T <: ReadableClass](in:DataInputStream,factory:SubscriptionFactory[T]):IndexedSeq[T] = {
+			val numData=in.readInt
+			for(i <- 0 until numData) yield factory.createObject(Reference(in), in)			
+		}
 	
 	private def handleQueryResults(in:DataInputStream) = 	{
 		val data=readList(in)
@@ -217,14 +237,22 @@ object ClientQueryManager {
 	
 	
 	private def handleAcceptSubscription(in:DataInputStream) = {
-		val subsID:Int=in.readInt
-		val data=readList(in)
+		val subsID:Int=in.readInt		
 		//println("Handling accept subs subsID:"+subsID)
 		
 		val subs:Subscriber=newSubscriberQueue.take()			
 		subscriptionMap.put(subsID,subs)
 		subscriptionAcceptQueue.put(subsID)
-		runInPool(subs.func(NotificationType.sendData,data))
+		subs match {			
+			case a:SimpleSubscriber =>{
+				val data=readList(in)
+				a.func(NotificationType.sendData,data)
+			}
+			case b:FactSubscriber[_] => {
+				val data=readListWithFactory(in,b.factory)
+				b.func(NotificationType.sendData,data)
+			}
+		}			
 	}
 	
 	/*private def handleAcceptPathSubscription(in:DataInputStream) = {
@@ -241,28 +269,49 @@ object ClientQueryManager {
 	
 	private def handleSubsNotifications(in:DataInputStream ) = {
 		val substID=in.readInt
-		val subscriber=subscriptionMap.get(substID) 
+		val subs=subscriptionMap.get(substID) 
 		
-		NotificationType(in.readInt) match {
-			case NotificationType.FieldChanged => {
-				val inst=InstanceData.readWithChildInfo(Reference(in),in)
-				runInPool(subscriber.func(NotificationType.FieldChanged,IndexedSeq(inst)))
+		subs match {
+			case subscriber:SimpleSubscriber => NotificationType(in.readInt) match {
+				case NotificationType.FieldChanged => {
+					val inst=InstanceData.readWithChildInfo(Reference(in),in)
+					runInPool(subscriber.func(NotificationType.FieldChanged,IndexedSeq(inst)))
+				}
+				case NotificationType.childAdded => {
+					val inst=InstanceData.readWithChildInfo(Reference(in),in)
+					runInPool(subscriber.func(NotificationType.childAdded,IndexedSeq(inst)))
+				}
+				case NotificationType.instanceRemoved => {
+					val ref=Reference(in)
+					runInPool(subscriber.func(NotificationType.instanceRemoved,
+						IndexedSeq(new InstanceData(ref,Array(),Array(),false)))) // empty instance
+				}
+				case NotificationType.sendData => {
+					val list=readList(in)
+					runInPool(subscriber.func(NotificationType.sendData,list))
+				}
 			}
-			case NotificationType.childAdded => {
-				val inst=InstanceData.readWithChildInfo(Reference(in),in)
-				runInPool(subscriber.func(NotificationType.childAdded,IndexedSeq(inst)))
+			case factSubs:FactSubscriber[_] => NotificationType(in.readInt) match {
+				case NotificationType.FieldChanged => {
+					val inst=factSubs.factory.createObject(Reference(in),in)
+					runInPool(factSubs.func(NotificationType.FieldChanged,IndexedSeq(inst)))
+				}
+				case NotificationType.childAdded => {
+					val inst=factSubs.factory.createObject(Reference(in),in)
+					runInPool(factSubs.func(NotificationType.childAdded,IndexedSeq(inst)))
+				}
+				case NotificationType.instanceRemoved => {
+					val ref=Reference(in)
+					runInPool(factSubs.func(NotificationType.instanceRemoved,
+						IndexedSeq(factSubs.factory.createEmptyObject(ref)))) // empty instance
+				}
+				case NotificationType.sendData => {
+					val list=readListWithFactory(in,factSubs.factory)
+					runInPool(factSubs.func(NotificationType.sendData,list))
+				}
 			}
-			case NotificationType.instanceRemoved => {
-				val ref=Reference(in)
-				runInPool(subscriber.func(NotificationType.instanceRemoved,
-					IndexedSeq(new InstanceData(ref,Array(),Array(),false)))) // empty instance
-			}
-			case NotificationType.sendData => {
-				val list=readList(in)
-				runInPool(subscriber.func(NotificationType.sendData,list))
-			}
-			
-		}		
+		}
+				
 	}
 	
 	/*private def handlePathSubsNotifications(in:DataInputStream ) = {

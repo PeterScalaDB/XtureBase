@@ -20,29 +20,24 @@ class TestActionModule extends ActionModule {
 		new ParamAnswerDefinition("Text eingeben:",DataType.StringTyp,Some(thirdQuestion))))),doOtherAction)
 	
 	val quietAction=new ActionImpl("Gleichbleiben",None,doQuietAction)
-	def getActionCount:Int=3
+	val actionList=List(oneAction,otherAction,quietAction)
 	
-	def getAction(ix:Int):ActionImpl = ix match {
-		case 0 => oneAction
-		case 1 => otherAction
-		case 2 => quietAction
-		case _ => null
-	}
+	def getActionsIterator = actionList.iterator
 	
-	def doOneAction(data:Seq[InstanceData],param:Seq[Constant]):Boolean = {
+	def doOneAction(data:InstanceData,param:Seq[(String,Constant)]):Boolean = {
 		println("Doing Action One with parameters:"+param.mkString(",")+"data")
-		println(data.mkString(","))
+		println(data)
 		true
 	}
 	
-	def doOtherAction(data:Seq[InstanceData],param:Seq[Constant]):Boolean = {
+	def doOtherAction(data:InstanceData,param:Seq[(String,Constant)]):Boolean = {
 		println("Doing Action two with parameters:"+param.mkString(",")+"data")
-		println(data.mkString(","))
+		println(data)
 		true
 	}
 	
-	def doQuietAction(data:Seq[InstanceData],param:Seq[Constant]):Boolean = {
-		println("Do quiet action "+data.map(_.ref).mkString(","))
+	def doQuietAction(data:InstanceData,param:Seq[(String,Constant)]):Boolean = {
+		println("Do quiet action "+data)
 		true
 	}
 	

@@ -10,18 +10,23 @@ package definition.typ
 trait AbstractAction {
 	def name:String
 	def question:Option[ParamQuestion]=None
+	def isIterator:Boolean
+	
+	def toXML:scala.xml.Elem
+	
 	override def toString = "Action ["+(if(name==null) "null" else name)+"] question:"+question
 }
 
 
-class ActionDescription(val name:String,override val question:Option[ParamQuestion]) extends AbstractAction {
-  
+class ActionDescription(val name:String,override val question:Option[ParamQuestion],val isIterator:Boolean) extends AbstractAction {
+  def toXML:scala.xml.Elem=null
 }
 
 object ActionDescription {
 	def fromXML(node: scala.xml.Node) = {
 		val name=(node \"@name").text
+		val isIt=(node \"@iter").text=="1"
 		val questions=for(afield <-(node \"Question")) yield ParamQuestion.fromXML(afield)
-		new ActionDescription(name,if(questions.isEmpty) None else Some(questions.first))
+		new ActionDescription(name,if(questions.isEmpty) None else Some(questions.first),isIt)
 	}
 }

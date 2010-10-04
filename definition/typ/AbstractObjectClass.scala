@@ -4,6 +4,8 @@
 package definition.typ
 
 import definition.data._
+import collection.mutable.{HashSet,ArrayBuffer,LinkedHashMap}
+
 
 /**
  * 
@@ -16,20 +18,19 @@ trait AbstractObjectClass {
 	
 	def id:Int
 	
-	protected def fields:Seq[FieldDefinition]
-	protected def propFields:Seq[PropertyFieldDefinition] 
-	protected def actions:Seq[AbstractAction]
+	protected def ownFields:Seq[FieldDefinition]
+	protected def ownPropFields:Seq[PropertyFieldDefinition] 
+	protected def ownActions:Iterator[AbstractAction]
 	protected def superClasses:Seq[String]
 	
+	private var hasResolved=false	
+	val fields=new ArrayBuffer[FieldDefinition]() // list of inherited fields from the super class
+	val propFields = new ArrayBuffer[PropertyFieldDefinition]()
+	val superClassIDs:HashSet[Int] = HashSet(id)
+	val actions=LinkedHashMap[String,AbstractAction]()
+	
+	
 		
-	protected var vsuperFields:Seq[FieldDefinition]= IndexedSeq.empty // list of inherited fields from the super class
-	protected var vsuperPropFields:Seq[PropertyFieldDefinition] = IndexedSeq.empty
-	protected var vsuperClassIDs:Seq[Int] = IndexedSeq.empty
-	protected var superClassActions:Seq[AbstractAction] = IndexedSeq.empty
-	
-	
-	def superClassIDs:Seq[Int]=vsuperClassIDs
-	
 	def inheritsFrom(otherClassID:Int):Boolean =
   {
   	println( " " +name +" "+id+"InheritsFrom: "+ otherClassID)
@@ -37,53 +38,34 @@ trait AbstractObjectClass {
   }
 	
 	def resolveSuperFields():Unit = 	{		
-		if(vsuperFields.isEmpty)
+		if(!hasResolved)
 		{	
 			for(cl <-superClasses)
-				AllClasses.get.getClassByName(cl).get.resolveSuperFields()
-		  vsuperFields= superClasses.flatMap( AllClasses.get.getClassByName(_).get.getFields  )
-		  vsuperPropFields = superClasses.flatMap( AllClasses.get.getClassByName(_).get.getPropFields  )
-		  superClassActions= superClasses.flatMap (AllClasses.get.getClassByName(_).get.getActions)
+			{
+				val superClass:AbstractObjectClass= AllClasses.get.getClassByName(cl) match {
+					case Some(a) => a
+					case None=> throw new IllegalArgumentException("Superclass "+cl+" is not defined, in class "+name)
+				}				
+				superClassIDs ++=superClass.superClassIDs
+				superClass.resolveSuperFields()
+				fields ++= superClass.fields
+				
+				propFields ++= superClass.propFields 
+				actions ++=superClass.actions					
+			}	
+			// add own fields
+			for(a <- ownFields) {
+					val ix= fields.findIndexOf(a.name==_.name)
+					if(ix<0) // not found
+						fields += a
+						else fields(ix)=a
+				}
+			propFields ++=ownPropFields
+			ownActions.foreach(a => actions(a.name)=a)		  
+		  hasResolved=true
 		}
 		//Console.println("Resolve "+versNr+" "+superClasses+" "+vsuperFields)  
-	}	
-	
-	// creates a list of all super classes of this class
-	def resolveSuperClassIDs():Seq[Int] = {
-		if(vsuperClassIDs.isEmpty)
-		{			
-			vsuperClassIDs=superClasses.flatMap(AllClasses.get.getClassByName(_).get.resolveSuperClassIDs) :+ id
-			vsuperClassIDs
-		} 
-		//println("ClassVersion" +classID+" vers:"+versNr+" superClasses:"+vsuperClassIDs)
-		else vsuperClassIDs
-	}
-	
-	protected def getFields :Seq[FieldDefinition] = vsuperFields ++ fields
-	protected def getPropFields : Seq[PropertyFieldDefinition] = vsuperPropFields ++ propFields
-	def getActions = superClassActions++actions
-	
-	def field(ix:Int):FieldDefinition =
-	{		
-		if (ix<vsuperFields.length)vsuperFields(ix)
-		else fields(ix-vsuperFields.length)
-	}
-	
-	def getFieldCount = vsuperFields.length+fields.length
-	
-	def propField(ix:Int) =
-	{
-		
-		if (ix<vsuperPropFields.length)vsuperPropFields(ix)
-		else propFields(ix-vsuperPropFields.length)
-	}
-	
-	def action(ix:Int) = if (ix<superClassActions.length)superClassActions(ix)
-			else actions(ix-superClassActions.length)
-	
-	def getPropFieldCount = vsuperPropFields.length+propFields.length
-	
-	def getActionCount = superClassActions.length+actions.length	
+	}		
 	
 	
 	override def toString = "Class "+id+" Fields:\n"+fields.mkString("\n")+"PropFields:\n"+propFields.mkString("\n");
