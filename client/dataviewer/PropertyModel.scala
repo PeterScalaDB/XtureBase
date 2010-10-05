@@ -52,15 +52,12 @@ class PropertyModel(val mainController:DataViewController) {
 		loaded=true
 	}
 	
-	def runSw (func: =>Unit) = 
-		SwingUtilities.invokeLater(new Runnable { def run =
-			func
-	})
+	
 	
 	
 	
 	def callBack(notType:NotificationType.Value,data: IndexedSeq[InstanceData]) = 
-		runSw {		
+		ClientQueryManager.runSw {		
 		//println("Proberty modification :"+notType+ " "+(if(data.isEmpty)" [Empty] "else   data.first.ref)+", ... "+	
 		//		 "subsID:"+subscriptionID+ " ** "+ Thread.currentThread.getName)
 		//println()				

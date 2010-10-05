@@ -81,6 +81,7 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 		//println(xmlString)
 		AllClasses.set(new ClientClasses(scala.xml.XML.loadString(xmlString)))		
 		//println(AllClasses.get.toXML)
+		println("Types got")
 	}
 	
 	private def readUserSettings(in:DataInputStream) = {

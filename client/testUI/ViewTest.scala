@@ -44,6 +44,8 @@ object ViewTest extends SimpleSwingApplication {
 	
 	var lastSelected:Seq[InstanceData]=Seq.empty
 	
+	val graphViewController=new GraphViewController
+	
 	val graphViewPan=new BorderPanel () {
 		preferredSize=new Dimension(400,200)
 		add(new ScrollPane() {
@@ -51,6 +53,8 @@ object ViewTest extends SimpleSwingApplication {
 			viewportView=testGraphList
 			testGraphList.peer.setModel(TestGraphListModel)
 		},BorderPanel.Position.Center)
+		add(graphViewController.layerPanel,BorderPanel.Position.North)
+		viewController.registerSelectListener(graphViewController)
 	}
 	
 	val pathScroller =new ScrollPane() {
@@ -149,7 +153,7 @@ object ViewTest extends SimpleSwingApplication {
 	}
 	
 	def openGraphData() = if(lastSelected.size>0){
-		TestGraphListModel.load(lastSelected(0).ref,0.toByte)
+		//TestGraphListModel.load(lastSelected(0).ref,0.toByte)
 	}
 	
 	def loadData() = {

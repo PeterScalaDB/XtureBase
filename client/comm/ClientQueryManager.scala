@@ -32,9 +32,7 @@ object ClientQueryManager {
 	private val queryQueue = new SynchronousQueue[IndexedSeq[InstanceData]]()	
 	private val newSubscriberQueue=new ArrayBlockingQueue[Subscriber](3)
 	private val subscriptionMap=new ConcurrentHashMap[Int,Subscriber]()
-	//private val factSubsMap=new ConcurrentHashMap[Int,FactSubscriber[_ <: ReadableClass]]()
-	//private val newPathSubscriberQueue=new ArrayBlockingQueue[PathSubscriber](3)
-	//private val pathSubscriptionMap=new ConcurrentHashMap[Int,PathSubscriber]()
+	
 	
 	
 	private val commandResultQueue = new SynchronousQueue[Option[Constant]]()
@@ -43,6 +41,7 @@ object ClientQueryManager {
 	
 	private var sock:ClientSocket=null
 	private val myPool=Executors.newCachedThreadPool() 
+	private var isSetup=false
 	private var setupListenerMap=collection.mutable.HashSet[Function0[Unit]]()
 	private val storeSettingsListenerMap= collection.mutable.HashSet[Function0[Unit]]()
 	
@@ -50,10 +49,8 @@ object ClientQueryManager {
 		sock=newSock
 		// register Handler
 		sock.registerCommandHandler(ServerCommands.sendQueryResponse)(handleQueryResults)
-		sock.registerCommandHandler(ServerCommands.acceptSubscription)(handleAcceptSubscription)
-		//sock.registerCommandHandler(ServerCommands.acceptPathSubscription)(handleAcceptPathSubscription)
+		sock.registerCommandHandler(ServerCommands.acceptSubscription)(handleAcceptSubscription)	
 		sock.registerCommandHandler(ServerCommands.sendSubscriptionNotification )(handleSubsNotifications)
-		//sock.registerCommandHandler(ServerCommands.sendPathSubsNotification )(handlePathSubsNotifications)
 		sock.registerCommandHandler(ServerCommands.sendCommandResponse )(handleCommandResponse)
 	}
 	
@@ -255,17 +252,7 @@ object ClientQueryManager {
 		}			
 	}
 	
-	/*private def handleAcceptPathSubscription(in:DataInputStream) = {
-		val subsID:Int=in.readInt
-		val pathData=readArray(in)
-		val listData=readArray(in)		
-		
-		val subs:PathSubscriber=newPathSubscriberQueue.take()			
-		pathSubscriptionMap.put(subsID,subs)
-		pathSubsAcceptQueue.put(subsID)
-		runInPool(subs.func(PathNotificationType.sendPathList,pathData))
-		runInPool(subs.func(PathNotificationType.sendChildList,listData))
-	}*/
+	
 	
 	private def handleSubsNotifications(in:DataInputStream ) = {
 		val substID=in.readInt
@@ -314,39 +301,7 @@ object ClientQueryManager {
 				
 	}
 	
-	/*private def handlePathSubsNotifications(in:DataInputStream ) = {
-		val substID=in.readInt
-		val subscriber=pathSubscriptionMap.get(substID) 
-		
-		PathNotificationType(in.readInt) match {
-			case a @ PathNotificationType.sendChildList => {				
-				runInPool(subscriber.func(a,readArray(in)))
-			}
-			case b @ PathNotificationType.sendPathList => {				
-				runInPool(subscriber.func(b,readArray(in)))
-			}			
-			case c @ PathNotificationType.childAdded => {
-				val inst=InstanceData.read(Reference(in),in)
-				runInPool(subscriber.func(c,Array(inst)))
-			}			
-			case d @ PathNotificationType.childFieldChanged => {
-				val inst=InstanceData.read(Reference(in),in)
-				runInPool(subscriber.func(d,Array(inst)))
-			}			
-			case e @ PathNotificationType.childRemoved => {
-				val ref=Reference(in)
-				runInPool(subscriber.func(e, Array(new InstanceData(ref,0,Array())))) // empty instance
-			}			
-			case f @ PathNotificationType.pathElementChanged => {
-				val inst=InstanceData.read(Reference(in),in)
-				runInPool(subscriber.func(f,Array(inst)))				
-			}
-			case g @ PathNotificationType.pathElementRemoved => {
-				val ref=Reference(in)
-				runInPool(subscriber.func(g, Array(new InstanceData(ref,0,Array())))) // empty instance				
-			}			
-		}		
-	}*/
+	
 	
 	
 	private def handleCommandResponse(in:DataInputStream ) = {
@@ -367,15 +322,18 @@ object ClientQueryManager {
 	}
 	
 	def registerSetupListener(listener:Function0[Unit]) {
-		setupListenerMap+=listener
+		if(isSetup) listener() // call listener instantly when types are already setup
+		else setupListenerMap+=listener // else put it in the list to be notified later
 	}
 	
 	def registerStoreSettingsListener(listener:Function0[Unit]) {
 		storeSettingsListenerMap+=listener
+		
 	}
 	
 	def notifySetupListeners() = runInPool{
 		setupListenerMap.foreach(a => a())
+		isSetup=true
 	}
 	
 	def notifyStoreSettingsListeners() = {
@@ -390,6 +348,11 @@ object ClientQueryManager {
 		myPool.execute(new Runnable() {
 						            	def run = a})
 	}
+	
+	def runSw (func: =>Unit) = 
+		SwingUtilities.invokeLater(new Runnable { def run =
+			func
+	})
 		
 	
 	

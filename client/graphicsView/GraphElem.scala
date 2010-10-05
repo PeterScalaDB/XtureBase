@@ -39,7 +39,8 @@ object GraphElemFactory extends SubscriptionFactory[GraphElem] {
 		val endPoint=Expression.readConstant(in).toVector
 		val owners=InstanceData.readOwners(in)
 		//print("owners:"+owners.size+" "+owners.mkString)
-		//print(" hasChildren:"+in.readBoolean)
+		//print(" hasChildren:"+)
+		in.readBoolean
 		new LineElement(ref,color.toInt,lineStyle.toInt,startPoint,endPoint)
 	}
 }
