@@ -5,14 +5,15 @@ package client.graphicsView
 
 import scala.swing._
 import scala.swing.event._
-import java.awt.Color
+import java.awt.{Dimension,Graphics,Graphics2D,Color,RenderingHints,BasicStroke}
+import java.awt.geom._
 
 /**
  * 
  */
 object ResolutionMeasureApp extends SimpleSwingApplication  {
-	val widthEdit=new TextField("400")
-	val heightEdit=new TextField("200")
+	val widthEdit=new TextField("1200")
+	val heightEdit=new TextField("800")
 	val mmWidthEdit=new TextField("")
 	val mmHeightEdit=new TextField("1")
 	val xResLabel=new Label("")
@@ -31,8 +32,19 @@ object ResolutionMeasureApp extends SimpleSwingApplication  {
 	val showBox= new BorderPanel {
 		  background=Color.blue
 		  opaque=true
-		  preferredSize=new Dimension(400,200)
-		  maximumSize=new Dimension(400,200)		
+		  preferredSize=new Dimension(1200,800)
+		  maximumSize=preferredSize
+		  override def paintComponent(g:Graphics2D)= {		  	
+		  	super.paintComponent(g);
+		  	g.setRenderingHints(new RenderingHints(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON ))
+		  	//g.setRenderingHints(new RenderingHints(RenderingHints.KEY_STROKE_CONTROL,RenderingHints.VALUE_STROKE_NORMALIZE ))
+		  	//g.setRenderingHints(new RenderingHints(RenderingHints.KEY_INTERPOLATION,RenderingHints.VALUE_INTERPOLATION_BICUBIC ))
+		  	g.setPaint(Color.black)
+		  	g.setStroke(new BasicStroke(0.2f))
+		  	g.draw(new Line2D.Double(0,0,1000,500))
+		  	g.draw(new Line2D.Double(1000,0,1000,500))
+		  	g.draw(new Line2D.Double(0,500,1000,500))
+		  }
 	}
 	
 	val mainPanel = new BorderPanel() {	

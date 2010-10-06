@@ -50,7 +50,7 @@ object ViewTest extends SimpleSwingApplication {
 		preferredSize=new Dimension(400,200)
 		add(new ScrollPane() {
 			preferredSize=new Dimension(200,200)
-			viewportView=testGraphList
+			viewportView=graphViewController.canvasPanel
 			testGraphList.peer.setModel(TestGraphListModel)
 		},BorderPanel.Position.Center)
 		add(graphViewController.layerPanel,BorderPanel.Position.North)
@@ -131,7 +131,7 @@ object ViewTest extends SimpleSwingApplication {
 		}
 		title="TableTest"
 		contents = mainPanel
-		bounds=new Rectangle(200,200,900,600)
+		bounds=new Rectangle(200,200,1600,900)
 	}	
 	
 	
@@ -165,6 +165,7 @@ object ViewTest extends SimpleSwingApplication {
 	def createInstance() = {
 		ClientQueryManager.createInstance(typEdit.text.toInt,Array(new OwnerReference(propEdit.text.toByte,viewController.parentRef)))
 	}
+	 
 	
 		
 	def deleteInstance():Unit = {

@@ -7,6 +7,7 @@ import definition.data.{InstanceData,Reference}
 import client.comm.ClientQueryManager
 import definition.typ.AllClasses
 import definition.comm.NotificationType
+import java.awt.geom.Rectangle2D
 
 /**
  * 
@@ -14,7 +15,7 @@ import definition.comm.NotificationType
 class Layer(val controller:GraphViewController,val ref:Reference,val name:String,var visible:Boolean,var edible:Boolean) {
 	var subsID:Int= -1
 	var elemList:IndexedSeq[GraphElem]=IndexedSeq.empty
-  
+  val bounds=new Rectangle2D.Double(0,0,0,0)
 	
 	
 	
@@ -25,7 +26,7 @@ class Layer(val controller:GraphViewController,val ref:Reference,val name:String
 			(ntype:NotificationType.Value,data:IndexedSeq[GraphElem]) => 
 			ClientQueryManager.runSw{				
 				ntype match {
-						case NotificationType.sendData  => elemList=data ;controller.layerChanged(this)
+						case NotificationType.sendData  => elemList=data ;calcBounds;controller.layerChanged(this)
 						
 						case NotificationType.FieldChanged  => {
 							val searchRef=data(0).ref							
@@ -33,6 +34,7 @@ class Layer(val controller:GraphViewController,val ref:Reference,val name:String
 									if(searchRef ==elemList(i).ref){
 										val oldState=elemList(i)
 										elemList=elemList updated(i,data(0))
+										//checkElemBounds(data(0))
 										controller.graphElemChanged(this,oldState,data(0))
 									}
 						}
@@ -46,6 +48,7 @@ class Layer(val controller:GraphViewController,val ref:Reference,val name:String
 						}
 						case NotificationType.childAdded => {
 							elemList= elemList :+ data(0)
+							//checkElemBounds(data(0))
 							controller.graphElemAdded(this,data(0))
 						}
 						case a => println("unhandled notification type "+a)
@@ -67,7 +70,32 @@ class Layer(val controller:GraphViewController,val ref:Reference,val name:String
 		controller.layerChanged(this)
 	}	
 	
+	def getBounds=bounds
+	
+	def calcBounds()={
+		bounds.x=Math.MAX_DOUBLE
+		bounds.y=Math.MAX_DOUBLE
+		bounds.width=Math.MIN_DOUBLE
+		bounds.height=Math.MIN_DOUBLE
+		for(elem<-elemList) checkElemBounds(elem)
+		bounds.width-=bounds.x
+		bounds.height-=bounds.y
+		println
+		println("layerbounds "+bounds)
+		bounds
+	}
+	
+	def checkElemBounds(elem:GraphElem) = {
+	  if (elem.minX<bounds.x)bounds.x=elem.minX
+		if (elem.minY<bounds.y)bounds.y=elem.minY
+		// use the width fields as maxX and height as maxY
+		if (elem.maxX>(bounds.width))bounds.width=elem.maxX
+		//print (" e.maxY:"+elem.maxY+" b.y:"+bounds.y+" b.h:"+bounds.height)
+		if (elem.maxY>(bounds.height))bounds.height=elem.maxY	
+	}
 }
+
+
 
 
 object Layer {

@@ -7,6 +7,7 @@ package client.graphicsView
 import javax.swing._
 import javax.swing.table._
 import javax.swing.event._
+import java.awt.geom.Rectangle2D
 
 import definition.data._
 import definition.typ._
@@ -85,4 +86,24 @@ class LayerTableModel extends AbstractTableModel {
 		case 2 => classOf[java.lang.Boolean]
 		case 3 => classOf[java.lang.Boolean]
 	}
+	
+	def calcAllLayerBounds()= {
+		val bounds=new Rectangle2D.Double
+		bounds.x=Math.MAX_DOUBLE
+		bounds.y=Math.MAX_DOUBLE
+		bounds.width=Math.MIN_DOUBLE
+		bounds.height=Math.MIN_DOUBLE
+		for(lay <-layerList) {
+			val lb=lay.calcBounds
+			if(lb.x<bounds.x)bounds.x=lb.x
+			if(lb.y<bounds.y)bounds.y=lb.y
+			// use bounds.width as maxX
+			if(lb.x+lb.width>bounds.width)bounds.width=lb.x+lb.width
+			if(lb.y+lb.height>bounds.height)bounds.height=lb.y+lb.height
+		}
+		bounds.width-=bounds.x
+		bounds.height-=bounds.y
+		bounds
+	}
+	
 }

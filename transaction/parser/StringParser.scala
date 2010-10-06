@@ -15,7 +15,7 @@ class StringParser extends JavaTokenParsers {
 	def intNumber: Parser[String] = 
     """-?\d+""".r
   def doubleNumber: Parser[String] = 
-    """((\d+)?[\.,]\d*|\d*[\.,]\d+)""".r
+    """-?((\d+)?[\.,]\d*|-?\d*[\.,]\d+)""".r
     
   def numberParam: Parser[String] = """\d+""".r
     

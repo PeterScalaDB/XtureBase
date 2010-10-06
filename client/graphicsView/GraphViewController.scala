@@ -9,6 +9,7 @@ import client.dataviewer.SelectListener
 import definition.data._
 import client.comm.ClientQueryManager
 import javax.swing.SwingUtilities
+import java.awt.event._
 
 /**
  * 
@@ -16,13 +17,28 @@ import javax.swing.SwingUtilities
 class GraphViewController() extends SelectListener {
 	
 	val layerModel=new LayerTableModel()
-
+  val scaleModel=new ScaleModel
 	
 	var selectedInstances:Seq[InstanceData]=Seq.empty
 	
 	TestGraphListModel.controller=this
 	
+	val canvas=new GraphViewCanvas(this)
+	val scalePanel=new ScalePanel(scaleModel,this)
 	
+	val canvasPanel=new BorderPanel {
+		add(canvas,BorderPanel.Position.Center)
+		add(scalePanel,BorderPanel.Position.North)
+	}
+	
+	canvas.peer.addHierarchyBoundsListener( new HierarchyBoundsListener(){			
+			def ancestorMoved(e:HierarchyEvent ) ={}
+			
+			def ancestorResized(e:HierarchyEvent )= {
+				 //if(e.getChanged==canvas.peer)
+					scaleModel.viewSize=canvas.size			
+			}
+	})
 	
 	val layerTable=new Table() {
 		peer.setModel(layerModel)
@@ -53,19 +69,19 @@ class GraphViewController() extends SelectListener {
 	}
 	
 	def layerChanged(lay:Layer) = {
-		TestGraphListModel.update()
+		zoomAll
 	}
 	
 	def graphElemAdded(lay:Layer,elem:GraphElem) = {
-		TestGraphListModel.update()
+		canvas.repaint
 	}
 	
 	def graphElemRemoved(lay:Layer,elem:GraphElem) = {
-		TestGraphListModel.update()
+		canvas.repaint
 	}
 	
 	def graphElemChanged(lay:Layer,oldState:GraphElem,newState:GraphElem) = {
-		TestGraphListModel.update()
+		canvas.repaint
 	}
 	// will be called when the DataViewController has another selection
 	def selectionChanged(instList:Seq[InstanceData])= {
@@ -74,7 +90,7 @@ class GraphViewController() extends SelectListener {
 	
 	def addLayer = {
 		//println("sel:"+selectedInstances+" ref:"+selectedInstances.head.ref+" "+Layer.displayListTyp)
-		if(!selectedInstances.isEmpty && selectedInstances.head.ref.typ == Layer.displayListTyp 
+		if(selectedInstances!=null &&(!selectedInstances.isEmpty) && selectedInstances.head.ref.typ == Layer.displayListTyp 
 				&& !layerModel.containsRef(selectedInstances.head.ref)) {
 			
 			val newLayer=Layer.createLayer(this,selectedInstances.head)
@@ -98,6 +114,12 @@ class GraphViewController() extends SelectListener {
 	def toggleVisible = {
 		val ix=getSelectedLayer 
 		if(ix> -1)  layerModel.toggleVisibility(ix)	 
+	}
+	
+	def zoomAll() = {
+		val allBounds=layerModel.calcAllLayerBounds
+		scaleModel.setWorldBounds(allBounds.x,allBounds.y,allBounds.width,allBounds.height)
+		canvas.repaint
 	}
 	
 	

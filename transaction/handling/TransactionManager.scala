@@ -86,7 +86,7 @@ object TransactionManager {
 		  
 	}
 	
-	private def tryWriteInstanceData(data:InstanceData) =	{
+	def tryWriteInstanceData(data:InstanceData) =	{
 		if(!running ) throw new IllegalArgumentException("No transaction defined ")
 		ActionList.addTransactionData(data.ref,new DataChangeAction (Some(data) ))
 	}

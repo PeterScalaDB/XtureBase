@@ -48,6 +48,7 @@ object Constant
 		case DataType.DoubleTyp => new DoubleConstant(value.toDouble)   
 		case DataType.StringTyp => new StringConstant(value.toString)
 		case DataType.BoolTyp => new BoolConstant(value.toBoolean)
+		case DataType.VectorTyp =>val nv=value.toVector;new VectorConstant(nv.x,nv.y,nv.z)
 		case _ => throw new IllegalArgumentException("Conversion to type "+toType+" is not supported yet")
 		}	
 }
