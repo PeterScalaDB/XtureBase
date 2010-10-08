@@ -16,17 +16,26 @@ class Layer(val controller:GraphViewController,val ref:Reference,val name:String
 	var subsID:Int= -1
 	var elemList:IndexedSeq[GraphElem]=IndexedSeq.empty
   val bounds=new Rectangle2D.Double(0,0,0,0)
-	
+	var startTime:Long=_
 	
 	
 	def load() = {
 		visible=true
+		startTime=System.currentTimeMillis();
 		if(subsID>=0) ClientQueryManager.changeSubscription(subsID,ref,0)
 		else subsID=ClientQueryManager.createFactSubscription(ref,0,GraphElemFactory){
 			(ntype:NotificationType.Value,data:IndexedSeq[GraphElem]) => 
 			ClientQueryManager.runSw{				
 				ntype match {
-						case NotificationType.sendData  => elemList=data ;calcBounds;controller.layerChanged(this)
+						case NotificationType.sendData  =>{
+							val endTime=System.currentTimeMillis();
+							elemList=data
+							println("Layer "+name+" loadTime:"+(endTime-startTime)+" num elements:"+elemList.size+
+								(if(!elemList.isEmpty)(" last Ref:"+elemList(elemList.size-1).ref.sToString) else ""))
+							 
+							calcBounds
+							controller.layerChanged(this)
+						}
 						
 						case NotificationType.FieldChanged  => {
 							val searchRef=data(0).ref							
@@ -80,8 +89,8 @@ class Layer(val controller:GraphViewController,val ref:Reference,val name:String
 		for(elem<-elemList) checkElemBounds(elem)
 		bounds.width-=bounds.x
 		bounds.height-=bounds.y
-		println
-		println("layerbounds "+bounds)
+		//println
+		//println("layerbounds "+bounds)
 		bounds
 	}
 	

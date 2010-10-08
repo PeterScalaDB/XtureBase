@@ -64,6 +64,12 @@ object StorageManager {
   	}
   }  
   
+  
+  def bulkGetInstanceData(startRef:Reference,endRef:Reference) = {
+  	println("bulkget:"+startRef+" - "+endRef)
+  	getHandler(startRef.typ).bulkGetInstanceRecords(startRef.instance,endRef.instance,dataFileHandler)  	 
+  }
+  
       
   /** creates a new empty instance
    * 

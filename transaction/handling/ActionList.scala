@@ -14,7 +14,7 @@ import server.comm.CommonSubscriptionHandler
  * 
  */
 object ActionList {
-	var theList:Map[Reference,TransactionData]=Map.empty
+	var theList=collection.mutable.LinkedHashMap[Reference,TransactionData]()
 
 
 	def breakAllData() = {
@@ -31,7 +31,7 @@ object ActionList {
 	reset()
 }
 
-def reset() = {theList=Map.empty}
+def reset() = {theList.clear}
 
 
 def commitAllData() = {

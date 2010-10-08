@@ -44,4 +44,5 @@ extends SingleSubscription(user,id,null) {
 	def updatePath(newPath:IndexedSeq[Reference]) = {
 		new PathSubscription(user,id,newPath)
 	}
+	override def toString = "PathSubs("+id+ " path: "+path.mkString+")"
 }

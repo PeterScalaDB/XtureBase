@@ -188,9 +188,10 @@ class UserQueryHandler(userSocket: UserSocket) {
 				StorageManager.getInstanceProperties(parentRef) match 
 				{
 					case Some(props) => { 
-						val childRefs=props.propertyFields(propertyField).propertyList						
+						val childRefs=props.propertyFields(propertyField).propertyList	
+						//println("send Children:"+childRefs.map(_.sToString+","))
 						// get all Data before starting to write
-						val instList = for(cRef <- childRefs) yield StorageManager.getInstanceData(cRef)						
+						val instList= getInstances(childRefs)
 						out.writeInt(childRefs.size)
 						for(i <-childRefs.indices)
 						{
@@ -206,7 +207,40 @@ class UserQueryHandler(userSocket: UserSocket) {
 			}
 	}
 	
-	
-
-	
+  private def getInstances(childRefs:IndexedSeq[Reference]):Seq[InstanceData] = {
+  	if(childRefs.size>10) {  
+  		var retList=new collection.mutable.ArrayBuffer[InstanceData]()
+  		var bulkStart= 0
+  		var oldRef=childRefs.head
+  		for(i <-1 until childRefs.size) {
+  			val newRef=childRefs(i)
+  			if(oldRef.typ== newRef.typ && oldRef.instance ==(newRef.instance-1)){
+  				// subsequent instance
+  			}
+  			else { // another instance, break bulk block
+  				if(bulkStart==i-1 )  // only single instance
+  					retList += StorageManager.getInstanceData(oldRef)  				
+  				else retList ++= StorageManager.bulkGetInstanceData(childRefs(bulkStart),oldRef)	  				
+  				bulkStart=i
+  			}
+  			oldRef=newRef
+  		}	
+  		if(bulkStart==childRefs.size-1 ) { // only single instance
+  			retList += StorageManager.getInstanceData(oldRef)
+  		}
+  		else {
+  			val bulkList= StorageManager.bulkGetInstanceData(childRefs(bulkStart),oldRef)
+  			if(childRefs.size==bulkList.size) {println("powerbulk");return  bulkList}
+  			else {
+  				println(" sizediff childrefs:"+childRefs.size+" bulkList:"+ bulkList.size )
+  				retList ++= bulkList
+  			}  			
+  		}
+  		retList
+  	}	
+  	else if(childRefs.size>1) for(cRef <- childRefs) yield StorageManager.getInstanceData(cRef)
+  	else if(!childRefs.isEmpty)IndexedSeq(StorageManager.getInstanceData(childRefs.head))
+  	else IndexedSeq()
+  }
+	 
 }

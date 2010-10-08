@@ -21,7 +21,9 @@ class ContainerFileHandler [T <: Referencable] (val fileName:String,factory: (Re
 	var inBufferStream=new ByteArrayInputStream(readBuffer)
 	var dataInStream=new DataInputStream(inBufferStream)
 	
-	
+	var lastReadPos:Long= -2 
+	var lastReadSize:Int= -2
+	//var followCount=0
 	
 	/** Stores an Instance in the Data File
 	 @param data Instance to Store
@@ -29,6 +31,9 @@ class ContainerFileHandler [T <: Referencable] (val fileName:String,factory: (Re
 	 */
 	def writeInstance(data:T):(Long,Int) =
 	{
+		if(lastReadPos!= -2){			
+			lastReadPos= -2 // reset cache marker
+		}
 		bufferStream.reset()		
 		val pos=theFile.length
 		theFile.seek(pos)
@@ -52,10 +57,21 @@ class ContainerFileHandler [T <: Referencable] (val fileName:String,factory: (Re
 			readBuffer=new Array[Byte](size+128)
 			inBufferStream=new ByteArrayInputStream(readBuffer)
 			dataInStream=new DataInputStream(inBufferStream)
-		}				
-		theFile.seek(pos)
+		}	
+		//print(" R:"+pos+","+size )
+		if(pos!=lastReadPos+lastReadSize) { // dont seek for subsequent instances
+			/*if(followCount>0) {				
+				println("following hits:"+followCount)
+				followCount=0
+			}*/
+			theFile.seek(pos)
+		}
+		//else { followCount+=1}
+		//else print("h ")
 		theFile.read(readBuffer,0,size)
 		inBufferStream.reset
+		lastReadPos=pos
+		lastReadSize=size
 	}	
 	
 		

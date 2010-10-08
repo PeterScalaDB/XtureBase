@@ -23,6 +23,11 @@ class ClassIndexHandler(val theClass:ServerObjectClass)
 	val firstID= if(numRecords>0) readIxInst(0) else 0
 	var lastID:Long= if(numRecords>0) readIxInst(numRecords-1) else 0
 	
+	
+	var lastReadID:Long= -2	
+	var lastSeekID:Long = -2
+	var lastSeekPos:Option[Long] = None
+	
 	val bufferStream=new MyByteStream(56)
 	val miniBufferStream=new MyByteStream(12)
 	val miniOutStream=new DataOutputStream(miniBufferStream)
@@ -32,6 +37,7 @@ class ClassIndexHandler(val theClass:ServerObjectClass)
 	for(i <-0 until 7 )	outStream.writeLong(0)
 	
 	var readBuffer= new Array[Byte](56)
+	var bulkReadBuffer=readBuffer
 	var inBufferStream=new ByteArrayInputStream(readBuffer)
 	var dataInStream=new DataInputStream(inBufferStream)
 	
@@ -47,14 +53,16 @@ class ClassIndexHandler(val theClass:ServerObjectClass)
 	{
 		val inst=lastID+1		
 		theFile.seek(theFile.length)
+		resetLastReadID
 		bufferStream.reset()
 		outStream.writeLong(inst)
 		theFile.write(bufferStream.buffer,0,56)
 		numRecords+=1
-		lastID=inst
-		
+		lastID=inst		
 		inst
 	}	
+	
+	def resetLastReadID=if(lastReadID!= -2) lastReadID= -2
 	
 	
 	
@@ -76,6 +84,7 @@ class ClassIndexHandler(val theClass:ServerObjectClass)
 	  	throw new IllegalArgumentException("Storing wrong instance" +inst+ " in class "+theClass.name)
 	  }
 		theFile.seek(findIxRecord(inst)*recordSize+8+ixOffset)
+		resetLastReadID
 		miniBufferStream.reset()
 		miniOutStream.writeLong(dataPos)
 	  miniOutStream.writeInt(dataLength)
@@ -116,6 +125,7 @@ class ClassIndexHandler(val theClass:ServerObjectClass)
 	// does the specified instance exist ?
 	def instanceExists(inst:Long):Boolean =
 	{
+		resetLastReadID
 		for(i<-internFindIxRecord(inst))
 				{
 			     val r=getInstanceRecord(inst)
@@ -132,10 +142,47 @@ class ClassIndexHandler(val theClass:ServerObjectClass)
 		theFile.close
 	}
 	
+	def bulkGetInstanceRecords(startInst:Long,endInst:Long,dataFileHandler:BoolContFileHandler[InstanceData])=  {
+		
+		if (bulkReadBuffer.size<(endInst-startInst+1)*56) {
+			bulkReadBuffer=new Array[Byte](56*(endInst-startInst+1).toInt)
+			
+		}
+		theFile.seek(findIxRecord(startInst)*recordSize)
+		theFile.read(bulkReadBuffer,0,56*(endInst-startInst+1).toInt)
+		println("buffer read "+(endInst-startInst+1).toInt)
+		//inBufferStream.reset
+		for(i<-startInst to endInst;val offset=(i-startInst).toInt*56+8) 			
+			yield	dataFileHandler.readWithBool(Reference(theClass.id,i),getLong(bulkReadBuffer,offset),
+				getInt(bulkReadBuffer,offset+8),getLong(bulkReadBuffer,offset+8+4)!=0 	)	
+			
+	}
+	
+	def getLong(readBuffer:Array[Byte],pos:Int):Long = 
+	 ((readBuffer(pos).toLong << 56) +
+    ((readBuffer(pos+1) & 255).toLong << 48) +
+    ((readBuffer(pos+2) & 255).toLong << 40) +
+    ((readBuffer(pos+3) & 255).toLong << 32) +
+    ((readBuffer(pos+4) & 255).toLong << 24) +
+    ((readBuffer(pos+5) & 255).toLong << 16) +
+    ((readBuffer(pos+6) & 255).toLong << 8) +
+    ((readBuffer(pos+7) & 255).toLong << 0) )
+    
+		
+	def getInt (readBuffer:Array[Byte],pos:Int):Int =
+		((readBuffer(pos+0) & 255).toInt << 24) +
+    ((readBuffer(pos+1) & 255).toInt << 16) +
+    ((readBuffer(pos+2) & 255).toInt << 8) +
+    ((readBuffer(pos+3) & 255).toInt << 0) 
+	
 	
 	 def getInstanceRecord (inst:Long):IndexRecord =
-	{		
-		theFile.seek(findIxRecord(inst)*recordSize)
+	{	
+		 //print("get")
+		if(lastReadID!=(inst-1)) // optimize: if this call is the subsequent inst of the last call, try not to seek
+			theFile.seek(findIxRecord(inst)*recordSize)
+		//else print("o ")
+		lastReadID=inst
 		theFile.read(readBuffer,0,56)
 		inBufferStream.reset		
 		new IndexRecord(dataInStream.readLong,dataInStream.readLong,dataInStream.readInt,dataInStream.readLong,dataInStream.readInt,
@@ -160,28 +207,35 @@ class ClassIndexHandler(val theClass:ServerObjectClass)
 	// gets the Position of the given Instance in the index file
 	private def internFindIxRecord(inst:Long):Option[Long] =
 	{
-		if(numRecords==0) None
-		if(inst==lastID) numRecords
-		//if(inst==firstID) 0		
-		// binary search
-		def finder(lower:Long,upper:Long):Option[Long] =
-		{
-			if (upper<lower) None
-			val mid = (upper + lower) / 2
-			val instAtMid=readIxInst(mid)
-			if (instAtMid > inst)
-           finder(lower, mid-1)
-       else if (instAtMid < inst)
-            finder( mid+1, upper)
-       else
-            Some(mid)
+		if(inst==lastSeekID) lastSeekPos
+		else {			
+		  if(numRecords==0) None
+		  if(inst==lastID) numRecords
+		  lastSeekID=inst
+		  //if(inst==firstID) 0		
+		  // binary search
+		  def finder(lower:Long,upper:Long):Option[Long] =
+		  {
+		  	if (upper<lower) None
+		  	val mid = (upper + lower) / 2
+		  	val instAtMid=readIxInst(mid)
+		  	if (instAtMid > inst)
+		  		finder(lower, mid-1)
+		  		else if (instAtMid < inst)
+		  			finder( mid+1, upper)
+		  			else
+		  				Some(mid)
+		  }
+
+		  lastSeekPos=finder(0,numRecords)
+		  lastSeekPos
 		}
-		
-		finder(0,numRecords)		
+				
 	}
 	
 	private def findIxRecord(inst:Long):Long =
 	{
+		resetLastReadID
 		internFindIxRecord(inst) match 
 		{ 
 			case Some(v)=>v ;

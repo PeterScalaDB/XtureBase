@@ -60,8 +60,8 @@ class ScaleModel {
 			xOffset=vpBorder
 			yOffset=((_viewSize.height-_world_Height*scale)/2).toInt+vpBorder
 		}
-		println("calcOff world x:"+_world_X+" y:"+_world_Y+" w:"+_world_Width+" h:"+_world_Height+" view:"+_viewSize+
-			" xof:"+xOffset+" yof:"+yOffset+" wr:"+worldRatio+" vr:"+viewRatio+" hs:"+_heightSet)
+		//println("calcOff world x:"+_world_X+" y:"+_world_Y+" w:"+_world_Width+" h:"+_world_Height+" view:"+_viewSize+
+		//	" xof:"+xOffset+" yof:"+yOffset+" wr:"+worldRatio+" vr:"+viewRatio+" hs:"+_heightSet)
 	}
 	
 	def world_X=_world_X

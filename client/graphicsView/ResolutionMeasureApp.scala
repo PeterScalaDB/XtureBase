@@ -30,7 +30,7 @@ object ResolutionMeasureApp extends SimpleSwingApplication  {
 	}
 	
 	val showBox= new BorderPanel {
-		  background=Color.blue
+		  background=Color.white
 		  opaque=true
 		  preferredSize=new Dimension(1200,800)
 		  maximumSize=preferredSize

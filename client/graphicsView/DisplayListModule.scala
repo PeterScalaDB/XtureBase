@@ -28,6 +28,7 @@ class DisplayListModule extends ActionModule {
   
   def doImport(data:InstanceData,param:Seq[(String,Constant)]):Boolean = {
   	if(!param.isEmpty) {
+  		val startTime=System.currentTimeMillis();
   		val dateiName=param(0)._2.toString
   		val file=new File(dateiName)  		
   		val reader=new BufferedReader(new FileReader(file))
@@ -50,7 +51,7 @@ class DisplayListModule extends ActionModule {
   							case 11 =>x2=coord
   							case 21 =>{
   								y2=coord
-  								println("Line ("+x1+","+y1+")-("+x2+","+y2+")")
+  								//println("Line ("+x1+","+y1+")-("+x2+","+y2+")")
   								var inst=TransactionManager.tryCreateInstance(40,owner,false)
   								inst=inst.setField(3,new VectorConstant(x1,y1,0))
   								inst=inst.setField(4,new VectorConstant(x2,y2,0))
@@ -66,6 +67,8 @@ class DisplayListModule extends ActionModule {
   			line=reader.readLine
   		}
   		reader.close
+  		val endTime=System.currentTimeMillis()
+  		println("Import ready "+dateiName+" time:"+(endTime-startTime))
   	}
   	true
   }

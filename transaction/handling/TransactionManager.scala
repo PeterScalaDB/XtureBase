@@ -15,7 +15,7 @@ import server.test.SimpleProfiler
  * 
  */
 object TransactionManager {
-  var running=false
+  @volatile var running=false
 	
 	private val transLock : AnyRef = new Object()	
 			
@@ -547,13 +547,13 @@ object TransactionManager {
   	//println("check Coll "+ instD.owners.mkString(", "))
   	for(owner <-instD.owners)
   	{
-  		println(" "+owner.ownerRef)
+  		//println(" "+owner.ownerRef)
   		ActionList.getCollData(owner.ownerRef) match {
 				case Some(collData) => {
 					println("notify CollFunc Child Deleted, owner:"+owner+" child"+instD.ref)
 					notifyCollFunc_ChildDeleted(owner ,collData,instD)
 				}
-				case b => println("check "+owner+" for Colldata:"+b) // more beer !
+				case b => //println("check "+owner+" for Colldata:"+b) // more beer !
 			}
   	}
   	
