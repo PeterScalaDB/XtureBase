@@ -8,7 +8,7 @@ import java.io._
 /** a factory that creates instances of user defined classes
  * 
  */
-abstract class SubscriptionFactory [T <: ReadableClass] {
+abstract class SubscriptionFactory [T <: Referencable] {
 	val typeMap=collection.mutable.HashMap[Int,(Reference,DataInput)=>T]()
 	def emptyFunc(ref:Reference):T
 	
@@ -18,6 +18,6 @@ abstract class SubscriptionFactory [T <: ReadableClass] {
   def createEmptyObject(nref:Reference):T = emptyFunc(nref)
 }
 
-trait ReadableClass {
+/*trait ReadableClass {
 	def ref:Reference	
-}
+}*/

@@ -26,7 +26,8 @@ class ActionPanel extends BoxPanel(scala.swing.Orientation.Vertical) with Select
 	var lastClass:Int= _
 	var buttonSize=new Dimension(110,30)
 	var nullSize=new Dimension(0,0)
-	var instList:Seq[InstanceData] = _
+	var instList:Seq[Referencable] = _
+	var lastSender:SelectSender= _
 	var listenerSet=collection.mutable.HashSet[ActionPanListener]()
 	xLayoutAlignment=0.5d
   yLayoutAlignment=0.5d
@@ -42,9 +43,11 @@ class ActionPanel extends BoxPanel(scala.swing.Orientation.Vertical) with Select
 	
 	}
 	
-	def selectionChanged(ninstList:Seq[InstanceData]) = {
+	def selectionChanged(sender:SelectSender,ninstList:Seq[Referencable]) = {
 		//println("select "+instList)
+		if(lastSender!=null&&lastSender!=sender)lastSender.deselect(false)
 		instList=ninstList
+		lastSender=sender
 		if(instList==null || instList.isEmpty || instList.first==null) hideActions
 		else setClass(instList.first.ref.typ)
 	}

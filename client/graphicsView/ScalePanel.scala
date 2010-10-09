@@ -13,7 +13,7 @@ import java.awt.{Font,Color,Insets}
 class ScalePanel(model:ScaleModel,controller:GraphViewController) extends BoxPanel(scala.swing.Orientation.Horizontal) {
 		
 	val zoomAllBut=new Button("Zoom All")
-	val zoomInBut=new Button(" + ")
+	val zoomInBut=new ToggleButton(" + ")
 	val zoomOutBut=new Button(" - ")
 	val scaleEdit=new TextField("")
 	val relativeEdit=new TextField("1 : 100")
@@ -26,6 +26,7 @@ class ScalePanel(model:ScaleModel,controller:GraphViewController) extends BoxPan
 	zoomInBut.margin=miniInsets
 	zoomOutBut.margin=miniInsets
 	relativeEdit.maximumSize=new Dimension(70,30)
+	relativeEdit.preferredSize=relativeEdit.maximumSize
 	scaleEdit.maximumSize=new Dimension(70,30)
 	scaleEdit.preferredSize=scaleEdit.maximumSize
 	scaleEdit.font=smallFont
@@ -35,6 +36,15 @@ class ScalePanel(model:ScaleModel,controller:GraphViewController) extends BoxPan
 	
 	reactions += {
 		case ButtonClicked(`zoomAllBut`)=> controller.zoomAll
+		case ButtonClicked(`zoomInBut`)=> controller.zoomInClicked
+		case ButtonClicked(`zoomOutBut`)=> model.zoomOut
+		
+		case EditDone(`relativeEdit`)=> {
+			val scaleValue=splitScaleText(relativeEdit.text)
+			if(scaleValue!=null){
+				model.relativeScale=scaleValue
+			}
+		}
 	}
 	
 	model.registerScaleListener(()=>{
@@ -50,5 +60,13 @@ class ScalePanel(model:ScaleModel,controller:GraphViewController) extends BoxPan
 		case a:Integer => a.toString
 		case b:java.lang.Double => "%4.2f".format(b)
 		case c=> "u "+c
+	}
+	
+	def splitScaleText(text:String):(Double,Double) = {
+		val nseq=text.split(":")
+		if(nseq.size!=2) null
+		else {
+			(nseq(0).trim.toDouble,nseq(1).trim.toDouble)
+		}
 	}
 }

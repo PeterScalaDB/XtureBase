@@ -191,13 +191,17 @@ class UserQueryHandler(userSocket: UserSocket) {
 						val childRefs=props.propertyFields(propertyField).propertyList	
 						//println("send Children:"+childRefs.map(_.sToString+","))
 						// get all Data before starting to write
-						val instList= getInstances(childRefs)
 						out.writeInt(childRefs.size)
-						for(i <-childRefs.indices)
+						if(childRefs.size<10)
 						{
-							childRefs(i).write(out)
-							instList(i).writeWithChildInfo(out)
-						}					
+						  val instList= getInstances(childRefs)						
+						  for(i <-childRefs.indices)
+						  {
+						  	childRefs(i).write(out)
+						  	instList(i).writeWithChildInfo(out)
+						  }	
+						}
+						else pushInstances(childRefs,out)					
 					}
 					case None => out.writeInt(0) 
 				}
@@ -206,6 +210,33 @@ class UserQueryHandler(userSocket: UserSocket) {
 				case e: Exception => println(e); out.writeInt(0)
 			}
 	}
+	
+	private def pushInstances(childRefs:IndexedSeq[Reference],out:DataOutput) = {
+		var bulkStart= 0
+  	var oldRef=childRefs.head
+  	for(i <-1 until childRefs.size) {
+  		val newRef=childRefs(i)
+  		if(oldRef.typ== newRef.typ && oldRef.instance ==(newRef.instance-1)){
+  				// subsequent instance
+  			}
+  		else { // another instance, break bulk block
+  			if(bulkStart==i-1 )  // only single instance
+  				StorageManager.pushInstanceData(oldRef,out)  				
+  				else  StorageManager.bulkPushInstanceData(childRefs(bulkStart),oldRef,out)	  				
+  				bulkStart=i
+  			}
+  			oldRef=newRef
+  		}	
+  		if(bulkStart==childRefs.size-1 ) { // only single instance
+  			StorageManager.pushInstanceData(oldRef,out)
+  		}
+  		else
+  			 StorageManager.bulkPushInstanceData(childRefs(bulkStart),oldRef,out)
+  			  			
+  		
+	}
+	
+	
 	
   private def getInstances(childRefs:IndexedSeq[Reference]):Seq[InstanceData] = {
   	if(childRefs.size>10) {  

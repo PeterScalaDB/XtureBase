@@ -42,9 +42,10 @@ object ViewTest extends SimpleSwingApplication {
 	
 	val testGraphList=new ListView[GraphElem]()
 	
-	var lastSelected:Seq[InstanceData]=Seq.empty
+	//var lastSelected:Seq[Referencable]=Seq.empty
 	
 	val graphViewController=new GraphViewController
+	val layerPanController=new LayerPanelController(graphViewController)
 	
 	val graphViewPan=new BorderPanel () {
 		preferredSize=new Dimension(400,200)
@@ -53,8 +54,8 @@ object ViewTest extends SimpleSwingApplication {
 			viewportView=graphViewController.canvasPanel
 			testGraphList.peer.setModel(TestGraphListModel)
 		},BorderPanel.Position.Center)
-		add(graphViewController.layerPanel,BorderPanel.Position.North)
-		viewController.registerSelectListener(graphViewController)
+		add(layerPanController.layerPanel,BorderPanel.Position.North)
+		viewController.registerSelectListener(layerPanController)
 	}
 	
 	val pathScroller =new ScrollPane() {
@@ -87,7 +88,7 @@ object ViewTest extends SimpleSwingApplication {
 			listenTo(loadBut,copyBut,createBut,openGraphBut)
 			reactions += {
 					case ButtonClicked(`loadBut`) => loadData
-					case ButtonClicked(`openGraphBut`) => openGraphData
+					//case ButtonClicked(`openGraphBut`) => openGraphData
 					//case ButtonClicked(`deleteBut`) => deleteInstance
 					//case ButtonClicked(`stressBut`) => stressTest
 					case ButtonClicked(`copyBut`) => copyData
@@ -99,14 +100,10 @@ object ViewTest extends SimpleSwingApplication {
 		
 		add (new BorderPanel(){
 			add (pathScroller,BorderPanel.Position.North)
-			add (new ScrollPane()  
-			{
-				viewportView= viewController.panel
-				viewController.registerSelectListener(new SelectListener{
-					def selectionChanged(instList:Seq[InstanceData])= lastSelected=instList
-				})
-				//preferredSize=new Dimension(280,500)								
-			},BorderPanel.Position.Center) 
+			add ( viewController.panel,BorderPanel.Position.Center)
+			/*viewController.registerSelectListener(new SelectListener{
+					def selectionChanged(sender:SelectSender,instList:Seq[Referencable])= lastSelected=instList
+				})*/
 		},BorderPanel.Position.West)
 		
 		add( new BorderPanel() {
@@ -143,6 +140,8 @@ object ViewTest extends SimpleSwingApplication {
 		actionPan.registerActionPanListener(DialogManager)
 		viewController.registerSelectListener(actionPan)
 		viewController.registerSelectListener(DialogManager)
+		graphViewController.selectModel.registerSelectListener(actionPan)
+		graphViewController.selectModel.registerSelectListener(DialogManager)
 		//println(top.title)
 		sock=new ClientSocket(InetAddress.getByName(args(0)),args(1).toInt,args(2),args(3))
   	sock.start()
@@ -152,9 +151,7 @@ object ViewTest extends SimpleSwingApplication {
   	super.startup(args)
 	}
 	
-	def openGraphData() = if(lastSelected.size>0){
-		//TestGraphListModel.load(lastSelected(0).ref,0.toByte)
-	}
+	
 	
 	def loadData() = {
 		val newRef=Reference(typEdit.text.toInt,instEdit.text.toInt)

@@ -19,14 +19,14 @@ object ClientQueryManager {
 	//type InstArrayFunc=(Array[InstanceData])=> Unit
 	type UpdateFunc=(NotificationType.Value,IndexedSeq[InstanceData])=>Unit
 	
-	type FactUpdateFunc[T<: ReadableClass]=(NotificationType.Value,IndexedSeq[T])=>Unit
+	type FactUpdateFunc[T<: Referencable]=(NotificationType.Value,IndexedSeq[T])=>Unit
 	
 	//type PathUpdateFunc=(PathNotificationType.Value,Array[InstanceData])=>Unit
 	
 	//case class Query(func: InstArrayFunc)
 	trait Subscriber
 	case class SimpleSubscriber(func: UpdateFunc) extends Subscriber
-	case class FactSubscriber[T<: ReadableClass](factory:SubscriptionFactory[T],func: FactUpdateFunc[T]) extends Subscriber
+	case class FactSubscriber[T<: Referencable](factory:SubscriptionFactory[T],func: FactUpdateFunc[T]) extends Subscriber
 	//case class PathSubscriber(func:PathUpdateFunc)
 	
 	private val queryQueue = new SynchronousQueue[IndexedSeq[InstanceData]]()	
@@ -80,7 +80,7 @@ object ClientQueryManager {
 		subscriptionAcceptQueue.take()
 	}
 	
-	def createFactSubscription[T <:ReadableClass](parentRef:Reference,propertyField:Byte,factory:SubscriptionFactory[T])
+	def createFactSubscription[T <:Referencable](parentRef:Reference,propertyField:Byte,factory:SubscriptionFactory[T])
 	(updateFunc: FactUpdateFunc[T]):Int = {		
 		sock.sendData(ClientCommands.startSubscription ) {out =>
 			newSubscriberQueue.add( FactSubscriber(factory,updateFunc))
@@ -200,7 +200,7 @@ object ClientQueryManager {
 		commandResultQueue.take() 
 	}
 	
-	def executeAction(instList:Seq[InstanceData],actionName:String,params:Seq[(String,Constant)])= {
+	def executeAction(instList:Seq[Referencable],actionName:String,params:Seq[(String,Constant)])= {
 		sock.sendData(ClientCommands.executeAction) { out =>
 			out.writeInt(instList.size)
 			instList foreach(_.ref.write(out))
@@ -219,7 +219,7 @@ object ClientQueryManager {
 			for(i <- 0 until numData) yield InstanceData.readWithChildInfo(Reference(in), in)			
 		}
 	
-	private def readListWithFactory[T <: ReadableClass](in:DataInputStream,factory:SubscriptionFactory[T]):IndexedSeq[T] = {
+	private def readListWithFactory[T <: Referencable](in:DataInputStream,factory:SubscriptionFactory[T]):IndexedSeq[T] = {
 			val numData=in.readInt
 			for(i <- 0 until numData) yield factory.createObject(Reference(in), in)			
 		}

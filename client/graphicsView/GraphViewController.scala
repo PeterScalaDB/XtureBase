@@ -5,30 +5,42 @@ package client.graphicsView
 
 import scala.swing._
 import scala.swing.event._
-import client.dataviewer.SelectListener
 import definition.data._
 import client.comm.ClientQueryManager
 import javax.swing.SwingUtilities
 import java.awt.event._
+import client.dialog._
 
 /**
  * 
  */
-class GraphViewController() extends SelectListener {
+class GraphViewController {
 	
-	val layerModel=new LayerTableModel()
+	
   val scaleModel=new ScaleModel
+  val selectModel=new ViewSelectModel(this)
+  val layerModel=new LayerTableModel()
+    
+  private var _viewportState=ViewportState.SelectState
+  
+  def viewportState=_viewportState  
 	
-	var selectedInstances:Seq[InstanceData]=Seq.empty
 	
-	TestGraphListModel.controller=this
-	
+		
 	val canvas=new GraphViewCanvas(this)
 	val scalePanel=new ScalePanel(scaleModel,this)
+	
+  scaleModel.registerScaleListener(()=>{
+  	canvas.repaint()
+  })
 	
 	val canvasPanel=new BorderPanel {
 		add(canvas,BorderPanel.Position.Center)
 		add(scalePanel,BorderPanel.Position.North)
+	}
+	
+	def filterLayersSelection(filtFunc:(GraphElem)=>Boolean):Seq[GraphElem]= {
+		layerModel.layerList.flatMap(l => l.filterSelection(filtFunc))
 	}
 	
 	canvas.peer.addHierarchyBoundsListener( new HierarchyBoundsListener(){			
@@ -40,33 +52,6 @@ class GraphViewController() extends SelectListener {
 			}
 	})
 	
-	val layerTable=new Table() {
-		peer.setModel(layerModel)
-		autoResizeMode=Table.AutoResizeMode.SubsequentColumns
-		selection.intervalMode=Table.IntervalMode.Single
-		selection.elementMode=Table.ElementMode.Row
-	}
-	
-	val layerPanel = new BorderPanel() {
-		add(new ScrollPane() {
-			viewportView= layerTable
-			preferredSize=new Dimension(100,100)
-		},BorderPanel.Position.Center)
-		add(new GridPanel(1,5){
-			val addBut =new Button("Hinzufügen")
-			val removeBut =new Button("Entfernen")
-			val activateBut =new Button("Aktivieren")
-			val visibleBut =new Button("Sichtbar")
-			val edibleBut =new Button("Veränderbar")
-			contents+=addBut+=removeBut+=visibleBut+=edibleBut+=activateBut
-			listenTo(addBut,removeBut,visibleBut,edibleBut,activateBut)
-			reactions+= {
-				case ButtonClicked(`addBut`) => addLayer
-				case ButtonClicked(`removeBut`) => removeLayer
-				case ButtonClicked(`visibleBut`) => toggleVisible
-			}
-		},BorderPanel.Position.South)
-	}
 	
 	def layerChanged(lay:Layer) = {
 		zoomAll
@@ -77,49 +62,91 @@ class GraphViewController() extends SelectListener {
 	}
 	
 	def graphElemRemoved(lay:Layer,elem:GraphElem) = {
+		selectModel.elemRemoved(elem)
 		canvas.repaint
 	}
 	
 	def graphElemChanged(lay:Layer,oldState:GraphElem,newState:GraphElem) = {
+		selectModel.elemChanged(oldState,newState)
 		canvas.repaint
 	}
 	// will be called when the DataViewController has another selection
-	def selectionChanged(instList:Seq[InstanceData])= {
-		selectedInstances=instList
-	}
 	
-	def addLayer = {
-		//println("sel:"+selectedInstances+" ref:"+selectedInstances.head.ref+" "+Layer.displayListTyp)
-		if(selectedInstances!=null &&(!selectedInstances.isEmpty) && selectedInstances.head.ref.typ == Layer.displayListTyp 
-				&& !layerModel.containsRef(selectedInstances.head.ref)) {
-			
-			val newLayer=Layer.createLayer(this,selectedInstances.head)
-			layerModel.addLayer( newLayer)
-			newLayer.load
-			TestGraphListModel.update()
-		}
-	}
-	
-	def getSelectedLayer:Int = if ( layerTable.selection.rows.isEmpty) -1 else layerTable.selection.rows.head 
-	
-	def removeLayer = {
-		 val ix=getSelectedLayer 
-		 if(ix> -1) {
-			 layerModel.layerList(ix).shutDown
-			 layerModel.removeLayer(ix)
-			 TestGraphListModel.update()
-		 }
-	}
-	
-	def toggleVisible = {
-		val ix=getSelectedLayer 
-		if(ix> -1)  layerModel.toggleVisibility(ix)	 
-	}
+		
 	
 	def zoomAll() = {
 		val allBounds=layerModel.calcAllLayerBounds
 		scaleModel.setWorldBounds(allBounds.x,allBounds.y,allBounds.width,allBounds.height)
 		canvas.repaint
+	}
+	def zoomInClicked() = {
+		changeViewportState(ViewportState.ZoomInState )
+	}
+	
+	def dragCompleted(startPoint:Point,endPoint:Point) = {
+		_viewportState match {
+			case ViewportState.ZoomInState => {
+				scalePanel.zoomInBut.selected=false
+				_viewportState=ViewportState.SelectState
+				scaleModel.zoomIn(startPoint,endPoint)				
+			}
+			case _ =>
+		}
+	}
+	
+	def dragStopped() {
+		_viewportState match {
+			case ViewportState.ZoomInState => {
+				scalePanel.zoomInBut.selected=false
+				_viewportState=ViewportState.SelectState
+			}
+			case _ =>
+		}		
+	}
+	
+	def singleClick(where:Point) = {
+		// check for single element selection
+		val clickPosX=scaleModel.xToWorld(where.x)
+		val clickPosY=scaleModel.yToWorld(where.y)
+		val lineCatchDistance=canvas.lineCatchDistance.toDouble/scaleModel.scale
+		println("Hittest clx:"+clickPosX+" cly:"+clickPosY+" dist:"+lineCatchDistance+" scale:"+scaleModel.scale)
+		val hittedElements=filterLayersSelection(_.hits(clickPosX,clickPosY,lineCatchDistance) )
+		println("hitted elements:"+hittedElements)
+		if(hittedElements.isEmpty) selectModel.deselect(true)
+		else selectModel.addSelection(hittedElements)
+		canvas.repaint
+	}
+	
+	def changeViewportState(newState:ViewportState.Value) = {
+	  
+		_viewportState=newState
+	  
+	  canvas.repaint
+	}
+	
+	def stopModus() = {
+		_viewportState match {
+	  	case ViewportState.ZoomInState =>scalePanel.zoomInBut.selected=false
+	  	case _ =>
+	  }
+		changeViewportState(ViewportState.SelectState)
+	}
+	
+	def keyPressed(e:KeyPressed) = {
+		//println("key typed "+e)
+		_viewportState match {
+			case ViewportState.SelectState =>
+			e.key match {
+				case Key.Left => scaleModel.moveLeft
+				case Key.Right => scaleModel.moveRight
+				case Key.Up => scaleModel.moveUp
+				case Key.Down => scaleModel.moveDown
+				case Key.Escape => stopModus()
+				case _ => //println(e)
+		  }
+			case o => // println(o)
+		}
+		
 	}
 	
 	

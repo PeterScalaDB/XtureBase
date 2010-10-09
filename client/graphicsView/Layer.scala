@@ -94,6 +94,11 @@ class Layer(val controller:GraphViewController,val ref:Reference,val name:String
 		bounds
 	}
 	
+	def filterSelection(filterFunc:(GraphElem)=>Boolean):Seq[GraphElem] = {
+		if (edible) elemList.filter(filterFunc)
+		else Seq.empty
+	}
+	
 	def checkElemBounds(elem:GraphElem) = {
 	  if (elem.minX<bounds.x)bounds.x=elem.minX
 		if (elem.minY<bounds.y)bounds.y=elem.minY

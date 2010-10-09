@@ -144,19 +144,39 @@ class ClassIndexHandler(val theClass:ServerObjectClass)
 	
 	def bulkGetInstanceRecords(startInst:Long,endInst:Long,dataFileHandler:BoolContFileHandler[InstanceData])=  {
 		
-		if (bulkReadBuffer.size<(endInst-startInst+1)*56) {
-			bulkReadBuffer=new Array[Byte](56*(endInst-startInst+1).toInt)
-			
-		}
+		if (bulkReadBuffer.size<(endInst-startInst+1)*56) 
+			bulkReadBuffer=new Array[Byte](56*(endInst-startInst+1).toInt)			
+		
 		theFile.seek(findIxRecord(startInst)*recordSize)
 		theFile.read(bulkReadBuffer,0,56*(endInst-startInst+1).toInt)
-		println("buffer read "+(endInst-startInst+1).toInt)
+		//println("buffer read "+(endInst-startInst+1).toInt)
 		//inBufferStream.reset
 		for(i<-startInst to endInst;val offset=(i-startInst).toInt*56+8) 			
 			yield	dataFileHandler.readWithBool(Reference(theClass.id,i),getLong(bulkReadBuffer,offset),
-				getInt(bulkReadBuffer,offset+8),getLong(bulkReadBuffer,offset+8+4)!=0 	)	
+				getInt(bulkReadBuffer,offset+8),getLong(bulkReadBuffer,offset+8+4)!=0 	)				
+	}
+	
+	
+	def bulkPushInstanceRecords(startInst:Long,endInst:Long,dataFileHandler:BoolContFileHandler[InstanceData],
+	                           out:DataOutput)=  {
+		if (bulkReadBuffer.size<(endInst-startInst+1)*56) 
+			bulkReadBuffer=new Array[Byte](56*(endInst-startInst+1).toInt)			
+		
+		theFile.seek(findIxRecord(startInst)*recordSize)
+		theFile.read(bulkReadBuffer,0,56*(endInst-startInst+1).toInt)
+		//println("buffer push "+(endInst-startInst+1).toInt)
+		//inBufferStream.reset
+		for(i<-startInst to endInst){
+			val offset=(i-startInst).toInt*56+8
+			out.writeInt(theClass.id) // reference
+			out.writeLong(i)
+			dataFileHandler.pushData(getLong(bulkReadBuffer,offset),
+				getInt(bulkReadBuffer,offset+8) ,out	)
+			out.writeBoolean(getLong(bulkReadBuffer,offset+8+4)!=0)
+		}
 			
 	}
+	
 	
 	def getLong(readBuffer:Array[Byte],pos:Int):Long = 
 	 ((readBuffer(pos).toLong << 56) +

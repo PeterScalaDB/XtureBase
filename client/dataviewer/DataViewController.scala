@@ -6,6 +6,7 @@ package client.dataviewer
 import client.model._
 import definition.data._
 import definition.typ._
+import client.dialog._
 
 import scala.swing._
 
@@ -14,11 +15,8 @@ import scala.swing._
  * 
  */
 
-trait SelectListener {
-	def selectionChanged(instList:Seq[InstanceData])
-}
 
-class DataViewController  extends PathControllable  {
+class DataViewController  extends PathControllable with SelectSender  {
 	private var loaded=false
 	var parentRef:Reference= _
 	var mainClass:AbstractObjectClass = _
@@ -49,7 +47,7 @@ class DataViewController  extends PathControllable  {
 	  	panel.contents+=mod.panel
 	  }
 	  updateHeight()
-	  if(!selectRef.isDefined) selectListener foreach(_.selectionChanged(null))
+	  if(!selectRef.isDefined) selectListener foreach(_.selectionChanged(this,null))
 	  loaded =true
 	}
 	
@@ -99,8 +97,14 @@ class DataViewController  extends PathControllable  {
 		//println("sel: propfield:"+proMod.propertyField+" typ:"+tabMod.typ +" \n"+instList.mkString)
 		for(i <- 0 until numUsedModels;val mod=propertyModels(i))
 			mod.deselect(tabMod.typ)
-		 selectListener foreach(_.selectionChanged(instList))	
+		 selectListener foreach(_.selectionChanged(this,instList))	
 		//selectedInstance=inst
+	}
+	
+	def deselect(notify:Boolean) = {
+		for(i <- 0 until numUsedModels;val mod=propertyModels(i))
+			mod.deselect(-1)
+		
 	}
 	
 	/** sends a message to the path controller that it should open a child instance

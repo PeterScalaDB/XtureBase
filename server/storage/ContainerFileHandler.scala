@@ -48,11 +48,11 @@ class ContainerFileHandler [T <: Referencable] (val fileName:String,factory: (Re
 	 */
 	def readInstance(ref:Reference,pos:Long,size:Int):T =
 	{
-		readInBuffer(ref,pos,size)
+		readInBuffer(pos,size)
 		factory(ref,dataInStream)
 	}
 	
-	protected def readInBuffer(ref:Reference,pos:Long,size:Int) = {
+	protected def readInBuffer(pos:Long,size:Int) = {
 		if(size>readBuffer.size) {
 			readBuffer=new Array[Byte](size+128)
 			inBufferStream=new ByteArrayInputStream(readBuffer)
@@ -86,9 +86,13 @@ class BoolContFileHandler [T <: Referencable] (override val fileName:String,with
 	  ContainerFileHandler[T](fileName,null)	
 	{
 		def readWithBool(ref:Reference,pos:Long,size:Int,boolValue:Boolean):T = {
-			readInBuffer(ref,pos,size)
+			readInBuffer(pos,size)
 			withBoolFactory(ref,dataInStream,boolValue)
 		}		
+		def pushData(pos:Long,size:Int,out:DataOutput) = {
+			readInBuffer(pos,size)
+			out.write(readBuffer,0,size)			
+		}
 	}
 
 

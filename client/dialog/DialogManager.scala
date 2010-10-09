@@ -24,7 +24,7 @@ object DialogManager extends SelectListener with ActionPanListener{
 	val answerArea=new AnswerArea ()	
 	answerArea.registerAnswerCallBack(answerGiven)
 	
-	var selectedInstances:Seq[InstanceData] = _
+	var selectedInstances:Seq[Referencable] = _
 	var currentQuestion:ParamQuestion= _
 	var currentAction:String= _
 	val answerList=new scala.collection.mutable.ArrayBuffer[ResultElement]()
@@ -45,7 +45,7 @@ object DialogManager extends SelectListener with ActionPanListener{
 		errorField.text=""	
 	}
 	// from DataViewController selection listener 
-	def selectionChanged(instList:Seq[InstanceData]) = {
+	def selectionChanged(sender:SelectSender,instList:Seq[Referencable]) = {
 		selectedInstances=instList
 		reset()		
 	}

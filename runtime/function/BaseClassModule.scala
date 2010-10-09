@@ -24,7 +24,7 @@ class BaseClassModule extends ActionModule {
 		)),
 		doStressTest)
 	
-	val mList=List(deleteAction,stressTestAction)
+	val mList=List(deleteAction)
 	
   def getActionsIterator = mList.iterator 
   

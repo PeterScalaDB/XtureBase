@@ -6,7 +6,7 @@ package server.storage
 import definition.typ._
 import definition.data._
 import java.util.NoSuchElementException
-import java.io.DataInput
+import java.io.{DataInput,DataOutput}
 import runtime.function._
 import definition.expression.FunctionManager
 import server.test.SimpleProfiler
@@ -64,10 +64,23 @@ object StorageManager {
   	}
   }  
   
+  def pushInstanceData(ref:Reference,out:DataOutput) = {
+  	val handler=getHandler(ref.typ)
+  	val rec=handler.getInstanceRecord(ref.instance )
+  	ref.write(out)
+  	dataFileHandler.pushData(rec.dataPos,rec.dataLength,out )
+  	out.writeBoolean((rec.propPos !=0)&&(rec.propLength !=0))
+  }
+  
   
   def bulkGetInstanceData(startRef:Reference,endRef:Reference) = {
-  	println("bulkget:"+startRef+" - "+endRef)
+  	//println("bulkget:"+startRef+" - "+endRef)
   	getHandler(startRef.typ).bulkGetInstanceRecords(startRef.instance,endRef.instance,dataFileHandler)  	 
+  }
+  
+  def bulkPushInstanceData(startRef:Reference,endRef:Reference,out:DataOutput) = {
+  	//println("bulkpush:"+startRef+" - "+endRef)
+  	getHandler(startRef.typ).bulkPushInstanceRecords(startRef.instance,endRef.instance,dataFileHandler,out)
   }
   
       
