@@ -161,6 +161,17 @@ object ClientQueryManager {
 		commandResultQueue.take()			
 	}
 	
+	def writeInstancesField(refs:Seq[Referencable],fieldNr:Byte,newValue:Expression) = {
+		sock.sendData(ClientCommands.writeMultiFields ) { out =>
+		  out.writeInt(refs.size)
+		  for(inst<-refs) inst.ref.write(out)
+			out.writeByte(fieldNr)
+			newValue.write(out)
+		}
+		commandResultQueue.take()			
+	}
+		
+	
 	/** creates an instance and returns the instanceID
 	 * @param classType the typeID of the new instance
 	 * @param owners the owners of the new instance

@@ -25,6 +25,7 @@ class GraphViewController {
   
   def viewportState=_viewportState  
 	
+  var isZoomingIn=false
 	
 		
 	val canvas=new GraphViewCanvas(this)
@@ -80,40 +81,76 @@ class GraphViewController {
 		canvas.repaint
 	}
 	def zoomInClicked() = {
-		changeViewportState(ViewportState.ZoomInState )
+		isZoomingIn=true
 	}
 	
-	def dragCompleted(startPoint:Point,endPoint:Point) = {
-		_viewportState match {
-			case ViewportState.ZoomInState => {
-				scalePanel.zoomInBut.selected=false
-				_viewportState=ViewportState.SelectState
-				scaleModel.zoomIn(startPoint,endPoint)				
+	def dragCompleted(startPoint:Point,endPoint:Point,control:Boolean,shift:Boolean) = {
+		if(isZoomingIn){			
+			scalePanel.zoomInBut.selected=false
+			_viewportState=ViewportState.SelectState
+			scaleModel.zoomIn(startPoint,endPoint)				
+			isZoomingIn=false
+		} else
+		_viewportState match {		
+			case ViewportState.SelectState => {
+				checkSelection(startPoint,endPoint,control)
 			}
 			case _ =>
 		}
 	}
 	
 	def dragStopped() {
+		if(isZoomingIn) {
+			scalePanel.zoomInBut.selected=false
+			_viewportState=ViewportState.SelectState
+			isZoomingIn=false
+		}
 		_viewportState match {
-			case ViewportState.ZoomInState => {
-				scalePanel.zoomInBut.selected=false
-				_viewportState=ViewportState.SelectState
-			}
+			
+				
+			
 			case _ =>
 		}		
 	}
 	
-	def singleClick(where:Point) = {
+	
+	def checkSelection(startPoint:Point,endPoint:Point,add:Boolean) {
+		val onlyInside=startPoint.x<endPoint.x // catch only Objects inside of the rectangle when 
+		 // moving the mouse from left to right. When moving from right to left, catch all cutting objects
+		val p1x=scaleModel.xToWorld(startPoint.x)
+		val p2x=scaleModel.xToWorld(endPoint.x)
+	  val minX=Math.min(p1x,p2x)
+	  val maxX=Math.max(p1x,p2x)
+	  val p1y=scaleModel.yToWorld(startPoint.y)
+		val p2y=scaleModel.yToWorld(endPoint.y)
+	  val minY=Math.min(p1y,p2y)
+	  val maxY=Math.max(p1y,p2y)
+	  val elemList= 
+	  	if(onlyInside) filterLayersSelection(e=> e.minX>=minX && e.maxX<=maxX && e.minY>=minY && e.maxY<=maxY)
+	  	else filterLayersSelection(e=> e.maxX>=minX && e.minX<=maxX && e.maxY>=minY && e.minY<=maxY)	  	
+	  if(add) {
+	  	if(!elemList.isEmpty)selectModel.addSelection(elemList,false)
+	  } else {
+	  	if (elemList.isEmpty)selectModel.deselect(true)
+	  	else selectModel.setSelection(elemList)
+	  }
+	  
+	}
+	
+	
+	def singleClick(where:Point,control:Boolean,shift:Boolean) = {
 		// check for single element selection
 		val clickPosX=scaleModel.xToWorld(where.x)
 		val clickPosY=scaleModel.yToWorld(where.y)
 		val lineCatchDistance=canvas.lineCatchDistance.toDouble/scaleModel.scale
-		println("Hittest clx:"+clickPosX+" cly:"+clickPosY+" dist:"+lineCatchDistance+" scale:"+scaleModel.scale)
+		//println("Hittest clx:"+clickPosX+" cly:"+clickPosY+" dist:"+lineCatchDistance+" scale:"+scaleModel.scale)
 		val hittedElements=filterLayersSelection(_.hits(clickPosX,clickPosY,lineCatchDistance) )
-		println("hitted elements:"+hittedElements)
-		if(hittedElements.isEmpty) selectModel.deselect(true)
-		else selectModel.addSelection(hittedElements)
+		//println("hitted elements:"+hittedElements)
+		if(control) {
+			if(!hittedElements.isEmpty) selectModel.addSelection(hittedElements,true)
+		}else 
+			if(hittedElements.isEmpty) selectModel.deselect(true)
+				else selectModel.setSelection(hittedElements)
 		canvas.repaint
 	}
 	
@@ -125,8 +162,11 @@ class GraphViewController {
 	}
 	
 	def stopModus() = {
+		if(isZoomingIn){
+		  scalePanel.zoomInBut.selected=false	
+		}else 		
 		_viewportState match {
-	  	case ViewportState.ZoomInState =>scalePanel.zoomInBut.selected=false
+	  	
 	  	case _ =>
 	  }
 		changeViewportState(ViewportState.SelectState)

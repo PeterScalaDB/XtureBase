@@ -80,7 +80,7 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 		val xmlString=in.readUTF()
 		//println(xmlString)
 		AllClasses.set(new ClientClasses(scala.xml.XML.loadString(xmlString)))		
-		//println(AllClasses.get.toXML)
+		//println(AllClasses.get.classList.mkString)
 		println("Types got")
 	}
 	

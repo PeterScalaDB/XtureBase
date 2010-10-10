@@ -3,7 +3,8 @@
  */
 package definition.typ
 
-import definition.data.Reference
+import definition.data._
+import collection.mutable.LinkedHashSet
 
 /**
  * Contains a list of all current classes
@@ -37,8 +38,31 @@ abstract class AllClasses [B <:AbstractObjectClass] (node: scala.xml.Node)  {
   
   // resolves all superfields from all classes. Will be called after reading all classes from XLM
   def resolveFields()= for(cl <-classList.valuesIterator) cl.resolveSuperFields()
-  											
-  									 		
+  	
+  /** gets the most common class that all classes inherit from
+   * 
+   * @param dataList list of referencable Instances
+   * @return the id of the common class or -1 if there is no common class
+   */
+  def getCommonClass(dataList:Seq[Referencable]):Int = {
+  	if(dataList==null || dataList.isEmpty) return -1
+  	if(dataList.size==1) return dataList.first.ref.typ 
+  	var aClassID= -2
+  	var superClasses:LinkedHashSet[Int]=null
+  	for(inst <-dataList) {
+  		if(aClassID== -2){
+  			aClassID=dataList.first.ref.typ
+  			superClasses=getClassByID(aClassID).superClassIDs
+  		}
+  		else if(inst.ref.typ!=aClassID) {
+  		  val otherSuperClasses=getClassByID(inst.ref.typ).superClassIDs
+  		  superClasses=superClasses intersect otherSuperClasses
+  		  if(superClasses.isEmpty) return -1
+  		  aClassID=superClasses.last
+  		}
+  	}
+  	aClassID
+  }
 }
 
 

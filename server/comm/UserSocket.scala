@@ -34,6 +34,7 @@ private var userName=""
 
 	// register routines
 	registerCommandHandler(ClientCommands.writeField) (wantWriteField)
+	registerCommandHandler(ClientCommands.writeMultiFields) (wantWriteMultiFields)
 	registerCommandHandler(ClientCommands.createInstance)(wantCreateInstance)
 	registerCommandHandler(ClientCommands.deleteInstance)(wantDeleteInstance)
 	registerCommandHandler(ClientCommands.copyInstance)(wantCopyInstance)
@@ -176,6 +177,39 @@ private var userName=""
 	}
 	sendData(ServerCommands.sendCommandResponse ) {out =>
 	println("sendCommandResponse writeField "+ref+" "+expr)
+	if(error!=null) {
+		out.writeBoolean(true)
+		error.write(out)	
+	}
+	else {
+		out.writeBoolean(false) // no errors
+		out.writeBoolean(false) // no result value
+	}
+	}			 
+	}
+	
+	private def wantWriteMultiFields(in:DataInputStream) = {
+		var error:CommandError=null
+		var result:Constant=null
+		val numInst=in.readInt
+		val refList=for(i <-0 until numInst) yield Reference(in)
+		val field=in.readByte
+		val expr=Expression.read(in)
+		try {
+			val ret=TransactionManager.doTransaction {
+				for(ref<-refList)
+				if (!TransactionManager.tryWriteInstanceField(ref,field,expr))
+					error=new CommandError("Unknown Issue",ClientCommands.writeField.id,0)
+			}
+			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.copyInstance.id,0)
+		} 
+	catch {
+		case e:Exception =>
+		e.printStackTrace()
+		error=new CommandError(e.toString,ClientCommands.writeField.id,0)
+	}
+	sendData(ServerCommands.sendCommandResponse ) {out =>
+	println("sendCommandResponse writeFields "+refList.size+" "+expr)
 	if(error!=null) {
 		out.writeBoolean(true)
 		error.write(out)	

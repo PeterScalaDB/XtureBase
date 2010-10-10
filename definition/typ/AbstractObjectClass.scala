@@ -4,7 +4,7 @@
 package definition.typ
 
 import definition.data._
-import collection.mutable.{HashSet,ArrayBuffer,LinkedHashMap}
+import collection.mutable.{HashMap,ArrayBuffer,LinkedHashMap,LinkedHashSet}
 
 
 /**
@@ -21,19 +21,19 @@ trait AbstractObjectClass {
 	protected def ownFields:Seq[FieldDefinition]
 	protected def ownPropFields:Seq[PropertyFieldDefinition] 
 	protected def ownActions:Iterator[AbstractAction]
-	protected def superClasses:Seq[String]
+	protected def superClasses:Seq[String]	
 	
 	private var hasResolved=false	
 	val fields=new ArrayBuffer[FieldDefinition]() // list of inherited fields from the super class
 	val propFields = new ArrayBuffer[PropertyFieldDefinition]()
-	val superClassIDs:HashSet[Int] = HashSet(id)
+	val superClassIDs:LinkedHashSet[Int] = LinkedHashSet()
 	val actions=LinkedHashMap[String,AbstractAction]()
-	
+	val fieldEditors=LinkedHashSet[String]()
 	
 		
 	def inheritsFrom(otherClassID:Int):Boolean =
   {
-  	println( " " +name +" "+id+"InheritsFrom: "+ otherClassID)
+  	//println( " " +name +" "+id+"InheritsFrom: "+ otherClassID)
   	superClassIDs.contains(otherClassID)
   }
 	
@@ -47,18 +47,23 @@ trait AbstractObjectClass {
 					case None=> throw new IllegalArgumentException("Superclass "+cl+" is not defined, in class "+name)
 				}				
 				superClassIDs ++=superClass.superClassIDs
+				superClassIDs += id
 				superClass.resolveSuperFields()
-				fields ++= superClass.fields
-				
+				fields ++= superClass.fields				
 				propFields ++= superClass.propFields 
-				actions ++=superClass.actions					
+				actions ++=superClass.actions
+				fieldEditors ++=superClass.fieldEditors
 			}	
 			// add own fields
 			for(a <- ownFields) {
-					val ix= fields.findIndexOf(a.name==_.name)
-					if(ix<0) // not found
+					var ix= fields.findIndexOf(a.name==_.name)
+					if(ix<0){						// not found
+						
 						fields += a
-						else fields(ix)=a
+					}
+					else fields(ix)=a
+					if(a.editor.length>0)// editor defined
+						fieldEditors +=a.editor
 				}
 			propFields ++=ownPropFields
 			ownActions.foreach(a => actions(a.name)=a)		  

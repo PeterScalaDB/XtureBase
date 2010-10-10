@@ -21,6 +21,7 @@ object ClientCommands extends Enumeration {
   val pathSubs_changePath=Value("Change Path")
   val createInstance=Value("create Instance")
   val writeField=Value("write Field")
+  val writeMultiFields=Value("write Field of multiple instances")
   val deleteInstance=Value("delete Instance")
   val copyInstance=Value("copy Instance")
   val executeAction=Value("execute Action")

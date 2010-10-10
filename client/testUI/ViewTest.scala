@@ -40,6 +40,8 @@ object ViewTest extends SimpleSwingApplication {
 	
 	val actionPan= new ActionPanel
 	
+	val fieldEditPan=new FieldEditorsPanel
+	
 	val testGraphList=new ListView[GraphElem]()
 	
 	//var lastSelected:Seq[Referencable]=Seq.empty
@@ -107,12 +109,14 @@ object ViewTest extends SimpleSwingApplication {
 		},BorderPanel.Position.West)
 		
 		add( new BorderPanel() {
-			preferredSize=new Dimension(120,100)
-			add(new Label("Funktionen:"),BorderPanel.Position.North)
-			add (new ScrollPane() {
-				viewportView= actionPan				
+			add(fieldEditPan,BorderPanel.Position.North)			
+			add(new BorderPanel() {
+				preferredSize=new Dimension(120,100)
+				add(new Label("Funktionen:"){preferredSize=new Dimension(40,35)},BorderPanel.Position.North)
+				add (new ScrollPane() {
+					viewportView= actionPan				
+				},BorderPanel.Position.Center)
 			},BorderPanel.Position.Center)
-			
 		},BorderPanel.Position.East)
 		add( DialogManager.dialogPanel,BorderPanel.Position.South)
 	}
@@ -140,8 +144,11 @@ object ViewTest extends SimpleSwingApplication {
 		actionPan.registerActionPanListener(DialogManager)
 		viewController.registerSelectListener(actionPan)
 		viewController.registerSelectListener(DialogManager)
+		viewController.registerSelectListener(fieldEditPan)
 		graphViewController.selectModel.registerSelectListener(actionPan)
 		graphViewController.selectModel.registerSelectListener(DialogManager)
+		graphViewController.selectModel.registerSelectListener(fieldEditPan)
+		
 		//println(top.title)
 		sock=new ClientSocket(InetAddress.getByName(args(0)),args(1).toInt,args(2),args(3))
   	sock.start()

@@ -21,12 +21,28 @@ class ViewSelectModel(controller:GraphViewController) extends SelectSender {
 		if(notify) notifyListeners
 	}
 	
-	def addSelection(newElems:Seq[GraphElem]) ={
-		for(ne<-newElems){
-			val ix=list.indexOf(ne)
-			if(ix<0) list +=ne // was not in list, add it
-			else list.remove(ix)
-		}	
+	/** adds the elements to the selection
+	 * 
+	 * @param newElems the elements to dd
+	 * @param toggle should the elements be removed when they are already in the selection ?
+	 */
+	def addSelection(newElems:Seq[GraphElem],toggle:Boolean) ={
+		if(toggle) {
+			for(ne<-newElems) {
+				val ix=elList.indexOf(ne)
+				if(ix<0) elList +=ne
+				else elList.remove(ix)
+			}				
+		}
+		else for(ne<-newElems)
+			if(!elList.contains(ne)) elList +=ne
+			
+		notifyListeners
+	}
+	
+	def setSelection(newElems:Seq[GraphElem]) = {
+		elList.clear
+		elList ++=newElems
 		notifyListeners
 	}
 	
@@ -36,7 +52,10 @@ class ViewSelectModel(controller:GraphViewController) extends SelectSender {
 	
 	def elemRemoved(elem:GraphElem) = {
 		val ix=list.indexOf(elem)
-		if(ix> -1) list.remove(ix)
+		if(ix> -1) {
+			list.remove(ix)
+			if(list.size==0)notifyListeners
+		}
 	}
 	
 	def elemChanged(oldEl:GraphElem,newEl:GraphElem)={

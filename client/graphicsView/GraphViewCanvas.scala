@@ -38,6 +38,10 @@ class GraphViewCanvas(controller:GraphViewController) extends Component {
 	reactions+={
 		case e:MousePressed => {
 			requestFocusInWindow()
+			val middleButton=(e.peer.getButton == java.awt.event.MouseEvent.BUTTON2)
+			//val middleButton=(e.peer.getButton == java.awt.event.MouseEvent.BUTTON3)
+			
+			if(middleButton) controller.isZoomingIn=true
 			currentMousePos=null
 			dragStartPoint=e.point
 			dragToPoint=null
@@ -55,12 +59,14 @@ class GraphViewCanvas(controller:GraphViewController) extends Component {
 		}		
 		
 		case e:MouseReleased => {
+			val control=(e.modifiers & Key.Modifier.Control)>0
+			val shift=(e.modifiers & Key.Modifier.Shift)>0
 			if(dragToPoint!=null&& !inDistance(dragStartPoint,dragToPoint,dragTreshold))
 			{ // it was dragged
-				controller.dragCompleted(dragStartPoint,dragToPoint)
+				controller.dragCompleted(dragStartPoint,dragToPoint,control,shift)
 				dragStartPoint=null
 			} else { // it was NOT dragged
-				controller.singleClick(dragStartPoint)
+				controller.singleClick(dragStartPoint,control,shift)
 			}
 			cursor=dotCurs
 			currentMousePos=e.point
@@ -134,7 +140,7 @@ class GraphViewCanvas(controller:GraphViewController) extends Component {
 	def drawDragGraphics(g:Graphics2D) = {
 		if(dragToPoint!=null)
 		controller.viewportState match {
-			case ViewportState.SelectState | ViewportState.ZoomInState => {
+			case ViewportState.SelectState => {
 				g.setPaint(Color.gray)
 				val sx=Math.min(dragStartPoint.x,dragToPoint.x)
 				val sy=Math.min(dragStartPoint.y,dragToPoint.y)

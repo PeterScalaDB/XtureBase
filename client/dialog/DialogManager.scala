@@ -47,7 +47,14 @@ object DialogManager extends SelectListener with ActionPanListener{
 	// from DataViewController selection listener 
 	def selectionChanged(sender:SelectSender,instList:Seq[Referencable]) = {
 		selectedInstances=instList
-		reset()		
+		reset()
+		if(selectedInstances==null || selectedInstances.isEmpty) questionField.text="Keine Objekte ausgewählt"
+		else {
+			val typ=AllClasses.get.getCommonClass(selectedInstances)
+			questionField.text=(if(selectedInstances.size==1)"1 " else (selectedInstances.size.toString+" "))+
+			  (if(typ== -1) "" else AllClasses.get.getClassByID(typ).name+" - ")+"Objekt"+(if(selectedInstances.size>1)"e " else " ")+
+			  "ausgewählt"
+		}
 	}
 	
 	
