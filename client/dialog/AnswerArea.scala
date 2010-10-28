@@ -8,19 +8,27 @@ import collection.mutable.ArrayBuffer
 import definition.typ._
 import definition.expression.Constant
 
+
 /**
  * 
  */
 class AnswerArea extends BoxPanel(scala.swing.Orientation.Vertical ) {
   val boolPool=new PanelPool[BoolAnswerPanel]
   val intPool=new PanelPool[IntAnswerPanel]
+  val doublePool=new PanelPool[DoubleAnswerPanel]
   val stringPool=new PanelPool[StringAnswerPanel]
-  val poolArray=Array(boolPool,intPool,stringPool)  
+  val poolArray=Array(boolPool,intPool,stringPool,doublePool) 
+  
+  val customPools=new collection.mutable.HashMap[DataType.Value,PanelPool[_ <: AnswerPanel]]
+  
   var func: (ParamAnswerDefinition,Constant)=>Unit = _
   
   
+  
   def reset()= {
+  	//println("answerArea reset")
   	poolArray foreach( _.reset)
+  	customPools.values.foreach( _.reset)
   	contents.clear
   }
   
@@ -31,8 +39,14 @@ class AnswerArea extends BoxPanel(scala.swing.Orientation.Vertical ) {
   			case DataType.BoolTyp =>  boolPool.getPanel()
   			case DataType.IntTyp =>  intPool.getPanel()
   			case DataType.LongTyp => intPool.getPanel()
+  			case DataType.DoubleTyp => doublePool.getPanel()
   			case DataType.StringTyp => stringPool.getPanel()
-  			case a => throw new IllegalArgumentException ("Answertype "+a+" not supported ")
+  			case a =>  			
+  				if(customPools.contains(a)) {
+  					val custPool=customPools(a)
+  					custPool.getPanel()
+  				}
+  				else throw new IllegalArgumentException ("Answertype "+a+" not supported ")
   		}
   		panel.loadParamAnswer(ans)
   		contents+=panel
@@ -45,20 +59,27 @@ class AnswerArea extends BoxPanel(scala.swing.Orientation.Vertical ) {
   	func=nfunc
   }
   
+  def registerCustomPanel[T <: AnswerPanel](typ:DataType.Value)(implicit m: scala.reflect.Manifest[T]) = {
+  	customPools(typ)=new PanelPool[T]
+  }
+  
   class PanelPool [T <: AnswerPanel](implicit m: scala.reflect.Manifest[T]) {
-	val pool=ArrayBuffer[T]()
-	var usedPanels=0
-	def getPanel() = {
-		usedPanels+= 1
-		if(pool.size>=usedPanels) pool(usedPanels-1)
-		else {
-			val newPan = m.erasure.newInstance.asInstanceOf[T]
-			newPan.registerAnswerCallBack(func)
-			pool append newPan
-			newPan
-		}
-	}
-	def reset = usedPanels=0	
-}
+  	val pool=ArrayBuffer[T]()
+  	var usedPanels=0
+  	def getPanel() = {
+  		usedPanels+= 1
+  		if(pool.size>=usedPanels) pool(usedPanels-1)
+  		else {
+  			val newPan = m.erasure.newInstance.asInstanceOf[T]
+  			newPan.registerAnswerCallBack(func)
+  			pool append newPan
+  			newPan
+  		}
+  	}
+  	def reset = {
+  		for(i <- 0 until usedPanels) pool(i).reset
+  		usedPanels=0  		
+  	}
+  }
 }
 

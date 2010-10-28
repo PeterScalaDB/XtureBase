@@ -39,6 +39,8 @@ case class VectorConstant(val x:Double,val y:Double,val z:Double) extends Consta
   
   def +(other:VectorConstant)= new VectorConstant(x+other.x,y+other.y,z+other.z)
   
+  def +(ox:Double,oy:Double,oz:Double)=new VectorConstant(x+ox,y+oy,z+oz)
+  
   def -(other:VectorConstant)= new VectorConstant(x-other.x,y-other.y,z-other.z)
   
   //  scale
@@ -61,5 +63,11 @@ case class VectorConstant(val x:Double,val y:Double,val z:Double) extends Consta
   
   override def toVector=this
   
+  def squareDistanceTo(ox:Double,oy:Double,oz:Double):Double = {
+  	val dx=x-ox
+  	val dy=y-oy
+  	val dz=y-oy
+  	dx*dx+dy*dy+dz*dz
+  }
 }
 

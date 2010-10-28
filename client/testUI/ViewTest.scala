@@ -10,6 +10,7 @@ import server.storage._
 import server.config._
 import transaction.handling._
 import definition.data._
+import definition.typ.DataType
 import definition.expression._
 import client.model._
 import client.comm._
@@ -41,6 +42,7 @@ object ViewTest extends SimpleSwingApplication {
 	val actionPan= new ActionPanel
 	
 	val fieldEditPan=new FieldEditorsPanel
+	val newPanelArea=new NewPanelArea
 	
 	val testGraphList=new ListView[GraphElem]()
 	
@@ -109,7 +111,12 @@ object ViewTest extends SimpleSwingApplication {
 		},BorderPanel.Position.West)
 		
 		add( new BorderPanel() {
-			add(fieldEditPan,BorderPanel.Position.North)			
+			peer.putClientProperty("newPanel","IGNORE")
+			add(new BoxPanel(scala.swing.Orientation.Vertical){
+				contents+=newPanelArea
+				contents+=fieldEditPan
+				
+			},BorderPanel.Position.North)			
 			add(new BorderPanel() {
 				preferredSize=new Dimension(120,100)
 				add(new Label("Funktionen:"){preferredSize=new Dimension(40,35)},BorderPanel.Position.North)
@@ -148,6 +155,7 @@ object ViewTest extends SimpleSwingApplication {
 		graphViewController.selectModel.registerSelectListener(actionPan)
 		graphViewController.selectModel.registerSelectListener(DialogManager)
 		graphViewController.selectModel.registerSelectListener(fieldEditPan)
+		DialogManager.answerArea.registerCustomPanel[PointAnswerPanel](DataType.VectorTyp)
 		
 		//println(top.title)
 		sock=new ClientSocket(InetAddress.getByName(args(0)),args(1).toInt,args(2),args(3))

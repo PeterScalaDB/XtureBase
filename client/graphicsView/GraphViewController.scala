@@ -10,16 +10,24 @@ import client.comm.ClientQueryManager
 import javax.swing.SwingUtilities
 import java.awt.event._
 import client.dialog._
+import definition.expression.VectorConstant
 
 /**
  * 
  */
 class GraphViewController {
 	
+	val newPanel=new GraphicsNewPanel
 	
   val scaleModel=new ScaleModel
   val selectModel=new ViewSelectModel(this)
   val layerModel=new LayerTableModel()
+	
+	var pointListener:PointClickListener=_
+	var lastSelectedPoint:VectorConstant=_
+  
+  // cache the state if the visible layer list is empty
+  var cacheVisibleLayers=false
     
   private var _viewportState=ViewportState.SelectState
   
@@ -55,6 +63,11 @@ class GraphViewController {
 	
 	
 	def layerChanged(lay:Layer) = {
+		val hasVisibleLayers=layerModel.hasVisibleLayers
+		if(hasVisibleLayers!=cacheVisibleLayers) {
+			canvas.setHasVisibleLayers(hasVisibleLayers)
+			cacheVisibleLayers=hasVisibleLayers
+		}
 		zoomAll
 	}
 	
@@ -87,7 +100,7 @@ class GraphViewController {
 	def dragCompleted(startPoint:Point,endPoint:Point,control:Boolean,shift:Boolean) = {
 		if(isZoomingIn){			
 			scalePanel.zoomInBut.selected=false
-			_viewportState=ViewportState.SelectState
+			//_viewportState=ViewportState.SelectState
 			scaleModel.zoomIn(startPoint,endPoint)				
 			isZoomingIn=false
 		} else
@@ -102,7 +115,7 @@ class GraphViewController {
 	def dragStopped() {
 		if(isZoomingIn) {
 			scalePanel.zoomInBut.selected=false
-			_viewportState=ViewportState.SelectState
+			//_viewportState=ViewportState.SelectState
 			isZoomingIn=false
 		}
 		_viewportState match {
@@ -142,22 +155,33 @@ class GraphViewController {
 		// check for single element selection
 		val clickPosX=scaleModel.xToWorld(where.x)
 		val clickPosY=scaleModel.yToWorld(where.y)
-		val lineCatchDistance=canvas.lineCatchDistance.toDouble/scaleModel.scale
+		
 		//println("Hittest clx:"+clickPosX+" cly:"+clickPosY+" dist:"+lineCatchDistance+" scale:"+scaleModel.scale)
-		val hittedElements=filterLayersSelection(_.hits(clickPosX,clickPosY,lineCatchDistance) )
-		//println("hitted elements:"+hittedElements)
-		if(control) {
-			if(!hittedElements.isEmpty) selectModel.addSelection(hittedElements,true)
-		}else 
-			if(hittedElements.isEmpty) selectModel.deselect(true)
-				else selectModel.setSelection(hittedElements)
+		
+		_viewportState match {
+			case ViewportState.SelectState => {
+				val lineCatchDistance=canvas.lineCatchDistance.toDouble/scaleModel.scale
+		    val hittedElements=filterLayersSelection(_.hits(clickPosX,clickPosY,lineCatchDistance) )
+		    //println("hitted elements:"+hittedElements)
+		    if(control) {
+		    	if(!hittedElements.isEmpty) selectModel.addSelection(hittedElements,true)
+		    }else 
+		    	if(hittedElements.isEmpty) selectModel.deselect(true)
+		    	else selectModel.setSelection(hittedElements) 		
+			}
+			case ViewportState.AskPoint => {
+				getNearestPoint(clickPosX,clickPosY) match {
+					case Some(nearestPoint) => pointListener.pointClicked(nearestPoint)
+					case _ => pointListener.pointClicked(new VectorConstant(clickPosX,clickPosY,0))
+				}			 				
+			}
+		}		
 		canvas.repaint
 	}
 	
 	def changeViewportState(newState:ViewportState.Value) = {
-	  
-		_viewportState=newState
-	  
+		stopModus
+		_viewportState=newState	  
 	  canvas.repaint
 	}
 	
@@ -168,8 +192,12 @@ class GraphViewController {
 		_viewportState match {
 	  	
 	  	case _ =>
-	  }
+	  }		
+	}
+	
+	def cancelModus() = {		
 		changeViewportState(ViewportState.SelectState)
+		canvas.repaint
 	}
 	
 	def keyPressed(e:KeyPressed) = {
@@ -181,13 +209,51 @@ class GraphViewController {
 				case Key.Right => scaleModel.moveRight
 				case Key.Up => scaleModel.moveUp
 				case Key.Down => scaleModel.moveDown
-				case Key.Escape => stopModus()
+				case Key.Escape => cancelModus()
 				case _ => //println(e)
 		  }
+			case ViewportState.AskPoint => 
+			e.key match {				
+				case Key.Escape => DialogManager.reset
+				case _ => //println(e)
+			}
 			case o => // println(o)
-		}
-		
+		}		
 	}
 	
+	def focusGained = PointAnswerPanel.currentViewController=this
+	
+	def askForPointClick(plistener:PointClickListener) = {
+		pointListener=plistener
+		changeViewportState(ViewportState.AskPoint)
+	}
+	
+	def getNearestPoint(clickPosX:Double,clickPosY:Double):Option[VectorConstant] = {
+		val pointCatchDistance=canvas.pointCatchDistance.toDouble/scaleModel.scale		
+		val hittedPoints=layerModel.checkElementPoints(_.hitPoint(clickPosX, clickPosY, pointCatchDistance))
+		if(! hittedPoints.isEmpty) {
+			var nearestPoint:VectorConstant= null
+			var dist:Double= Math.MAX_DOUBLE
+			for(el <-hittedPoints) {
+				val newDist=el.squareDistanceTo(clickPosX,clickPosY,0)
+				if(newDist<dist) nearestPoint=el
+			}
+			Some(nearestPoint)
+		}
+		else None
+	}
+	
+	/** in AskPoint modus: check if there is a fitting point next to the mouse cursor 
+	 * 
+	 * @param screenPos current screen pos of the mouse cursor
+	 * @return screen pos of a hitting element point, or null if no points arround
+	 */
+	def checkPointHit(screenPos:Point):Point = {
+		getNearestPoint(scaleModel.xToWorld(screenPos.x),scaleModel.yToWorld(screenPos.y)) match {
+			case Some (nearestPoint) => new Point(scaleModel.xToScreen(nearestPoint.x),scaleModel.yToScreen(nearestPoint.y))
+			case _ => null
+		}
+	  	
+	}
 	
 }

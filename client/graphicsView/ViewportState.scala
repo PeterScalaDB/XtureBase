@@ -8,5 +8,5 @@ package client.graphicsView
  */
 object ViewportState extends Enumeration {
   val SelectState=Value("Select")
-  val DrawLineState=Value("ZoomIn")
+  val AskPoint=Value("AskPoint") 
 }

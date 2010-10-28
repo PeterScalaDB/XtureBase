@@ -10,17 +10,26 @@ import scala.swing.event._
 /**
  * 
  */
-class GraphViewCanvas(controller:GraphViewController) extends Component {
+class GraphViewCanvas(controller:GraphViewController) extends Component  {
 	var dragStartPoint:Point=null
 	var dragToPoint:Point=null
 	var currentMousePos:Point=null
+	
+	var pointHitPos:Point=null
+	
 	
 	val selectColor=new Color(255,50,50)
 	
 	val dragTreshold=5 // how much pixels can you drag the mouse before it is handled as drag
 	
 	val lineCatchDistance=4
+	val pointCatchDistance=5
 	
+	// insert new panel information into properties
+	
+	setHasVisibleLayers(false)
+	
+		
 	background=Color.white
 	opaque=true
 	focusable=true
@@ -31,9 +40,9 @@ class GraphViewCanvas(controller:GraphViewController) extends Component {
 	val dotCurs=toolkit.createCustomCursor(toolkit.getImage("dot_clear.gif"), new Point(0,0), "Zero");
 	cursor=dotCurs
 	
-	def defaultStroke=new BasicStroke()
+	val defaultStroke=new BasicStroke()
 	
-	listenTo(mouse.clicks,mouse.moves,keys)
+	listenTo(mouse.clicks,mouse.moves,keys,this)
 	
 	reactions+={
 		case e:MousePressed => {
@@ -54,8 +63,11 @@ class GraphViewCanvas(controller:GraphViewController) extends Component {
 		}
 		
 		case e:MouseDragged => {
+			if(dragToPoint!=null) drawDragGraphics()
+			else repaint
 			dragToPoint=e.point
-			repaint()
+			drawDragGraphics()
+			
 		}		
 		
 		case e:MouseReleased => {
@@ -81,6 +93,10 @@ class GraphViewCanvas(controller:GraphViewController) extends Component {
 			}
 			else if(currentMousePos!=null) drawCrossHair()
 			currentMousePos=e.point
+			controller.viewportState match {
+				case ViewportState.AskPoint => pointHitPos=controller.checkPointHit(e.point)
+				case _ =>
+			}
 			drawCrossHair()
 		}		
 		
@@ -96,6 +112,10 @@ class GraphViewCanvas(controller:GraphViewController) extends Component {
 		}		
 		
 		case e:KeyPressed => controller.keyPressed(e)
+		
+		case e:FocusLost => repaint
+		
+		case e:FocusGained => controller.focusGained
 	}
 	
 	private def inDistance(a:Point,b:Point,distance:Int) = 
@@ -108,16 +128,39 @@ class GraphViewCanvas(controller:GraphViewController) extends Component {
 		g.setPaint(Color.black)
 		g.drawLine(currentMousePos.x,1,currentMousePos.x,currBounds.height)
 		g.drawLine(1,currentMousePos.y,currBounds.width,currentMousePos.y)
+		controller.viewportState match {
+			case ViewportState.AskPoint => {
+				if(pointHitPos!=null) g.drawRect(pointHitPos.x-4,pointHitPos.y-4,8,8)
+			}
+			case _ =>
+		}
 		g.setPaintMode()
 	}
 	
-	override def paintComponent(g:Graphics2D)= {
+	// is called by the controller to state that the layerList is empty
+	def setHasVisibleLayers(visibleValue:Boolean) = {
+		peer.putClientProperty("newPanel",if(visibleValue) controller.newPanel else null)
+	}
+	
+	override def paintComponent(g:Graphics2D)= {		
 		g.setRenderingHints(new RenderingHints(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON ))
 		val currBounds=if(g.getClipBounds==null)bounds else g.getClipBounds
 		g.setPaint(Color.white)
 		g.fillRect(0,0,size.width,size.height)
 		
+		if(hasFocus) {
+		  g.setPaint(Color.red)
+		  g.setStroke(defaultStroke)
+		  g.drawRect(0,0,size.width-1,size.height-1)
+		}
+		
 		g.setPaint(Color.black)
+		
+		controller.viewportState match {
+			case ViewportState.AskPoint => g.drawString("AskPoint",30,30)  
+			case _ =>
+		}	
+		
 		// draw all elements
 		for(lay <-controller.layerModel.layerList)
 			for(elem<-lay.elemList)
@@ -137,17 +180,27 @@ class GraphViewCanvas(controller:GraphViewController) extends Component {
 		
 	}
 	
-	def drawDragGraphics(g:Graphics2D) = {
+	def drawDragGraphics(g:Graphics2D=peer.getGraphics.asInstanceOf[Graphics2D]) = {
 		if(dragToPoint!=null)
 		controller.viewportState match {
 			case ViewportState.SelectState => {
-				g.setPaint(Color.gray)
-				val sx=Math.min(dragStartPoint.x,dragToPoint.x)
-				val sy=Math.min(dragStartPoint.y,dragToPoint.y)
-				g.drawRect(sx,sy,Math.max(dragToPoint.x,dragStartPoint.x)-sx,
-					Math.max(dragToPoint.y,dragStartPoint.y)-sy)
+				drawDragRect(g)
+			}
+			case ViewportState.AskPoint => {
+				if(controller.isZoomingIn)
+					drawDragRect(g)
 			}
 		}
+	}
+	
+	def drawDragRect(g:Graphics2D)= {
+		g.setXORMode(Color.white)
+		g.setPaint(Color.gray)
+		val sx=Math.min(dragStartPoint.x,dragToPoint.x)
+		val sy=Math.min(dragStartPoint.y,dragToPoint.y)
+		g.drawRect(sx,sy,Math.max(dragToPoint.x,dragStartPoint.x)-sx,
+		Math.max(dragToPoint.y,dragStartPoint.y)-sy)
+		g.setPaintMode()
 	}
 	
 	

@@ -11,6 +11,7 @@ import java.awt.geom.Rectangle2D
 
 import definition.data._
 import definition.typ._
+import definition.expression.VectorConstant
 /**
  * 
  */
@@ -37,6 +38,11 @@ class LayerTableModel extends AbstractTableModel {
   	fireTableRowsUpdated(pos,pos)
   }
   
+  /** checks if there are visible Layers
+   * 
+   */
+  def hasVisibleLayers= 
+  	layerList.exists(_.visible)
   
   
   def getRowCount= listLock.synchronized{
@@ -106,4 +112,7 @@ class LayerTableModel extends AbstractTableModel {
 		bounds
 	}
 	
+	def checkElementPoints(checkFunc:(GraphElem)=>Option[VectorConstant]):Seq[VectorConstant]= {
+		layerList.flatMap(_.checkElementPoints(checkFunc))
+	}
 }

@@ -19,7 +19,7 @@ abstract class AnswerPanel extends BoxPanel (Orientation.Horizontal) {
 	
 	def loadParamAnswer(answerDesc:ParamAnswerDefinition) = {
 		ansParm=answerDesc
-		reset()
+		//reset()
 		infoLabel.text=answerDesc.name
 	}
 	def registerAnswerCallBack(nfunc: (ParamAnswerDefinition,Constant)=>Unit) = func=nfunc
@@ -57,8 +57,7 @@ class StringAnswerPanel extends  AnswerPanel {
 
 
 
-class IntAnswerPanel extends  StringAnswerPanel {	
-	
+class IntAnswerPanel extends  StringAnswerPanel {		
 	override def initReactions() = {
 		reactions+= {
 			case ButtonClicked(e) => {
@@ -72,4 +71,21 @@ class IntAnswerPanel extends  StringAnswerPanel {
 			}
 		}	
 	}
+}
+
+
+class DoubleAnswerPanel extends  StringAnswerPanel {		
+	override def initReactions() = {
+		reactions+= {
+			case ButtonClicked(e) => {
+				try {
+					val tx=textField.text.trim.replace(',','.')
+					func(ansParm,new DoubleConstant(tx.toDouble))	
+				}
+				catch {
+					case ex:Exception => println(ex)
+				}																		
+			}
+		}	
+	}	
 }

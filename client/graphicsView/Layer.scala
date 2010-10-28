@@ -8,6 +8,7 @@ import client.comm.ClientQueryManager
 import definition.typ.AllClasses
 import definition.comm.NotificationType
 import java.awt.geom.Rectangle2D
+import definition.expression.VectorConstant
 
 /**
  * 
@@ -97,6 +98,19 @@ class Layer(val controller:GraphViewController,val ref:Reference,val name:String
 	def filterSelection(filterFunc:(GraphElem)=>Boolean):Seq[GraphElem] = {
 		if (edible) elemList.filter(filterFunc)
 		else Seq.empty
+	}
+	
+	def checkElementPoints(checkFunc:(GraphElem)=>Option[VectorConstant]):Seq[VectorConstant]= {
+		if (!visible) Seq.empty
+		else {
+			val buffer=new collection.mutable.ArrayBuffer[VectorConstant]()
+			for(el<-elemList) {
+				val res=checkFunc(el)
+				if(res.isDefined) 
+					buffer +=res.get
+			}
+			buffer
+		}		
 	}
 	
 	def checkElemBounds(elem:GraphElem) = {

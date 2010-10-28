@@ -23,6 +23,7 @@ class GraphElem(override val ref:Reference,val color:Int) extends Referencable {
   def maxY=0d
   
   def hits(px:Double,py:Double,dist:Double)=false // hittest  
+  def hitPoint(px:Double,py:Double,dist:Double):Option[VectorConstant]=None
 }
 
 class LinearElement(nref:Reference,ncolor:Int,val lineWidth:Int,val lineStyle:Int) extends GraphElem(nref,ncolor)
@@ -50,6 +51,22 @@ case class LineElement(nref:Reference,ncolor:Int,nlineWidth:Int,nlineStyle:Int,s
 		//println("hittest startp:"+startPoint+" dist:"+calcDist)
 		calcDist<=dist && px>=(minX-dist) && (px<=(maxX)+dist) &&
 		  py>=(minY-dist) && (py<=(maxY)+dist)
+	}
+	override def hitPoint(px:Double,py:Double,dist:Double)= {
+		var ret:Option[VectorConstant]=None
+		//println("test x:"+(px-startPoint.x)+ " y:"+(py-startPoint.y))
+		if(Math.abs(px-startPoint.x)<dist&& Math.abs(py-startPoint.y)<dist) ret=Some(startPoint)
+		if(Math.abs(px-endPoint.x)<dist&& Math.abs(py-endPoint.y)<dist) {
+			if(ret.isDefined) { // startPoint and endPoint are in distance
+				// check wich point is nearer				
+				val sdist=startPoint.squareDistanceTo(px,py,0)				
+				val edist=endPoint.squareDistanceTo(px,py,0)
+				if(edist<sdist) ret=Some(endPoint)
+			}
+			else ret= Some(endPoint)
+		}
+		//if(ret.isDefined) println("ret="+ret)
+		ret
 	}
 }
 

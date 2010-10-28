@@ -9,7 +9,9 @@ import definition.data._
 import client.dataviewer._
 import definition.expression.Constant
 import client.comm.ClientQueryManager
-
+import javax.swing.{BorderFactory}
+import javax.swing.border._ 
+import scala.swing.event._
 
 /** manages the user dialog and provides the DialogArea panel
  * 
@@ -21,7 +23,9 @@ object DialogManager extends SelectListener with ActionPanListener{
 	
 	val questionField=new Label()	
 	val errorField=new Label()	
-	val answerArea=new AnswerArea ()	
+	val answerArea=new AnswerArea ()
+	val cancelBut=new Button("Abbrechen")
+	cancelBut.visible=false
 	answerArea.registerAnswerCallBack(answerGiven)
 	
 	var selectedInstances:Seq[Referencable] = _
@@ -30,19 +34,27 @@ object DialogManager extends SelectListener with ActionPanListener{
 	val answerList=new scala.collection.mutable.ArrayBuffer[ResultElement]()
 	
   val dialogPanel = new BoxPanel(Orientation.Horizontal ) {
+		border=BorderFactory.createEtchedBorder(EtchedBorder.LOWERED)
      contents+= new GridPanel(2,1) {
-    	 contents+= questionField+=errorField
+    	 contents+= questionField+=new BoxPanel(Orientation.Horizontal) {
+    		contents+=errorField+=cancelBut 
+    	 }
      }
      contents+=new ScrollPane() {
     	 viewportView=answerArea
      }
-     preferredSize=new Dimension(0,60)
+     listenTo(cancelBut)
+     reactions+= {
+    	 case ButtonClicked(`cancelBut`) => reset
+     }
+     preferredSize=new Dimension(0,70)
   }
 	
 	def reset()= {
 		answerArea.reset()
 		questionField.text=""
 		errorField.text=""	
+		cancelBut.visible=false
 	}
 	// from DataViewController selection listener 
 	def selectionChanged(sender:SelectSender,instList:Seq[Referencable]) = {
@@ -63,6 +75,7 @@ object DialogManager extends SelectListener with ActionPanListener{
 		currentAction=actionName
 		answerList.clear
 		loadQuestion(question)
+		cancelBut.visible=true
 	}	
 	
 	private def loadQuestion(question:ParamQuestion) = {

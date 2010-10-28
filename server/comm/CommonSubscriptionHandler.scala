@@ -152,6 +152,16 @@ object CommonSubscriptionHandler {
 			subscriptionList(id)
 		}
 	
+	// notifies all subscriptionManagers that a notification will start
+	def startNotify= {
+		
+	}
+	
+	// makes the subscriptionManagers to send their data
+	def submitNotifications = {
+		
+	}
+	
 	
 	def instanceChanged(newState:InstanceData) = {
 		//println("subsMan inst changed "+newState.ref)

@@ -20,6 +20,14 @@ object SessionManager {
   	init()
   }
   
+  var isSetup=false
+  
+  val setupListeners=collection.mutable.ArrayBuffer[()=>Unit]()
+  
+  def registerSetupListener(func:()=>Unit) = {
+  	if(isSetup) func // if the classes List is ready, call the func
+  	else setupListeners +=func // else wait for getting set up
+  }
   
   def init() = {
   	val sc=new ServerClassList( xml.XML.loadFile(FSPaths.configDir+"types.xml" ))
@@ -27,6 +35,8 @@ object SessionManager {
   	UserList.fromXML(xml.XML.loadFile(FSPaths.configDir+"users.xml" ))
   	StorageManager.init(sc.classList)
   	CommonSubscriptionHandler.init(AllClasses.get.getClassList.toMap)
+  	for(li <-setupListeners)
+  		li() // call listeners
   	println("Max Trans:"+TransLogHandler.transID)
   	
   	Runtime.getRuntime.addShutdownHook(new Thread {
