@@ -10,6 +10,7 @@ import definition.typ.AbstractAction
  */
 trait ActionModule {	
 	def getActionsIterator:Iterator[AbstractAction]
+	def getCreateActionsIterator:Iterator[AbstractAction]=Seq.empty.iterator
 }
 
 object ActionModule {

@@ -40,7 +40,7 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 		rowHeight=20
 		font=tableFont
 		listenTo(selection)	
-		listenTo(mouse.clicks)
+		listenTo(mouse.clicks,this)
 		reactions += {
 			case TableRowsSelected(table,range,live) => {			
 				if (!live&& ! selfSelectChanged) listLock.synchronized  { 
@@ -56,7 +56,7 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 				val row= peer.rowAtPoint(e.point)
 				if(row>=0 && row<dataList.size) listLock.synchronized { propMod.mainController.openChild(dataList(row).ref)}
 			}
-
+      case e:FocusGained =>propMod.focusGained
 		}
 	}
 	table.model=this

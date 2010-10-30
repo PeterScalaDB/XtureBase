@@ -131,7 +131,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	
 	
 	def notifyInstanceChanged(subs:SubscriptionInfo,data:InstanceData) = {
-		println("Notify changed "+subs+" "+data.ref)
+		print("NC "+subs+" "+data.ref)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 			out.writeInt(subs.id )
 			out.writeInt(NotificationType.FieldChanged.id)
@@ -139,6 +139,14 @@ class UserQueryHandler(userSocket: UserSocket) {
 			data.writeWithChildInfo(out)
 		}
 	}	
+	
+	/*def burstNotifyChanges(subs:SubscriptionInfo,parentRef:Reference,propField:Byte) = {
+		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
+			out.writeInt(subs.id )
+			out.writeInt(NotificationType.sendData.id)
+			sendQueryData(out,parentRef,propField)
+		}
+	}*/
 	
 	def notifyInstanceAdded(subs:SubscriptionInfo,data:InstanceData) = {
 		println("Notify added "+subs+" "+data.ref)

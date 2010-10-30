@@ -3,7 +3,7 @@
  */
 package client.graphicsView
 
-import definition.data.{InstanceData,Reference}
+import definition.data.{InstanceData,Reference,Referencable}
 import client.comm.ClientQueryManager
 import definition.typ.AllClasses
 import definition.comm.NotificationType
@@ -13,12 +13,13 @@ import definition.expression.VectorConstant
 /**
  * 
  */
-class Layer(val controller:GraphViewController,val ref:Reference,val name:String,var visible:Boolean,var edible:Boolean) {
+class Layer(val controller:GraphViewController,override val ref:Reference,val name:String,var visible:Boolean,var edible:Boolean)
+  extends Referencable {
 	var subsID:Int= -1
 	var elemList:IndexedSeq[GraphElem]=IndexedSeq.empty
   val bounds=new Rectangle2D.Double(0,0,0,0)
 	var startTime:Long=_
-	
+	var firstLoad=true
 	
 	def load() = {
 		visible=true
@@ -32,10 +33,14 @@ class Layer(val controller:GraphViewController,val ref:Reference,val name:String
 							val endTime=System.currentTimeMillis();
 							elemList=data
 							println("Layer "+name+" loadTime:"+(endTime-startTime)+" num elements:"+elemList.size+
-								(if(!elemList.isEmpty)(" last Ref:"+elemList(elemList.size-1).ref.sToString) else ""))
-							 
-							calcBounds
-							controller.layerChanged(this)
+								(if(!elemList.isEmpty)(" last Ref:"+elemList(elemList.size-1).ref.sToString) else ""))							 
+							/*if(firstLoad){
+								firstLoad=false*/
+								calcBounds
+								controller.layerChanged(this)
+							//}							
+							for(el <-elemList) controller.graphElemChanged(el,false)
+							controller.canvas.repaint
 						}
 						
 						case NotificationType.FieldChanged  => {
@@ -45,7 +50,7 @@ class Layer(val controller:GraphViewController,val ref:Reference,val name:String
 										val oldState=elemList(i)
 										elemList=elemList updated(i,data(0))
 										//checkElemBounds(data(0))
-										controller.graphElemChanged(this,oldState,data(0))
+										controller.graphElemChanged(data(0))
 									}
 						}
 						case NotificationType.instanceRemoved => {
@@ -70,7 +75,14 @@ class Layer(val controller:GraphViewController,val ref:Reference,val name:String
 	def hide() = {
 		visible=false
 		ClientQueryManager.pauseSubscription(subsID)
+		controller.selectModel.deselectLayer(this)
 		elemList=IndexedSeq.empty
+		controller.layerChanged(this)		
+	}
+	
+	def lock() = {
+		edible=false
+		controller.selectModel.deselectLayer(this)		
 		controller.layerChanged(this)
 	}
 	
@@ -100,15 +112,16 @@ class Layer(val controller:GraphViewController,val ref:Reference,val name:String
 		else Seq.empty
 	}
 	
-	def checkElementPoints(checkFunc:(GraphElem)=>Option[VectorConstant]):Seq[VectorConstant]= {
+	def checkElementPoints(checkFunc:(GraphElem)=>Seq[(Byte,VectorConstant)]):Seq[(Byte,VectorConstant)]= {
 		if (!visible) Seq.empty
 		else {
-			val buffer=new collection.mutable.ArrayBuffer[VectorConstant]()
+			val buffer=elemList.flatMap(checkFunc)/*new collection.mutable.ArrayBuffer[(Byte,VectorConstant)]()
 			for(el<-elemList) {
 				val res=checkFunc(el)
-				if(res.isDefined) 
-					buffer +=res.get
-			}
+				if(!res.isEmpty) 
+					buffer ++=res
+			}*/
+				
 			buffer
 		}		
 	}

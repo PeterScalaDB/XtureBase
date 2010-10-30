@@ -17,6 +17,9 @@ object CommonSubscriptionHandler {
 	
 	private var classHandlerMap:Map[Int,ClassSubscriptionHandler]=Map()
 	
+	//private var lastOwnerRefs:Array[OwnerReference]=null
+	//private var burstOwnerRefs:Array[OwnerReference]=null
+	
 	def init (classList:Map[Int,AbstractObjectClass] ) =   {
   	if(classHandlerMap.isEmpty)
   	{  		
@@ -152,24 +155,37 @@ object CommonSubscriptionHandler {
 			subscriptionList(id)
 		}
 	
-	// notifies all subscriptionManagers that a notification will start
-	def startNotify= {
-		
+	
+	
+	def submitBurstInfo()= {}
+		/*if(burstOwnerRefs!=null)
+		{
+			for(owner <-burstOwnerRefs)
+				classHandlerMap(owner.ownerRef.typ).burstNotifyChanges(owner.ownerRef,owner.ownerField)
+			burstOwnerRefs=null
+			lastOwnerRefs=null
+		}*/
+	
+	
+	def arrayCompare[T](a:Array[T],b:Array[T]):Boolean= {
+		if(b==null || a.length!=b.length) return false
+		for(i <-0 until a.length)
+			if(a(0)!=b(0))return false
+		true
 	}
 	
-	// makes the subscriptionManagers to send their data
-	def submitNotifications = {
-		
-	}
-	
-	
-	def instanceChanged(newState:InstanceData) = {
-		//println("subsMan inst changed "+newState.ref)
-		// notify subscriptions for this single instance
+	def instanceChanged(newState:InstanceData) = {		
+		// notify subscriptions for this single instance	
 		classHandlerMap(newState.ref.typ ).singleInstanceChanged(newState)
-		// notify subscriptions for this instance as child
+		// notify subscriptions for this instance as child		
+		/*if(burstOwnerRefs==null && arrayCompare(newState.owners ,lastOwnerRefs)) { // owners were already notified
+			println("burst started "+lastOwnerRefs)
+			burstOwnerRefs=lastOwnerRefs
+		}
+		if(! arrayCompare(newState.owners , burstOwnerRefs))*/	 
 		for(owner <-newState.owners )
 			classHandlerMap(owner.ownerRef.typ).childInstanceChanged(owner.ownerRef,owner.ownerField,newState)
+		//lastOwnerRefs=newState.owners
 	}
 	
 	

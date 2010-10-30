@@ -14,8 +14,7 @@ import transaction.handling.TransactionManager
  */
 class BaseClassModule extends ActionModule {
 
-	val deleteAction=new ActionIterator("Löschen",Some(new ParamQuestion("Element wirklich löschen ?",
-		Seq(new ParamAnswerDefinition("bitte bestätigen:",DataType.BoolTyp,None)))),doDelete)
+	val deleteAction=new ActionIterator("Löschen",None,doDelete)
 	
 	val stressTestAction=new ActionImpl("Stress-Test",ParamQuestion.makeQuestion(List(
 		("Stresstest Unterelement-Typ:",("Typ-ID:",DataType.IntTyp)),
@@ -29,10 +28,10 @@ class BaseClassModule extends ActionModule {
   def getActionsIterator = mList.iterator 
   
   def doDelete(data:Seq[InstanceData],param:Seq[(String,Constant)]):Boolean = {
-  	if(!param.isEmpty && param(0)._2.toBoolean) {  		
+  	//if(!param.isEmpty && param(0)._2.toBoolean) {  		
   		  for(inst <-data)
   		  	TransactionManager.tryDeleteInstance(inst.ref,None)  		
-  	}  		
+  	//}  		
   	true
   }
 	

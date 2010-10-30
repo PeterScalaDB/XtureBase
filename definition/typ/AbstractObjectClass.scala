@@ -21,6 +21,7 @@ trait AbstractObjectClass {
 	protected def ownFields:Seq[FieldDefinition]
 	protected def ownPropFields:Seq[PropertyFieldDefinition] 
 	protected def ownActions:Iterator[AbstractAction]
+	protected def ownCreateActions:Iterator[AbstractAction]
 	protected def superClasses:Seq[String]	
 	
 	private var hasResolved=false	
@@ -28,6 +29,7 @@ trait AbstractObjectClass {
 	val propFields = new ArrayBuffer[PropertyFieldDefinition]()
 	val superClassIDs:LinkedHashSet[Int] = LinkedHashSet()
 	val actions=LinkedHashMap[String,AbstractAction]()
+	val createActions=LinkedHashMap[String,AbstractAction]()
 	val fieldEditors=LinkedHashSet[String]()
 	
 		
@@ -52,6 +54,7 @@ trait AbstractObjectClass {
 				fields ++= superClass.fields				
 				propFields ++= superClass.propFields 
 				actions ++=superClass.actions
+				createActions ++=superClass.createActions
 				fieldEditors ++=superClass.fieldEditors
 			}	
 			// add own fields
@@ -66,7 +69,8 @@ trait AbstractObjectClass {
 						fieldEditors +=a.editor
 				}
 			propFields ++=ownPropFields
-			ownActions.foreach(a => actions(a.name)=a)		  
+			ownActions.foreach(a => actions(a.name)=a)	
+			ownCreateActions.foreach(a => createActions(a.name)=a)
 		  hasResolved=true
 		}
 		//Console.println("Resolve "+versNr+" "+superClasses+" "+vsuperFields)  

@@ -6,10 +6,10 @@ package definition.typ
 /** Questions that Actions ask for to get their parameters
  * 
  */
-case class ParamQuestion(name:String,possibleAnswers:Seq[ParamAnswerDefinition]) {
+case class ParamQuestion(name:String,possibleAnswers:Seq[ParamAnswerDefinition],repeat:Boolean=false) {
 	def toXML ():scala.xml.Node = {
-		println("question out " +name)
-		<Question name={name} >
+		//println("question out " +name)
+		<Question name={name} repeat={if(repeat)"1" else "0"} >
 		{for(ans <-possibleAnswers) yield ans.toXML()}
 		</Question>
 	}
@@ -18,8 +18,9 @@ case class ParamQuestion(name:String,possibleAnswers:Seq[ParamAnswerDefinition])
 object ParamQuestion {
 	def fromXML(node: scala.xml.Node):ParamQuestion = {
 		val name=(node \"@name").text
+		val repeat=(node \"@repeat").text=="1"
 		val answers=for(afield <-(node \"Answer")) yield ParamAnswerDefinition.fromXML(afield)
-		new ParamQuestion(name,answers)
+		new ParamQuestion(name,answers,repeat)
 	}
 	
 	def makeQuestion(parms:List[(String,(String,DataType.Value))]):Option[ParamQuestion] = {

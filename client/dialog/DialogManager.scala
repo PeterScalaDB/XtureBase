@@ -29,9 +29,15 @@ object DialogManager extends SelectListener with ActionPanListener{
 	answerArea.registerAnswerCallBack(answerGiven)
 	
 	var selectedInstances:Seq[Referencable] = _
+	var actionInstances:Seq[Referencable] = _
+	
 	var currentQuestion:ParamQuestion= _
+	var repeatQuestion:ParamQuestion= _
+	var isRepeating=false
 	var currentAction:String= _
 	val answerList=new scala.collection.mutable.ArrayBuffer[ResultElement]()
+	var createType:Int=0
+	//var newFunc:(Seq[(String,Constant)])=>Unit = null
 	
   val dialogPanel = new BoxPanel(Orientation.Horizontal ) {
 		border=BorderFactory.createEtchedBorder(EtchedBorder.LOWERED)
@@ -51,14 +57,21 @@ object DialogManager extends SelectListener with ActionPanListener{
   }
 	
 	def reset()= {
+		//println("dialogmanager reset "+isRepeating)
+		if(isRepeating) { // when stopped during repeating, keep the results that are already there
+			isRepeating=false
+			processResults
+		}
 		answerArea.reset()
 		questionField.text=""
 		errorField.text=""	
 		cancelBut.visible=false
+		
 	}
 	// from DataViewController selection listener 
 	def selectionChanged(sender:SelectSender,instList:Seq[Referencable]) = {
 		selectedInstances=instList
+		//println("diaman sel changed")
 		reset()
 		if(selectedInstances==null || selectedInstances.isEmpty) questionField.text="Keine Objekte ausgewählt"
 		else {
@@ -71,15 +84,32 @@ object DialogManager extends SelectListener with ActionPanListener{
 	
 	
 	// from ActionPanel listener	
-	def startActionDialog(actionName:String,question:ParamQuestion) = {
+	def startActionDialog(actionName:String,question:ParamQuestion,actionInst:Seq[Referencable],ncreateType:Int) = {
+		actionInstances=actionInst
+		createType=ncreateType
 		currentAction=actionName
+		repeatQuestion=null
+		isRepeating=false
 		answerList.clear
 		loadQuestion(question)
 		cancelBut.visible=true
+		//newFunc=null
 	}	
+	
+		
+	/*def startNewDialog(actionName:String,question:ParamQuestion,func:(Seq[(String,Constant)])=>Unit) = {
+		currentAction=actionName
+		repeatQuestion=null
+		isRepeating=false
+		answerList.clear
+		loadQuestion(question)
+		cancelBut.visible=true
+		newFunc=func
+	}*/
 	
 	private def loadQuestion(question:ParamQuestion) = {
 		currentQuestion=question
+		if(question.repeat) repeatQuestion=question
 		questionField.text=question.name
 		errorField.text=""
 		answerArea.loadAnswerDefinitions(question)
@@ -87,16 +117,31 @@ object DialogManager extends SelectListener with ActionPanListener{
 	
 	def answerGiven(parm:ParamAnswerDefinition,result:Constant):Unit = {
 		answerList += ResultElement(currentQuestion,parm,result)		
-		if(parm.followQuestion ==None) {
-			println("do action "+answerList.foreach( x =>println("Question:"+x.question.name+" answer:"+x.answer.name+" result:"+x.result)))
-			if(selectedInstances!=null)
-			ClientQueryManager.executeAction(selectedInstances,currentAction,answerList.map(x =>(x.answer.name,x.result)))
-			reset()
-		}
-		else {
-			
+		if(parm.followQuestion ==None) 
+			if(repeatQuestion!=null){
+				isRepeating=true
+				loadQuestion(repeatQuestion)
+			}
+			else { // action is ready				
+				processResults
+				reset()
+			}		
+		else {			
 			loadQuestion(parm.followQuestion.get)
 		}
+	}
+	
+	def processResults = {
+		val resultList=answerList.map(x =>(x.answer.name,x.result))			
+		/*if(newFunc!=null)  // create new element
+			newFunc(resultList)
+		else*/ if(actionInstances!=null) {
+			if(createType==0) // modification action
+		  ClientQueryManager.executeAction(actionInstances,currentAction,resultList)
+		  // propertyField set to 0 because simpleCreateActions are handled in ActionPanel
+		  else ClientQueryManager.executeCreateAction(actionInstances,createType,0,currentAction,resultList)
+		}
+					
 	}
 	
 	

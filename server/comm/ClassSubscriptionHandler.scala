@@ -58,6 +58,15 @@ class ClassSubscriptionHandler(typID:Int) {
 		}
 	}
 	
+	/*def burstNotifyChanges(ownerRef:Reference ,propField:Byte) = {
+		if(propSubsMap.contains(ownerRef)) {
+			val list=propSubsMap(ownerRef)
+			for(subs <-list)
+				if(subs.propertyField ==propField)
+					subs.user.queryHandler.burstNotifyChanges(subs,ownerRef,propField)
+		}
+	}*/
+	
 	def instanceCreated(owner:OwnerReference,newInstance:InstanceData) = {
 		if(propSubsMap.contains(owner.ownerRef)) {
 			val list=propSubsMap(owner.ownerRef)

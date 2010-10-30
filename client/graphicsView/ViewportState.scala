@@ -9,4 +9,5 @@ package client.graphicsView
 object ViewportState extends Enumeration {
   val SelectState=Value("Select")
   val AskPoint=Value("AskPoint") 
+  val LineTo=Value("LineTo")
 }

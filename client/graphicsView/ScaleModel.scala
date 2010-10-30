@@ -6,11 +6,14 @@ package client.graphicsView
 import java.awt._
 import java.awt.geom._
 import java.awt.BasicStroke
+import definition.expression.VectorConstant
 
 /** Manages the scale of a graphics view
  * 
  */
 class ScaleModel {
+	
+	
 	
 	val vpBorder=10 // border of the Canvas
 	
@@ -25,6 +28,12 @@ class ScaleModel {
 	private var _heightSet:Boolean=_ // is the world height or width relevant for scaling 
 	private var xOffset=0 // screen offset to center the drawing
 	private var yOffset=0
+	// world border
+	private var wbx1:Double=0
+	private var wby1:Double=0
+	private var wbx2:Double=0
+	private var wby2:Double=0
+	
 	
 	private var _relativeScale=(1d,100d)
 	
@@ -64,7 +73,7 @@ class ScaleModel {
 	def setWorldBounds(x:Double,y:Double,w:Double,h:Double) = {
 		_world_X=x
 		_world_Y=y
-		_world_Width=w
+		_world_Width=if(w==0) 0.1 else w
 		_world_Height=if(h==0) 0.1 else h		
 		zoomStack=collection.immutable.List(new Rectangle2D.Double(_world_X,_world_Y,_world_Width,_world_Height))
 		calcOffsets		
@@ -128,15 +137,25 @@ class ScaleModel {
 	
 	
 	private def calcOffsets={
-		val worldRatio=if(_world_Height==0)_world_Width*10/0.1 else _world_Width*10d/_world_Height
+		val worldRatio= _world_Width*10d/_world_Height
 		val viewRatio= if(_viewSize.height==0)viewSize.width*10/0.1 else _viewSize.width*10d/_viewSize.height
 		_heightSet=worldRatio<viewRatio
 		if(_heightSet){			
 			yOffset=vpBorder
 			xOffset=((_viewSize.width-_world_Width*scale)/2).toInt+vpBorder
+			val worldOffset=(viewSize.width.toDouble/scale-_world_Width)/2
+			wbx1=_world_X-worldOffset
+			wby1= _world_Y	
+			wbx2=_world_X+_world_Width+worldOffset
+			wby2= _world_Y+_world_Height
 		} else {
 			xOffset=vpBorder
 			yOffset=((_viewSize.height-_world_Height*scale)/2).toInt+vpBorder
+			val worldOffset=(viewSize.height.toDouble/scale-_world_Height)/2
+			wbx1=_world_X
+			wby1=_world_Y-worldOffset	
+			wbx2=_world_X+_world_Width
+			wby2= _world_Y+_world_Height+worldOffset
 		}
 		_thicknessScale=(scale*_dotPitch/1000d)/(_relativeScale._1/_relativeScale._2)
 		strokeMap.clear
@@ -153,13 +172,15 @@ class ScaleModel {
 			
 	def viewHeightInWorld=_world_Height
 		
-	def scale= {
+	def scale= {		
 		if(_heightSet&&(_world_Height!=0)) {
 			_viewSize.height.toDouble/_world_Height
 		}else {
 		  if(_world_Width==0) 1
 		else(_viewSize.width.toDouble/_world_Width)	
-		}		
+		}
+		//println("scale heightSet:"+_heightSet+" wh:"+_world_Height+" ww:"+_world_Width+ " sc:"+scal)
+		//scal
 	}
 	
 	def worldScale = scale*dotPitch
@@ -167,6 +188,25 @@ class ScaleModel {
 	def getScaleRatio:(Number,Number) = {
 		val ret=scale*_dotPitch/1000d
 	  if(ret>1) (ret,1) else (1,1/(ret))	
+	}
+	
+	def setScaleRatio(a:Double,b:Double) = {
+		
+		val wishScale= (a / b)*1000d/_dotPitch
+		println("SetScale "+a+" / "+b+" wsc:"+wishScale)
+		var newWorldHeight:Double= 0
+		var newWorldWidth:Double= 0
+		if(_heightSet) {
+			newWorldHeight=_viewSize.height.toDouble/wishScale
+			newWorldWidth=_viewSize.width.toDouble*newWorldHeight/_viewSize.height.toDouble			
+			
+		} else {			
+			newWorldWidth=_viewSize.width.toDouble/wishScale
+			newWorldHeight=_viewSize.height.toDouble*newWorldWidth/_viewSize.width.toDouble			
+		}
+		val newX=_world_X-(newWorldHeight-_world_Height)/2
+		val newY=_world_Y-(newWorldWidth-_world_Width)/2
+		setWorldBounds(newX,newY,newWorldWidth,newWorldHeight)
 	}
 	
 	
@@ -198,6 +238,13 @@ class ScaleModel {
 		calcOffsets
 		notifyScaleChanged()
 	}
+	
+	/** tests if the given Point is inside of the world bounds of the screen
+	 * 
+	 * @param tp the test point
+	 * @return true if it is inside of the world bounds
+	 */
+	def isInWorldBounds(tp:VectorConstant)= tp.x>=wbx1 && tp.x<=wbx2 && tp.y>=wby1 && tp.y<=wby2
 }
 
 object ScalaModel {
@@ -208,3 +255,4 @@ object ScalaModel {
 		println(sm.scale+" "+sm.worldScale+" "+sm.getScaleRatio)
 	}
 }
+

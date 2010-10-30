@@ -19,13 +19,13 @@ import server.storage._
 class TypTest extends JUnitSuite {
 	val rudolfClass=new ServerObjectClass("Rudolf",3,"Rudolfs Klasse",IndexedSeq(FieldDefinition("GewerkName",DataType.StringTyp ),
 		  FieldDefinition("GewerkSumme",DataType.DoubleTyp )),IndexedSeq(PropertyFieldDefinition("Kinder",false,0)),
-		  IndexedSeq.empty,Seq.empty,"")
+		  IndexedSeq.empty,IndexedSeq.empty,Seq.empty,"")
 	 
 	
 	
 	
 	val hugoClass=new ServerObjectClass("Hugo",7,"hugos klasse",IndexedSeq(FieldDefinition("Hugofeld",DataType.StringTyp ),FieldDefinition("HugoWert",
-  		DataType.DoubleTyp )),IndexedSeq(PropertyFieldDefinition("Subelements",false,0)),IndexedSeq.empty,
+  		DataType.DoubleTyp )),IndexedSeq(PropertyFieldDefinition("Subelements",false,0)),IndexedSeq.empty,IndexedSeq.empty,
   		IndexedSeq("Rudolf" ),"")
 	  
   

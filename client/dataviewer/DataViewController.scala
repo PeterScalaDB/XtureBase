@@ -16,9 +16,9 @@ import scala.swing._
  */
 
 
-class DataViewController  extends PathControllable with SelectSender  {
+class DataViewController  extends PathControllable with SelectSender with Referencable  {
 	private var loaded=false
-	var parentRef:Reference= _
+	var ref:Reference= _
 	var mainClass:AbstractObjectClass = _
 	
 	val propertyModels =scala.collection.mutable.ArrayBuffer[PropertyModel]()
@@ -31,6 +31,8 @@ class DataViewController  extends PathControllable with SelectSender  {
 	var openChildCallBack:(Reference)=> Unit = _
 	var selectListener= collection.mutable.HashSet[SelectListener]()
 	
+	var containerFocusListener= collection.mutable.HashSet[ContainerFocusListener]()
+	
 	/** is called by PathModel when another instance should be loaded
 	 *  @param parentRef the new Instance to be loaded
 	 *  @param selectRef reference of an instance that should be selected
@@ -38,8 +40,8 @@ class DataViewController  extends PathControllable with SelectSender  {
 	def openData(nparentRef:Reference,selectRef:Option[Reference]) = {
 	  if(loaded) shutDown()
 	  selectedInstance=null
-	  parentRef=nparentRef
-	  mainClass=AllClasses.get.getClassByID(parentRef.typ)
+	  ref=nparentRef
+	  mainClass=AllClasses.get.getClassByID(ref.typ)
 	  for(i <- 0 until mainClass.propFields.size) {
 	  	val propFieldInfo=mainClass.propFields(i)
 	  	val mod=getPropModel
@@ -58,6 +60,10 @@ class DataViewController  extends PathControllable with SelectSender  {
 	def registerSelectListener(listener:SelectListener) = {
 		selectListener += listener
 	}
+	
+	def registerContainerFocusListener(listener:ContainerFocusListener) = {
+		containerFocusListener += listener
+	} 
 	
 	
 	def updateHeight() = {
@@ -99,6 +105,10 @@ class DataViewController  extends PathControllable with SelectSender  {
 			mod.deselect(tabMod.typ)
 		 selectListener foreach(_.selectionChanged(this,instList))	
 		//selectedInstance=inst
+	}
+	
+	def containerFocused(currPropertyField:Int):Unit = {
+		containerFocusListener foreach (_.containerFocused(this,currPropertyField,""))
 	}
 	
 	def deselect(notify:Boolean) = {

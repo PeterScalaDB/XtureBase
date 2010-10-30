@@ -23,7 +23,27 @@ class GraphElem(override val ref:Reference,val color:Int) extends Referencable {
   def maxY=0d
   
   def hits(px:Double,py:Double,dist:Double)=false // hittest  
-  def hitPoint(px:Double,py:Double,dist:Double):Option[VectorConstant]=None
+  def hitPoint(px:Double,py:Double,dist:Double):Seq[(Byte,VectorConstant)]=Nil
+  
+  def checkHit(px:Double,py:Double,dist:Double,p:VectorConstant):Seq[(Byte,VectorConstant)]={
+  	val xHit=Math.abs(px-p.x)<dist
+  	val yHit=Math.abs(py-p.y)<dist
+  	if(xHit&&yHit) List((GraphElemFactory.HITBOTH,p))
+  	else if(xHit)List((GraphElemFactory.HITX,p))
+  	else if(yHit)List((GraphElemFactory.HITY,p))
+  	else Nil
+  }
+}
+
+object ColorMap {
+	val theMap=collection.mutable.HashMap[Int,Color]()
+	def getColor(col:Int)= 
+		if(theMap.contains(col)) theMap(col)
+		else {
+			val newCol=new Color(col)
+			theMap(col)=newCol
+			newCol
+		}
 }
 
 class LinearElement(nref:Reference,ncolor:Int,val lineWidth:Int,val lineStyle:Int) extends GraphElem(nref,ncolor)
@@ -36,7 +56,7 @@ case class LineElement(nref:Reference,ncolor:Int,nlineWidth:Int,nlineStyle:Int,s
 	override def toString= "Line ("+startPoint.shortToString+","+endPoint.shortToString+", Col:"+color+", Style:"+lineStyle+")"
 	
 	override def draw(g:Graphics2D,sm:ScaleModel,selectColor:Color=null)={
-		g.setPaint(if(selectColor==null)new Color(color)else selectColor)
+		g.setPaint(if(selectColor==null) ColorMap.getColor(color)else selectColor)
 		g.setStroke(sm.getStroke(lineWidth))
 		g.drawLine(sm.xToScreen(startPoint.x) ,sm.yToScreen(startPoint.y) ,
 			sm.xToScreen(endPoint.x),sm.yToScreen(endPoint.y))	
@@ -52,21 +72,17 @@ case class LineElement(nref:Reference,ncolor:Int,nlineWidth:Int,nlineStyle:Int,s
 		calcDist<=dist && px>=(minX-dist) && (px<=(maxX)+dist) &&
 		  py>=(minY-dist) && (py<=(maxY)+dist)
 	}
-	override def hitPoint(px:Double,py:Double,dist:Double)= {
-		var ret:Option[VectorConstant]=None
+	override def hitPoint(px:Double,py:Double,dist:Double)= {		
 		//println("test x:"+(px-startPoint.x)+ " y:"+(py-startPoint.y))
-		if(Math.abs(px-startPoint.x)<dist&& Math.abs(py-startPoint.y)<dist) ret=Some(startPoint)
-		if(Math.abs(px-endPoint.x)<dist&& Math.abs(py-endPoint.y)<dist) {
-			if(ret.isDefined) { // startPoint and endPoint are in distance
-				// check wich point is nearer				
-				val sdist=startPoint.squareDistanceTo(px,py,0)				
-				val edist=endPoint.squareDistanceTo(px,py,0)
-				if(edist<sdist) ret=Some(endPoint)
-			}
-			else ret= Some(endPoint)
-		}
-		//if(ret.isDefined) println("ret="+ret)
-		ret
+		val ret1=checkHit(px,py,dist,startPoint)
+		val ret2=checkHit(px,py,dist,endPoint)
+		if(ret1.isEmpty) {
+			if (ret2.isEmpty) Nil
+			else ret2
+		} else {
+			if(ret2.isEmpty) ret1
+			else List(ret1.head,ret2.head)
+		}		
 	}
 }
 
@@ -80,7 +96,7 @@ case class ArcElement(nref:Reference,ncolor:Int,nlineWidth:Int,nlineStyle:Int,ce
 	override def toString= "Arc ("+centerPoint.shortToString+") d="+diameter+", sa:"+startAngle+", eA:"+endAngle+")"
 	
 	override def draw(g:Graphics2D,sm:ScaleModel,selectColor:Color=null)={
-		g.setPaint(if(selectColor==null)new Color(color)else selectColor)
+		g.setPaint(if(selectColor==null)ColorMap.getColor(color)else selectColor)
 		g.setStroke(sm.getStroke(lineWidth))
 		
 		val tx=sm.xToScreen(centerPoint.x-diameter)
@@ -114,6 +130,10 @@ case class ArcElement(nref:Reference,ncolor:Int,nlineWidth:Int,nlineStyle:Int,ce
 
 object GraphElemFactory extends SubscriptionFactory[GraphElem] {
 	val theArc=new Arc2D.Double
+	
+	val HITX=1.toByte
+	val HITY=2.toByte
+	val HITBOTH=3.toByte
 	
 	def emptyFunc(ref:Reference)= new GraphElem(ref,0)
 	

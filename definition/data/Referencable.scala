@@ -10,7 +10,7 @@ import java.io._
  * 
  */
 trait Referencable {
-   def ref:Reference=null
+   def ref:Reference
    
    
    /** writes the Referencable object in the given datastream

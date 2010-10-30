@@ -15,12 +15,14 @@ import definition.expression.VectorConstant
 /**
  * 
  */
-class LayerTableModel extends AbstractTableModel {
+class LayerTableModel(controller:GraphViewController) extends AbstractTableModel {
   val layerList=collection.mutable.ArrayBuffer[Layer]()
   val listLock=new Object()
-  val activeLayer:Int=0
+  var activeLayer:Int=0
   val javaTrue=new java.lang.Boolean(true)
   val javaFalse=new java.lang.Boolean(false)
+  
+  var canLoadElements:Boolean=false
   
   def addLayer(newLayer:Layer) = listLock.synchronized{
   	layerList +=newLayer
@@ -44,23 +46,79 @@ class LayerTableModel extends AbstractTableModel {
   def hasVisibleLayers= 
   	layerList.exists(_.visible)
   
-  
-  def getRowCount= listLock.synchronized{
-		 //println("get size "+(dataList.size+1)+ " " +Thread.currentThread)
-		 layerList.size		
-	}
-  
-  def toggleVisibility(ix:Int) = {
-  	val layer=layerList(ix)
-  	if(layer.visible) layer.hide
-  	else layer.load	
-  	
-  	fireTableRowsUpdated(ix,ix)
+  def setActiveLayerIx(layerNum:Int)= {
+  	activeLayer=layerNum
+  	controller.notifyContainerListeners
+  	fireTableDataChanged()
   }
+  
+  def getActiveLayer = listLock.synchronized{
+  	if(layerList.isEmpty) null
+  	else layerList(activeLayer)
+  }
+  
+  
+  
+  def toggleVisibility(ix:Int):Unit = listLock.synchronized{
+  	val layer=layerList(ix)
+  	if(layer.visible) {
+  		layer.visible=false  	
+  		layer.edible=false
+  		if(activeLayer==ix) {
+  			val nextActive=getNextActiveLayer
+  			if(nextActive== -1) {
+  				layer.visible=true
+  				layer.edible=true
+  				return // dont hide layer if it is the only edible
+  			}
+  			else activeLayer=nextActive
+  		}
+  		layer.hide  		
+  	}
+  	else layer.load	  	
+  	fireTableDataChanged()
+  }
+  
+  def toggleEdible(ix:Int):Unit = listLock.synchronized{
+  	val layer=layerList(ix)
+  	if(layer.edible) {
+  		layer.edible=false  		
+  		if(activeLayer==ix) {
+  			val nextActive=getNextActiveLayer
+  			if(nextActive== -1) {
+  				layer.edible=true
+  				return // dont hide layer if it is the only edible
+  			}
+  			else activeLayer=nextActive
+  		}
+  		layer.lock()
+  	}
+  	else layer.edible=true	  	
+  	fireTableDataChanged()  	
+  }
+  
+  def toggleActive(ix:Int):Unit = listLock.synchronized{
+  	val layer=layerList(ix)
+  	if(!layer.visible) layer.load
+  	layer.edible=true
+  	setActiveLayerIx(ix)
+  }
+  
+  
+  def getNextActiveLayer:Int= {
+  			  for(i <- 0 until layerList.size;val alay=layerList(i))
+  			  	if(alay.visible && alay.edible) return i
+  			  -1
+  			}
+  
   
   def containsRef(ref:Reference) = layerList.exists(_.ref ==ref)
 
-	def getColumnCount= 4
+  def getRowCount= listLock.synchronized{		 
+		 layerList.size	+1	
+	}
+  
+	def getColumnCount= 7
 	
 	def boolToJava(value:Boolean) = if(value)javaTrue else javaFalse
 
@@ -72,17 +130,24 @@ class LayerTableModel extends AbstractTableModel {
 				case 1 => boolToJava(layer.visible)
 				case 2 => boolToJava(layer.edible)
 				case 3 => boolToJava(row==activeLayer)
+				case 4 => " X "
+				case _ => ""
 			}
 		}
+		else if(row==layerList.size&& col==0) // last line
+			if(canLoadElements)"  --> Layer hinzufügen " else " - "
 		else null
 	}
 	
 	override def getColumnName(col:Int) =  {
 		col match {
-			case 0 =>"name"
-			case 1 =>"sichtbar"
-			case 2 =>"änderbar"
-			case 3 =>"aktiv"
+			case 0 =>"Layer-Name"
+			case 1 =>"Sichtbar"
+			case 2 =>"Änderbar"
+			case 3 =>"Aktiv"
+			case 4 =>"Raus"
+			case 5 =>"El.Vers"
+			case 6 =>"El.Kop"
 		}
 	}
 	
@@ -91,6 +156,9 @@ class LayerTableModel extends AbstractTableModel {
 		case 1 => classOf[java.lang.Boolean]
 		case 2 => classOf[java.lang.Boolean]
 		case 3 => classOf[java.lang.Boolean]
+		case 4 => classOf[javax.swing.JButton]
+		case 5 => classOf[String]
+		case 6 => classOf[java.lang.Boolean]
 	}
 	
 	def calcAllLayerBounds()= {
@@ -99,7 +167,7 @@ class LayerTableModel extends AbstractTableModel {
 		bounds.y=Math.MAX_DOUBLE
 		bounds.width=Math.MIN_DOUBLE
 		bounds.height=Math.MIN_DOUBLE
-		for(lay <-layerList) {
+		for(lay <-layerList) if (lay.visible) {
 			val lb=lay.calcBounds
 			if(lb.x<bounds.x)bounds.x=lb.x
 			if(lb.y<bounds.y)bounds.y=lb.y
@@ -112,7 +180,14 @@ class LayerTableModel extends AbstractTableModel {
 		bounds
 	}
 	
-	def checkElementPoints(checkFunc:(GraphElem)=>Option[VectorConstant]):Seq[VectorConstant]= {
+	def setCanLoadElements(value:Boolean)= {
+		canLoadElements=value
+		fireTableDataChanged() 
+	}
+	
+	def checkElementPoints(checkFunc:(GraphElem)=>Seq[(Byte,VectorConstant)]):Seq[(Byte,VectorConstant)]= {
 		layerList.flatMap(_.checkElementPoints(checkFunc))
+		//layerList.flatMap(_.elemList.flatMap(checkFunc))
+		
 	}
 }

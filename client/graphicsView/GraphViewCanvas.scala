@@ -15,15 +15,17 @@ class GraphViewCanvas(controller:GraphViewController) extends Component  {
 	var dragToPoint:Point=null
 	var currentMousePos:Point=null
 	
-	var pointHitPos:Point=null
+	var pointHitPos:MatchingScreenPoints=null
 	
 	
 	val selectColor=new Color(255,50,50)
 	
-	val dragTreshold=5 // how much pixels can you drag the mouse before it is handled as drag
+	val dragTreshold=8 // how much pixels can you drag the mouse before it is handled as drag
 	
 	val lineCatchDistance=4
 	val pointCatchDistance=5
+	
+	var lockedColor=new Color(0,70,50)
 	
 	// insert new panel information into properties
 	
@@ -42,27 +44,33 @@ class GraphViewCanvas(controller:GraphViewController) extends Component  {
 	
 	val defaultStroke=new BasicStroke()
 	
-	listenTo(mouse.clicks,mouse.moves,keys,this)
 	
+	
+	listenTo(mouse.clicks,mouse.moves,keys,this)	
 	reactions+={
 		case e:MousePressed => {
-			requestFocusInWindow()
-			val middleButton=(e.peer.getButton == java.awt.event.MouseEvent.BUTTON2)
-			//val middleButton=(e.peer.getButton == java.awt.event.MouseEvent.BUTTON3)
-			
-			if(middleButton) controller.isZoomingIn=true
+			requestFocusInWindow()			
 			currentMousePos=null
 			dragStartPoint=e.point
 			dragToPoint=null
 			cursor=Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR)
 		}
-		case e:MouseEntered => {	
-			
+		case e:MouseEntered => {			
 			currentMousePos=e.point
 			//drawCrossHair
-		}
+		}	
 		
 		case e:MouseDragged => {
+			val middleButton=((e.peer.getModifiersEx & java.awt.event.InputEvent.BUTTON2_DOWN_MASK)>0)
+			val rightButton=((e.peer.getModifiersEx & java.awt.event.InputEvent.BUTTON3_DOWN_MASK)>0)
+			val control=(e.modifiers & Key.Modifier.Control)>0			
+			//println("inDistance :"+inDistance(dragStartPoint,e.point,dragTreshold)+" c:"+control+" middle:"+
+			//	middleButton(e)+" "+controller.isZoomingIn)
+			if(!inDistance(dragStartPoint,e.point,dragTreshold)&&middleButton&&control&&(!controller.isZoomingIn)){
+				//println("zoom in")
+				controller.isZoomingIn=true				
+			}
+			  
 			if(dragToPoint!=null) drawDragGraphics()
 			else repaint
 			dragToPoint=e.point
@@ -73,12 +81,15 @@ class GraphViewCanvas(controller:GraphViewController) extends Component  {
 		case e:MouseReleased => {
 			val control=(e.modifiers & Key.Modifier.Control)>0
 			val shift=(e.modifiers & Key.Modifier.Shift)>0
+			//println("released "+middleButton(e)+" "+(e.peer.getButton&java.awt.event.MouseEvent.BUTTON2>0))
+			val middleButton=(e.peer.getButton==java.awt.event.MouseEvent.BUTTON2)
+			val rightButton=(e.peer.getButton==java.awt.event.MouseEvent.BUTTON3)
 			if(dragToPoint!=null&& !inDistance(dragStartPoint,dragToPoint,dragTreshold))
 			{ // it was dragged
-				controller.dragCompleted(dragStartPoint,dragToPoint,control,shift)
+				controller.dragCompleted(dragStartPoint,dragToPoint,control,shift,rightButton)
 				dragStartPoint=null
 			} else { // it was NOT dragged
-				controller.singleClick(dragStartPoint,control,shift)
+				controller.singleClick(dragStartPoint,control,shift,rightButton,middleButton)
 			}
 			cursor=dotCurs
 			currentMousePos=e.point
@@ -94,7 +105,7 @@ class GraphViewCanvas(controller:GraphViewController) extends Component  {
 			else if(currentMousePos!=null) drawCrossHair()
 			currentMousePos=e.point
 			controller.viewportState match {
-				case ViewportState.AskPoint => pointHitPos=controller.checkPointHit(e.point)
+				case ViewportState.AskPoint | ViewportState.LineTo => pointHitPos=controller.checkPointHit(e.point)
 				case _ =>
 			}
 			drawCrossHair()
@@ -129,17 +140,39 @@ class GraphViewCanvas(controller:GraphViewController) extends Component  {
 		g.drawLine(currentMousePos.x,1,currentMousePos.x,currBounds.height)
 		g.drawLine(1,currentMousePos.y,currBounds.width,currentMousePos.y)
 		controller.viewportState match {
-			case ViewportState.AskPoint => {
-				if(pointHitPos!=null) g.drawRect(pointHitPos.x-4,pointHitPos.y-4,8,8)
+			case ViewportState.AskPoint => drawHitPoints(g)
+			case ViewportState.LineTo => {
+				drawHitPoints(g)
+				g.setPaint(Color.black)
+				if(!controller.lineToPointBuffer .isEmpty) {
+					val lp=controller.lineToPointBuffer.last
+					g.drawLine(currentMousePos.x,currentMousePos.y,controller.scaleModel.xToScreen(lp.x),
+						controller.scaleModel.yToScreen(lp.y))
+				}
 			}
 			case _ =>
 		}
 		g.setPaintMode()
 	}
 	
+	private def drawHitPoints(g:Graphics2D)= {
+		g.setPaint(Color.blue)
+		if(pointHitPos.hitBoth.isDefined) g.drawRect(pointHitPos.hitBoth.get.x-4,pointHitPos.hitBoth.get.y-4,8,8)
+		else {
+			if(pointHitPos.hitX.isDefined){
+				g.drawRect(pointHitPos.hitX.get.x-4,pointHitPos.hitX.get.y-4,8,8)
+				g.drawLine(pointHitPos.hitX.get.x,pointHitPos.hitX.get.y,pointHitPos.hitX.get.x,currentMousePos.y)
+			}
+			if(pointHitPos.hitY.isDefined) {
+				g.drawRect(pointHitPos.hitY.get.x-4,pointHitPos.hitY.get.y-4,8,8)	
+				g.drawLine(pointHitPos.hitY.get.x,pointHitPos.hitY.get.y,currentMousePos.x,pointHitPos.hitY.get.y)
+			}
+		}
+	}
+	
 	// is called by the controller to state that the layerList is empty
 	def setHasVisibleLayers(visibleValue:Boolean) = {
-		peer.putClientProperty("newPanel",if(visibleValue) controller.newPanel else null)
+		//peer.putClientProperty("newPanel",if(visibleValue) controller.newPanel else null)
 	}
 	
 	override def paintComponent(g:Graphics2D)= {		
@@ -149,7 +182,7 @@ class GraphViewCanvas(controller:GraphViewController) extends Component  {
 		g.fillRect(0,0,size.width,size.height)
 		
 		if(hasFocus) {
-		  g.setPaint(Color.red)
+		  g.setPaint(Color.blue)
 		  g.setStroke(defaultStroke)
 		  g.drawRect(0,0,size.width-1,size.height-1)
 		}
@@ -157,19 +190,43 @@ class GraphViewCanvas(controller:GraphViewController) extends Component  {
 		g.setPaint(Color.black)
 		
 		controller.viewportState match {
-			case ViewportState.AskPoint => g.drawString("AskPoint",30,30)  
+			case ViewportState.AskPoint => g.drawString("AskPoint",30,30) 
+			case ViewportState.LineTo => g.drawString("LineTo",30,30)
 			case _ =>
 		}	
 		
 		// draw all elements
-		for(lay <-controller.layerModel.layerList)
+		for(lay <-controller.layerModel.layerList) {
+			val lColor=if(lay.edible)null else lockedColor
 			for(elem<-lay.elemList)
-					elem.draw(g,controller.scaleModel)
+					elem.draw(g,controller.scaleModel,lColor)
+		}
+			
     // draw selected elements
 		g.setRenderingHints(new RenderingHints(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_OFF ))			
 		for(el <-controller.selectModel.list)
 			el.draw(g,controller.scaleModel,selectColor)
-		g.setStroke(defaultStroke)    
+		// draw Line-To graphics
+		g.setStroke(defaultStroke)
+		if(controller.viewportState == ViewportState.LineTo&& controller.lineToPointBuffer.size>1)
+			for(i <- 0 until controller.lineToPointBuffer.size-1) {
+				val sp=controller.lineToPointBuffer(i)
+				val ep=controller.lineToPointBuffer(i+1)
+				g.drawLine(controller.scaleModel.xToScreen(sp.x),controller.scaleModel.yToScreen(sp.y),
+					controller.scaleModel.xToScreen(ep.x),controller.scaleModel.yToScreen(ep.y))
+			}
+		// draw braket cross
+		if(controller.bracketMode) {
+		  g.setStroke(defaultStroke)
+		  g.setPaint(Color.black)
+		  g.setXORMode(Color.yellow)
+		  val brx=controller.scaleModel.xToScreen(controller.lastSelectedPoint.x)
+		  val bry=controller.scaleModel.yToScreen(controller.lastSelectedPoint.y)
+		  g.drawLine(brx-7,bry,brx+7,bry)
+		  g.drawLine(brx,bry-7,brx,bry+7)
+		  g.setPaintMode()
+		}		
+		
 		if(dragStartPoint!=null)
 			drawDragGraphics(g)
 		if(drawCrossHairInPaint) {
@@ -186,7 +243,7 @@ class GraphViewCanvas(controller:GraphViewController) extends Component  {
 			case ViewportState.SelectState => {
 				drawDragRect(g)
 			}
-			case ViewportState.AskPoint => {
+			case ViewportState.AskPoint | ViewportState.LineTo => {
 				if(controller.isZoomingIn)
 					drawDragRect(g)
 			}

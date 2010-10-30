@@ -35,7 +35,7 @@ class FieldEditorsPanel extends BorderPanel with SelectListener {
 	def selectionChanged(sender:SelectSender,ninstList:Seq[Referencable]) = {
 		instList=ninstList
 		val newCommonTyp=AllClasses.get.getCommonClass(instList)
-		println("new common Typ:"+newCommonTyp)
+		//println("new common Typ:"+newCommonTyp)
 		if(newCommonTyp!=commonTyp) { // type was changed
 			childPanel.contents.clear
 			currentEditors.clear
@@ -47,7 +47,7 @@ class FieldEditorsPanel extends BorderPanel with SelectListener {
 				val editorNames=AllClasses.get.getClassByID(newCommonTyp).fieldEditors
 				for(aName <-editorNames){
 					val editor=EditorFactory.getEditor(aName)
-					println("editor:"+editor)
+					//println("editor:"+editor)
 					childPanel.contents+=editor.getPanel
 					currentEditors+=editor					
 				}					

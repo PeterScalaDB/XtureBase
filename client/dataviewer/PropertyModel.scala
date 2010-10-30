@@ -45,9 +45,9 @@ class PropertyModel(val mainController:DataViewController) {
 		propertyField=fieldToLoad
 		titleLabel.text="Property ("+fieldToLoad+") "+fieldName+ " allowedClass:"+allowedClass
 		if(subscriptionID<0)
-			subscriptionID=ClientQueryManager.createSubscription(mainController.parentRef,propertyField)(callBack) 
+			subscriptionID=ClientQueryManager.createSubscription(mainController.ref,propertyField)(callBack) 
 		else { // subscription already there
-			ClientQueryManager.changeSubscription(subscriptionID,mainController.parentRef,propertyField)
+			ClientQueryManager.changeSubscription(subscriptionID,mainController.ref,propertyField)
 		}		
 		loaded=true
 	}
@@ -105,8 +105,9 @@ class PropertyModel(val mainController:DataViewController) {
 		
 	}
 	
-	def getOwnerRef = new OwnerReference(propertyField,mainController.parentRef)
+	def getOwnerRef = new OwnerReference(propertyField,mainController.ref)
 	
+	def focusGained = mainController.containerFocused(propertyField)
 	
 	def shutDown() = {
 		ClientQueryManager.pauseSubscription(subscriptionID)

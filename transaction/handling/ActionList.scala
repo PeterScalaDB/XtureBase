@@ -72,6 +72,7 @@ def commitAllData() = {
 				}
 				//TODO: delete link, property and collFunc data !
 		}
+		CommonSubscriptionHandler.submitBurstInfo()
 		//SimpleProfiler.finish("commit "+theList.size)
 		reset()
 	} catch { case e:Exception => TransactionManager.breakTransaction() }

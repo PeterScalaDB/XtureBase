@@ -25,7 +25,11 @@ object SessionManager {
   val setupListeners=collection.mutable.ArrayBuffer[()=>Unit]()
   
   def registerSetupListener(func:()=>Unit) = {
-  	if(isSetup) func // if the classes List is ready, call the func
+  	//println("call setup "+func)
+  	if(isSetup){
+  		//println("call direct")
+  		func // if the classes List is ready, call the func
+  	}
   	else setupListeners +=func // else wait for getting set up
   }
   
@@ -37,6 +41,7 @@ object SessionManager {
   	CommonSubscriptionHandler.init(AllClasses.get.getClassList.toMap)
   	for(li <-setupListeners)
   		li() // call listeners
+  	isSetup=true	
   	println("Max Trans:"+TransLogHandler.transID)
   	
   	Runtime.getRuntime.addShutdownHook(new Thread {

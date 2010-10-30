@@ -38,7 +38,8 @@ private var userName=""
 	registerCommandHandler(ClientCommands.createInstance)(wantCreateInstance)
 	registerCommandHandler(ClientCommands.deleteInstance)(wantDeleteInstance)
 	registerCommandHandler(ClientCommands.copyInstance)(wantCopyInstance)
-	registerCommandHandler(ClientCommands.executeAction  )(executeAction)	
+	registerCommandHandler(ClientCommands.executeAction  )(executeAction(false))	
+	registerCommandHandler(ClientCommands.executeCreateAction  )(executeAction(true))
 	registerCommandHandler(ClientCommands.getUserSettings  )(getUserSettings)
 	registerCommandHandler(ClientCommands.writeUserSettings  )(writeUserSettings)
 
@@ -176,7 +177,7 @@ private var userName=""
 		error=new CommandError(e.toString,ClientCommands.writeField.id,0)
 	}
 	sendData(ServerCommands.sendCommandResponse ) {out =>
-	println("sendCommandResponse writeField "+ref+" "+expr)
+	//println("sendCommandResponse writeField "+ref+" "+expr)
 	if(error!=null) {
 		out.writeBoolean(true)
 		error.write(out)	
@@ -209,7 +210,7 @@ private var userName=""
 		error=new CommandError(e.toString,ClientCommands.writeField.id,0)
 	}
 	sendData(ServerCommands.sendCommandResponse ) {out =>
-	println("sendCommandResponse writeFields "+refList.size+" "+expr)
+	//println("sendCommandResponse writeFields "+refList.size+" "+expr)
 	if(error!=null) {
 		out.writeBoolean(true)
 		error.write(out)	
@@ -320,10 +321,12 @@ private var userName=""
 	}			 
 	}
 
-	private def executeAction(in:DataInputStream) = {
+	private def executeAction(createAction:Boolean)(in:DataInputStream) = {
 		var error:CommandError=null	
 		val numInstances=in.readInt
 		val instList=for(i <-0 until numInstances) yield StorageManager.getInstanceData(Reference(in))
+		val newType=if(createAction)in.readInt else 0
+		val propField=if(createAction)in.readByte else 0.toByte
 		val actionName=in.readUTF
 		val numParams=in.readInt
 		val paramList=for(i <-0 until numParams) 
@@ -331,20 +334,27 @@ private var userName=""
 		
 		try {
 			val ret=TransactionManager.doTransaction {
-				//println("Execute Action "+actionName+ " instances:"+instList.mkString(","))
+				println("Execute Action "+actionName+ " instances:"+instList.mkString(",")+" create:"+createAction+" new Type:"+newType)
 		    //println("params: "+paramList.mkString(","))
-		    AllClasses.get.getClassByID(instList.head.ref.typ).actions(actionName ) match {
-					case a:ActionImpl => // simple action, order of execution is not important
+				if(actionName=="*" && createAction&&instList.size==1) simplyCreateInstance(instList,newType,propField)
+				else {
+					val theAction= if(createAction){					
+						AllClasses.get.getClassByID(newType).createActions(actionName )
+					}
+					else AllClasses.get.getClassByID(instList.head.ref.typ).actions(actionName )
+					theAction match {
+						case a:ActionImpl => // simple action, order of execution is not important
 						for ((typ,partList) <- instList.groupBy(_.ref.typ))
-							{
-								val theAction= AllClasses.get.getClassByID(typ).actions(actionName).asInstanceOf[ActionImpl]
-								partList.foreach(a => theAction.func(a,paramList))
-							}
-					case b:ActionIterator => // Iterator, runs through all instances in given order 
-						b.func(instList,paramList) 
-					case e => println("unknown type "+e)
+						{
+							val theAction= AllClasses.get.getClassByID(typ).actions(actionName).asInstanceOf[ActionImpl]
+							                                                                                 partList.foreach(a => theAction.func(a,paramList))
+						}
+						case b:ActionIterator => // Iterator, runs through all instances in given order 
+						b.func(instList,paramList)
+						//case c:CreateActionImpl => c.func(instList,paramList,newType)	
+						case e => println("unknown type "+e)
+					}		
 				}		
-		    		
 			}
 			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.executeAction.id,0)
 		} 
@@ -363,6 +373,11 @@ private var userName=""
 			out.writeBoolean(false) // no result						  
 		}
 	}			 
+	}
+	
+	def simplyCreateInstance(parentList:Seq[InstanceData],newType:Int,propField:Byte) = {
+		val ownerRef=new OwnerReference(propField,parentList(1).ref)
+		val inst=TransactionManager.tryCreateInstance(newType,Array(ownerRef),true)		
 	}
 	
 	def getUserSettings(in:DataInputStream) = {

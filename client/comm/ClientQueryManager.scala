@@ -80,6 +80,9 @@ object ClientQueryManager {
 		subscriptionAcceptQueue.take()
 	}
 	
+	/** creates a Subscription with a Factory
+	 * 
+	 */
 	def createFactSubscription[T <:Referencable](parentRef:Reference,propertyField:Byte,factory:SubscriptionFactory[T])
 	(updateFunc: FactUpdateFunc[T]):Int = {		
 		sock.sendData(ClientCommands.startSubscription ) {out =>
@@ -211,10 +214,31 @@ object ClientQueryManager {
 		commandResultQueue.take() 
 	}
 	
-	def executeAction(instList:Seq[Referencable],actionName:String,params:Seq[(String,Constant)])= {
-		sock.sendData(ClientCommands.executeAction) { out =>
+	/** sends a notification to the server to execute the given action with the given parameters
+	 * @instList list of instances that should be modified. For a Create Action, the list of parents
+	 * @actionName name of the action
+	 * @params the parameter values for the action
+	 * @createAction is this a Create Action or Modification Action
+	 * 
+	 */
+	def executeAction(instList:Seq[Referencable],actionName:String,params:Seq[(String,Constant)])= {		
+		sock.sendData( ClientCommands.executeAction) { out =>
 			out.writeInt(instList.size)
 			instList foreach(_.ref.write(out))
+			out.writeUTF(actionName)
+			out.writeInt(params.size)
+			params foreach((x) => {out.writeUTF(x._1); x._2 .write(out)})
+		}
+		commandResultQueue.take() 	
+	}
+	
+	def executeCreateAction(parentList:Seq[Referencable],newType:Int,propField:Byte,actionName:String,params:Seq[(String,Constant)])= {
+		println("execute create newType:" + newType)
+		sock.sendData(ClientCommands.executeCreateAction) { out =>
+			out.writeInt(parentList.size)
+			parentList foreach(_.ref.write(out))
+			out.writeInt(newType)
+			out.writeByte(propField)
 			out.writeUTF(actionName)
 			out.writeInt(params.size)
 			params foreach((x) => {out.writeUTF(x._1); x._2 .write(out)})

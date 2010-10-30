@@ -44,19 +44,19 @@ object ViewTest extends SimpleSwingApplication {
 	val fieldEditPan=new FieldEditorsPanel
 	val newPanelArea=new NewPanelArea
 	
-	val testGraphList=new ListView[GraphElem]()
+	//val testGraphList=new ListView[GraphElem]()
 	
 	//var lastSelected:Seq[Referencable]=Seq.empty
 	
 	val graphViewController=new GraphViewController
 	val layerPanController=new LayerPanelController(graphViewController)
 	
-	val graphViewPan=new BorderPanel () {
+	val graphViewPan:BorderPanel=new BorderPanel () {
 		preferredSize=new Dimension(400,200)
 		add(new ScrollPane() {
 			preferredSize=new Dimension(200,200)
 			viewportView=graphViewController.canvasPanel
-			testGraphList.peer.setModel(TestGraphListModel)
+			//testGraphList.peer.setModel(TestGraphListModel)
 		},BorderPanel.Position.Center)
 		add(layerPanController.layerPanel,BorderPanel.Position.North)
 		viewController.registerSelectListener(layerPanController)
@@ -113,13 +113,16 @@ object ViewTest extends SimpleSwingApplication {
 		add( new BorderPanel() {
 			peer.putClientProperty("newPanel","IGNORE")
 			add(new BoxPanel(scala.swing.Orientation.Vertical){
-				contents+=newPanelArea
+				contents+=new BorderPanel {
+					add (new Label("Neue Objekte:"){preferredSize=new Dimension(40,30)},BorderPanel.Position.North)
+					add (newPanelArea,BorderPanel.Position.Center)
+				}
 				contents+=fieldEditPan
 				
 			},BorderPanel.Position.North)			
 			add(new BorderPanel() {
 				preferredSize=new Dimension(120,100)
-				add(new Label("Funktionen:"){preferredSize=new Dimension(40,35)},BorderPanel.Position.North)
+				add(new Label("Funktionen:"){preferredSize=new Dimension(40,30)},BorderPanel.Position.North)
 				add (new ScrollPane() {
 					viewportView= actionPan				
 				},BorderPanel.Position.Center)
@@ -149,12 +152,17 @@ object ViewTest extends SimpleSwingApplication {
 		top.title= "Table Test ["+args(2)+"]"
 		// connect components
 		actionPan.registerActionPanListener(DialogManager)
+		newPanelArea.registerActionPanListener(DialogManager)
 		viewController.registerSelectListener(actionPan)
 		viewController.registerSelectListener(DialogManager)
 		viewController.registerSelectListener(fieldEditPan)
+		viewController.registerContainerFocusListener(newPanelArea)
+		
 		graphViewController.selectModel.registerSelectListener(actionPan)
 		graphViewController.selectModel.registerSelectListener(DialogManager)
 		graphViewController.selectModel.registerSelectListener(fieldEditPan)
+		graphViewController.registerContainerListener(newPanelArea)
+		
 		DialogManager.answerArea.registerCustomPanel[PointAnswerPanel](DataType.VectorTyp)
 		
 		//println(top.title)
@@ -175,7 +183,7 @@ object ViewTest extends SimpleSwingApplication {
 	}
 	
 	def createInstance() = {
-		ClientQueryManager.createInstance(typEdit.text.toInt,Array(new OwnerReference(propEdit.text.toByte,viewController.parentRef)))
+		ClientQueryManager.createInstance(typEdit.text.toInt,Array(new OwnerReference(propEdit.text.toByte,viewController.ref)))
 	}
 	 
 	

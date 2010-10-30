@@ -3,12 +3,12 @@
  */
 package client.graphicsView
 
-import server.storage.{ActionModule,ActionImpl}
+import server.storage.{ActionModule,ActionImpl,ActionIterator}
 import definition.typ._
 import definition.expression._
 import definition.data._
 import java.io._
-import transaction.handling.TransactionManager
+import transaction.handling.{TransactionManager,SessionManager}
 
 import scala.collection.Iterator
 
@@ -17,14 +17,22 @@ import scala.collection.Iterator
  */
 class DisplayListModule extends ActionModule {
 
+  var lineTyp= -1
+  
+  SessionManager.registerSetupListener(() => {
+		lineTyp=AllClasses.get.getClassIDByName("LineElem")
+	})
 
-
-	def getActionsIterator() =  mList.iterator 
+	
 
 	val importAction=new ActionImpl("DXF-Import",Some(new ParamQuestion("Welche DXF Datei importieren ?",
 		Seq(new ParamAnswerDefinition("Dateinamen Eingeben:",DataType.StringTyp,None)))),doImport)
 
 	val mList=List(importAction)
+	
+	
+	def getActionsIterator() =  mList.iterator 
+	
 
 	def doImport(data:InstanceData,param:Seq[(String,Constant)]):Boolean = {
 		if(!param.isEmpty) {
@@ -75,8 +83,8 @@ class DisplayListModule extends ActionModule {
 												case 11 =>x2=value.trim.toDouble
 												case 21 =>{
 													y2=value.trim.toDouble
-													println("Line ("+x1+","+y1+")-("+x2+","+y2+")")
-													var inst=TransactionManager.tryCreateInstance(40,owner,false)
+													//println("Line ("+x1+","+y1+")-("+x2+","+y2+")")
+													var inst=TransactionManager.tryCreateInstance(lineTyp,owner,false)
 													inst=inst.setField(3,new VectorConstant(x1,y1,0))
 													inst=inst.setField(4,new VectorConstant(x2,y2,0))
 													inst=inst.setField(0,new IntConstant(AcadColor.table(color)))
@@ -114,7 +122,7 @@ class DisplayListModule extends ActionModule {
 												case 50 =>sA=value.trim.toDouble												
 												case 51 =>{
 													eA=value.trim.toDouble
-													println("Arc ("+x1+","+y1+") d="+dia+" ,sa:"+sA+" ,ea:"+eA+")")
+													//println("Arc ("+x1+","+y1+") d="+dia+" ,sa:"+sA+" ,ea:"+eA+")")
 													var inst=TransactionManager.tryCreateInstance(41,owner,false)
 													inst=inst.setField(3,new VectorConstant(x1,y1,0))
 													inst=inst.setField(4,new DoubleConstant(dia))
@@ -144,4 +152,7 @@ class DisplayListModule extends ActionModule {
 		}
 		true
 	}
+	
+	
+	
 }

@@ -18,7 +18,18 @@ class ViewSelectModel(controller:GraphViewController) extends SelectSender {
 	def deselect(notify:Boolean)= {
 		elList.clear
 		controller.stopModus()
+		controller.canvas.repaint
 		if(notify) notifyListeners
+	}
+	
+	/** removes all elements from the given Layer from the selection
+	 * 
+	 * @param lay
+	 */
+	def deselectLayer(lay:Layer) = {
+		for(el <-lay.elemList)
+			elemRemoved(el)
+		notifyListeners	
 	}
 	
 	/** adds the elements to the selection
@@ -58,8 +69,8 @@ class ViewSelectModel(controller:GraphViewController) extends SelectSender {
 		}
 	}
 	
-	def elemChanged(oldEl:GraphElem,newEl:GraphElem)={
-		val ix=list.indexOf(oldEl)
+	def elemChanged(newEl:GraphElem)={
+		val ix=list.findIndexOf(_.ref==newEl.ref)
 		if(ix> -1) list(ix)=newEl
 	}
 	

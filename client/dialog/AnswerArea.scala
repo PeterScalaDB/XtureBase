@@ -30,6 +30,7 @@ class AnswerArea extends BoxPanel(scala.swing.Orientation.Vertical ) {
   	poolArray foreach( _.reset)
   	customPools.values.foreach( _.reset)
   	contents.clear
+  	revalidate
   }
   
   def loadAnswerDefinitions(question:ParamQuestion) = {

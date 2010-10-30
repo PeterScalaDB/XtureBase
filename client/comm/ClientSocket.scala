@@ -79,7 +79,9 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 	private def readInTypes(in: DataInputStream) = {
 		val xmlString=in.readUTF()
 		//println(xmlString)
-		AllClasses.set(new ClientClasses(scala.xml.XML.loadString(xmlString)))		
+		AllClasses.set(new ClientClasses(scala.xml.XML.loadString(xmlString)))	
+		//println(AllClasses.get.getClassByID(40).actions .mkString)
+		//println(AllClasses.get.getClassByID(40).createActions .mkString)
 		//println(AllClasses.get.classList.mkString)
 		println("Types got")
 	}

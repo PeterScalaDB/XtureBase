@@ -41,15 +41,18 @@ class BoolAnswerPanel  extends AnswerPanel {
 
 class StringAnswerPanel extends  AnswerPanel {	
 	val textField=new TextField("")
-	val okBut = new Button("ok")	
-	
-	contents +=infoLabel+= Swing.RigidBox(new Dimension(10,0))+=textField+=Swing.RigidBox(new Dimension(10,0))+=okBut
-	listenTo(textField,okBut)
+	//val okBut = new Button("ok")	
+	override def loadParamAnswer(answerDesc:ParamAnswerDefinition)= {
+		super.loadParamAnswer(answerDesc)
+		textField.requestFocusInWindow
+	}
+	contents +=infoLabel+= Swing.RigidBox(new Dimension(10,0))+=textField+=Swing.HGlue
+	listenTo(textField)
 	initReactions()
 	
 	def initReactions()= {
 		reactions+= {
-			case ButtonClicked(e) =>  func(ansParm,new StringConstant(textField.text))				
+			case EditDone(e) =>  func(ansParm,new StringConstant(textField.text))				
 		}	
 	}
 	override def reset()= textField.text=""
@@ -60,10 +63,11 @@ class StringAnswerPanel extends  AnswerPanel {
 class IntAnswerPanel extends  StringAnswerPanel {		
 	override def initReactions() = {
 		reactions+= {
-			case ButtonClicked(e) => {
+			case EditDone(e) => {
 				try {
-
-					func(ansParm,new IntConstant(textField.text.toInt))	
+					val tx=textField.text.trim
+					if(tx.size>0)
+					func(ansParm,new IntConstant(tx.toInt))	
 				}
 				catch {
 					case ex:Exception => println(ex)
@@ -77,9 +81,10 @@ class IntAnswerPanel extends  StringAnswerPanel {
 class DoubleAnswerPanel extends  StringAnswerPanel {		
 	override def initReactions() = {
 		reactions+= {
-			case ButtonClicked(e) => {
+			case EditDone(e) => {
 				try {
 					val tx=textField.text.trim.replace(',','.')
+					if(tx.size>0)
 					func(ansParm,new DoubleConstant(tx.toDouble))	
 				}
 				catch {

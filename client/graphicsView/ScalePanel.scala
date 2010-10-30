@@ -18,6 +18,7 @@ class ScalePanel(model:ScaleModel,controller:GraphViewController) extends BoxPan
 	val scaleEdit=new TextField("")
 	val relativeEdit=new TextField("1 : 100")
 	val smallFont=new Font("Arial",0,10)
+	var selfChanged=false
 	zoomAllBut.font=(smallFont)
 	zoomInBut.font=smallFont
 	zoomOutBut.font=smallFont
@@ -32,7 +33,7 @@ class ScalePanel(model:ScaleModel,controller:GraphViewController) extends BoxPan
 	scaleEdit.font=smallFont
 	relativeEdit.font=smallFont
 	
-	listenTo(zoomAllBut,zoomInBut,zoomOutBut,relativeEdit)
+	listenTo(zoomAllBut,zoomInBut,zoomOutBut,relativeEdit,scaleEdit)
 	
 	reactions += {
 		case ButtonClicked(`zoomAllBut`)=> controller.zoomAll
@@ -45,10 +46,21 @@ class ScalePanel(model:ScaleModel,controller:GraphViewController) extends BoxPan
 				model.relativeScale=scaleValue
 			}
 		}
+		case EditDone(`scaleEdit`)=> {
+			//if(selfChanged) selfChanged=false
+			//else {
+				val scaleValue=splitScaleText(scaleEdit.text)
+				if(scaleValue!=null){
+					model.setScaleRatio(scaleValue._1,scaleValue._2)
+			//	}
+			}
+		}
+		
 	}
 	
 	model.registerScaleListener(()=>{
 		val sc=model.getScaleRatio
+		selfChanged=true
 		scaleEdit.text=scaleToText(sc._1)+" : "+scaleToText(sc._2)
 	})
 	background=Color.gray
