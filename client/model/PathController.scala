@@ -9,11 +9,28 @@ import scala.swing.event._
 import scala.collection.immutable._
 import javax.swing.SwingUtilities
 import client.comm.{ClientQueryManager,UserSettings}
+import java.awt.{Dimension,Color}
 
 /** manages the connection of a PathModel and a ListView
  * 
  */
 class PathController (val model:PathModel, val view:ListView[InstanceData],val listener:PathControllable) {
+	
+	class MyRenderer extends Label {
+		preferredSize=new Dimension(50,20)
+		def config( isSelected: Boolean, focused: Boolean, a: InstanceData, index: Int) {
+       //or whatever			
+			opaque=true
+      val prefix=if(index==0) "\u252c"
+  		else if (index==model.dataList.get.size-1) "\u2514\u2500" 
+  		else "\u2514\u252c"
+  	  val indent="    " * (if(index==0) 0 else (index-1))
+  	  text = indent+prefix+" "+(if(a!=null) a.toString else "")  	  
+  	  horizontalAlignment=Alignment.Left
+		}
+	}
+
+	
 	var oldIndex= -1
 	
 	var sizeChangeListeners= collection.mutable.HashSet[(Int)=>Unit]()
@@ -21,7 +38,16 @@ class PathController (val model:PathModel, val view:ListView[InstanceData],val l
 	listener.registerOpenChildCallBack(openChildFromListener)
 	view.peer.setModel(model)
 	view.selection.intervalMode=ListView.IntervalMode.Single
+	view.prototypeCellValue=new InstanceData(new Reference(0,0),Array(),Array(),false)
+	view.fixedCellHeight=24
+	view.background=new Color(220,220,220)
+	//view.peer.setFixedCellHeight(15)
 	view.listenTo(view.selection)
+	view.renderer=new ListView.AbstractRenderer[InstanceData,MyRenderer](new MyRenderer){
+		def configure(list: ListView[_], isSelected: Boolean, focused: Boolean, a: InstanceData, index: Int) {
+			component.config(isSelected,focused,a,index)
+		}
+	}
 	view.reactions += {
 		case ListSelectionChanged(list,range,live) => {			
 			if (!live&& !view.selection.indices.isEmpty) selectionChanged(view.selection.indices.first)			

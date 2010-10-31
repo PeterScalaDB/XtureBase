@@ -117,7 +117,7 @@ class ClassIndexHandler(val theClass:ServerObjectClass)
 	
 	def deleteInstance(inst:Long) =
 	{
-		internalWrite(inst,0,0,0)
+		internalWrite(inst,-1,0,0)
 		TransLogHandler.dataChanged(TransType.deleted,theClass.id,inst,0,0)
 	}
 	
@@ -129,7 +129,7 @@ class ClassIndexHandler(val theClass:ServerObjectClass)
 		for(i<-internFindIxRecord(inst))
 				{
 			     val r=getInstanceRecord(inst)
-			     return (r.dataPos!=0 && r.dataLength!=0) 
+			     return (r.dataPos!= -1 && r.dataLength!=0) 
 				}
 		false
 	}

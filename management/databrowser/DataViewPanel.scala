@@ -109,7 +109,7 @@ object DataViewPanel extends BorderPanel
 		{			
 			val ix:Int= ixTable.selection.rows.head
 			val inst:Long=IndexTableModel.ixList(ix).inst
-			//println("inst: "+inst)
+			println("inst: "+inst)
 			if (StorageManager.instanceExists(InstFieldTableModel.theClass.id,inst))
 			{
 				val r=new Reference(InstFieldTableModel.theClass.id,inst)
@@ -123,10 +123,10 @@ object DataViewPanel extends BorderPanel
 	
 	def createInstance() =
 	{
-		TransactionManager.doTransaction{
+		TransactionManager.doTransaction(0,{
 		  val inst=TransactionManager.tryCreateInstance(InstFieldTableModel.theClass.id, Array(),true)
 		  //TransactionManager.tryWriteInstanceData(inst)	
-		}		
+		}		)
 		IndexTableModel.readTheList
 	}
 	
@@ -138,9 +138,9 @@ object DataViewPanel extends BorderPanel
 			val inst:Long=IndexTableModel.ixList(ix).inst
 			//println("inst: "+inst)
 		  InstFieldTableModel.setInstance(null)	
-		  TransactionManager.doTransaction{
+		  TransactionManager.doTransaction(0,{
 			  TransactionManager.tryDeleteInstance(new Reference(InstFieldTableModel.theClass.id,inst),None)	
-			}	  
+			}	  )
 		  
 		  IndexTableModel.readTheList
 		}

@@ -17,9 +17,9 @@ object FSPaths
 	
 	val setupNode=systemNode.node("setup")
 	
-  val configDir=checkSeparator( dirNode.get("ConfigDir","c:\\"))
+  val configDir=checkSeparator( dirNode.get("ConfigDir","config"))
   
-  val dataDir=checkSeparator( dirNode.get("DataDir","c:\\temp\\"))
+  val dataDir=checkSeparator( dirNode.get("DataDir","data"))
   
   val serverPort=setupNode.get("ServerPort","9000").toInt
   

@@ -14,13 +14,16 @@ The aim of this project is to create a *database* that:
 
 My short term goal is to create a simple 2d graphical editor, to test the database and UI concept.
 * current state: with the sample data structure it is possible to read in 2D DXF files and 
-store lines as database elements. The drawings can be displayed on screen and distributed 
+store lines and arcs as database elements. The drawings can be displayed on screen and distributed 
 over network. Yeah !
+- Next step to do is managing the UNDO journal and database reorganisation
 
 The long term objective is to create a multifunctional database to describe a building in a graphical and textual way and store all related data in one place
 
-The database is written in "Scala":http://www.scala-lang.org/
+The database is written in the language "Scala":http://www.scala-lang.org/
 
 Read more:
 
 "Database specification":http://wiki.github.com/PeterScalaDB/AtectBase/database-specification
+
+You can find a pre-alpha binary test version of the system in the "download area":http://github.com/PeterScalaDB/XtureBase/archives/master

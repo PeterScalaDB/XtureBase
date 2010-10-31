@@ -16,7 +16,7 @@ import definition.expression.VectorConstant
 class Layer(val controller:GraphViewController,override val ref:Reference,val name:String,var visible:Boolean,var edible:Boolean)
   extends Referencable {
 	var subsID:Int= -1
-	var elemList:IndexedSeq[GraphElem]=IndexedSeq.empty
+	var elemList:Seq[GraphElem]=IndexedSeq.empty
   val bounds=new Rectangle2D.Double(0,0,0,0)
 	var startTime:Long=_
 	var firstLoad=true
@@ -99,7 +99,8 @@ class Layer(val controller:GraphViewController,override val ref:Reference,val na
 		bounds.y=Math.MAX_DOUBLE
 		bounds.width=Math.MIN_DOUBLE
 		bounds.height=Math.MIN_DOUBLE
-		for(elem<-elemList) checkElemBounds(elem)
+		for(elem<-elemList) 
+			checkElemBounds(elem)
 		bounds.width-=bounds.x
 		bounds.height-=bounds.y
 		//println
@@ -127,12 +128,13 @@ class Layer(val controller:GraphViewController,override val ref:Reference,val na
 	}
 	
 	def checkElemBounds(elem:GraphElem) = {
-	  if (elem.minX<bounds.x)bounds.x=elem.minX
-		if (elem.minY<bounds.y)bounds.y=elem.minY
+		val eb=elem.getBounds
+	  if (eb.x<bounds.x)bounds.x=eb.x
+		if (eb.y<bounds.y)bounds.y=eb.y
 		// use the width fields as maxX and height as maxY
-		if (elem.maxX>(bounds.width))bounds.width=elem.maxX
+		if (eb.width>(bounds.width))bounds.width=eb.width
 		//print (" e.maxY:"+elem.maxY+" b.y:"+bounds.y+" b.h:"+bounds.height)
-		if (elem.maxY>(bounds.height))bounds.height=elem.maxY	
+		if (eb.height>(bounds.height))bounds.height=eb.height	
 	}
 }
 

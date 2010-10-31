@@ -79,9 +79,12 @@ class PathModel extends AbstractListModel {
   	return 0
  }
 
-  def getElementAt(index: Int): Object = {
-  	getInstanceAt(index)
- 	}
+  def getElementAt(index: Int): Object = 
+  	if (dataList.isDefined) {  		
+  		getInstanceAt(index)
+		} else null
+ 	
+
   
   def getInstanceAt(index:Int  ):InstanceData = {
   	for(list <-dataList)

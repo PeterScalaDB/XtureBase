@@ -46,12 +46,12 @@ class AbstractActionPanel extends BoxPanel(scala.swing.Orientation.Vertical)  {
 	
 	reactions += {
 		case ButtonClicked(e:ActionButton) => if(instList!=null){			
-			if (e.question ==None ) {
+			if (e.theAction.question ==None ) {
 				//println("Execute action " +e.text)
-				if(e.newTypeID>0) ClientQueryManager.executeCreateAction(instList,e.newTypeID,e.propField,e.text,Seq())
+				if(e.newTypeID>0) ClientQueryManager.executeCreateAction(instList,e.newTypeID,e.propField,e.theAction.name,Seq())
 				else ClientQueryManager.executeAction(instList,e.text,Seq())
 			}
-			else listenerSet foreach (_.startActionDialog(e.text,e.question.get,instList,e.newTypeID))
+			else listenerSet foreach (_.startActionDialog(e.text,e.theAction.question.get,instList,e.newTypeID))
 		}	
 	}  
   
@@ -66,7 +66,7 @@ class AbstractActionPanel extends BoxPanel(scala.swing.Orientation.Vertical)  {
 	}
 	
 	
-	def getButton(action:AbstractAction,buttonLabel:String =""):ActionButton = {
+	def getButton(theAction:AbstractAction,buttonLabel:String =""):ActionButton = {
 		val retButton= if(buttonList.size>usedButtons) buttonList(usedButtons)
 			 else {
 				 val newBut=new ActionButton
@@ -76,8 +76,8 @@ class AbstractActionPanel extends BoxPanel(scala.swing.Orientation.Vertical)  {
 			 }
 		retButton.newTypeID=0
 		if(buttonLabel!="") retButton.text=buttonLabel 
-		else retButton.text=action.name
-		retButton.question=action.question
+		else retButton.text=theAction.name
+		retButton.theAction=theAction
 		usedButtons += 1
 		retButton
 	}
@@ -89,7 +89,7 @@ class AbstractActionPanel extends BoxPanel(scala.swing.Orientation.Vertical)  {
 	class ActionButton extends Button {
 		var newTypeID:Int=_
 		var propField:Byte = _
-		var question:Option[ParamQuestion]=_	
+		var theAction:AbstractAction=_	
 		preferredSize=buttonSize		
 		maximumSize=buttonSize
 		focusable=false

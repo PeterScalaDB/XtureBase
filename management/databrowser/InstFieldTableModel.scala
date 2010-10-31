@@ -22,6 +22,7 @@ object InstFieldTableModel extends AbstractTableModel
 	def setClass(newClass:AbstractObjectClass) = 
 	{
 		theClass=newClass
+		instance=null
 		fireTableStructureChanged()
 	}
   
@@ -39,7 +40,7 @@ object InstFieldTableModel extends AbstractTableModel
      else theClass.fields.size+ 1     
   }
      
-  override def isCellEditable(rowIndex:Int,columnIndex:Int) = (rowIndex>1) && (columnIndex==1)
+  override def isCellEditable(rowIndex:Int,columnIndex:Int) = (rowIndex>0) && (columnIndex==1)
   
 
   
@@ -47,7 +48,7 @@ object InstFieldTableModel extends AbstractTableModel
   
   def getValueAt(row:Int,column:Int):java.lang.Object =
   {
-  	if(instance==null) " "
+  	if(theClass==null) " "
   	else 
     column match {
   		case 0 =>    	row match{
@@ -55,12 +56,12 @@ object InstFieldTableModel extends AbstractTableModel
     		case 0 => "Owner"
     		case _ => theClass.fields(row-1).name    	    	
       }
-  		case 1 => row match{
+  		case 1 => if(instance==null) " " else  row match{
     		
     		case 0 => instance.owners.mkString(", ")
-    		case _ => instance.fieldData(row-1).getTerm 
+    		case _ => if(row<=instance.fieldData.size) instance.fieldData(row-1).getTerm else " " 
     	}
-  		case 2 => if(row<1) " " else { 
+  		case 2 => if(instance==null || row<1) " " else { 
   			instance.fieldValue(row-1).toString
   		}
   		case _ => "bla"
@@ -71,13 +72,13 @@ object InstFieldTableModel extends AbstractTableModel
   
   override def setValueAt(obj:Object,row:Int,column:Int) =
   {
-  	if((row>1)&&(column==1)&& instance!=null)
+  	if((row>0)&&(column==1)&& instance!=null)
   	{
   		val f:Byte=(row-1).toByte  		
   		
-  		TransactionManager.doTransaction {	
+  		TransactionManager.doTransaction(0, {	
   			TransactionManager.tryWriteInstanceField(instance.ref,f,StringParser.parse(obj.toString))
-  		}
+  		})
   		
   	}
   }

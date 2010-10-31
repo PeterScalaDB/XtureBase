@@ -53,13 +53,16 @@ class GraphElemModule extends ActionModule {
 				else if(param(0)._2.getType==DataType.DoubleTyp )
 					new VectorConstant (param(0)._2.toDouble,param(1)._2.toDouble,0)
  			  else throw new IllegalArgumentException(" move wrong parametertype ")
-			  println("move delta:"+delta)
+			  //println("move delta:"+delta)
 				for(d <-data) {
 					
 					if(d.ref.typ==TypeInfos.lineTyp) {						
 						TransactionManager.tryWriteInstanceField(d.ref,3,d.fieldValue(3).toVector+delta)
 						TransactionManager.tryWriteInstanceField(d.ref,4,d.fieldValue(4).toVector+delta)
-					}				 
+					} else
+					if(d.ref .typ==TypeInfos.arcTyp) {
+						TransactionManager.tryWriteInstanceField(d.ref,3,d.fieldValue(3).toVector+delta)
+					}
 				}
 			  
 		  true	
@@ -80,12 +83,17 @@ class GraphElemModule extends ActionModule {
 					new VectorConstant (param(0)._2.toDouble,param(1)._2.toDouble,0)
  			  else throw new IllegalArgumentException(" move wrong parametertype ")				
 				for(d <-data) {
-					if(d.ref.typ==TypeInfos.lineTyp) {
-						val inst=TransactionManager.tryCreateInstance(TypeInfos.lineTyp,d.owners,false)
-						val instVal=d.clone(inst.ref,d.owners).setField(3,d.fieldValue(3).toVector+delta).setField(4,
-							d.fieldValue(4).toVector+delta)						
-						TransactionManager.tryWriteInstanceData(instVal)						
+					val createInst=TransactionManager.tryCreateInstance(d.ref.typ,d.owners,false)
+					var newInst=d.clone(createInst.ref,d.owners)
+					if(d.ref.typ==TypeInfos.lineTyp) {						
+						newInst=newInst.setField(3,d.fieldValue(3).toVector+delta).setField(4,
+							d.fieldValue(4).toVector+delta)												
 					}
+					else if(d.ref.typ==TypeInfos.lineTyp) {						
+						newInst=newInst.setField(3,d.fieldValue(3).toVector+delta)
+												
+					}
+					TransactionManager.tryWriteInstanceData(newInst)
 				}			
 		  true	
 		}
@@ -102,7 +110,7 @@ class LineModule extends ActionModule {
 	override def getActionsIterator() =  Seq.empty.iterator
 	
 	def nextPointQuestion:ParamQuestion=new ParamQuestion("Linie bis Punkt",Seq(
-  	new ParamAnswerDefinition("weiterer Punkt",DataType.VectorTyp,None,"LineTo")),true)
+  	new ParamAnswerDefinition("weiterer Punkt",DataType.VectorTyp,None,"LT_Line")),true)
   def lineQuestion=new ParamQuestion("Linie erzeugen",Seq(new ParamAnswerDefinition("StartPunkt",DataType.VectorTyp,
   	Some(nextPointQuestion),"Create")))
 	
@@ -124,5 +132,6 @@ class LineModule extends ActionModule {
 
 package object TypeInfos {		
 	val lineTyp=AllClasses.get.getClassIDByName("LineElem")
+	val arcTyp=AllClasses.get.getClassIDByName("ArcElem")
 	
 }

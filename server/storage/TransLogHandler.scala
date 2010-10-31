@@ -16,7 +16,7 @@ object TransLogHandler
 	val theFile= new RandomAccessFile(fileName,"rwd")
 	val bufferStream=(new MyByteStream(34))
 	val outStream=new DataOutputStream(bufferStream)
-	
+	var nextUserID:Short=0
 		
 	var transID:Long =
 		if(theFile.length==0) { theFile.writeLong(1); 1 } 
@@ -24,7 +24,11 @@ object TransLogHandler
 	theFile.seek(theFile.length)
   
 	
-	def incrementTransID():Long = {transID += 1; transID } 
+	def incrementTransID(theNextUserID:Short):Long = {
+		nextUserID=theNextUserID
+		transID += 1; 
+		transID 
+	} 
 	
 	def resetTransID()= transID -=1
 	
@@ -42,6 +46,7 @@ object TransLogHandler
 		bufferStream.reset()		
 		outStream.writeByte(transTyp.id)
 		outStream.writeLong(transID)
+		outStream.writeShort(nextUserID)
 		outStream.writeInt(typ)		
 		outStream.writeLong(inst )
 		outStream.writeLong(dataPos)
@@ -56,17 +61,19 @@ object TransLogHandler
 		theFile.close
 	}
 	
-	def readFullIndex():Array[(Byte,Long,Int,Long,Long,Int)] = {
+	def readFullIndex():Array[LogIndexSet] = {
 		theFile.seek(8)
-		var retList: List [(Byte,Long,Int,Long,Long,Int)] =Nil
+		var retList: List [LogIndexSet] =Nil
 		while(theFile.getFilePointer < theFile.length)
-			retList= (theFile.readByte,theFile.readLong,theFile.readInt,theFile.readLong,theFile.readLong,theFile.readInt) :: retList
+			retList= LogIndexSet(TransType(theFile.readByte),theFile.readLong,theFile.readShort,
+				theFile.readInt,theFile.readLong,theFile.readLong,theFile.readInt) :: retList
 		retList.reverse.toArray
 	}
 	
 	
 }
 
+case class LogIndexSet(transTyp: TransType.Value,trID:Long,userID:Int,typ:Int,inst:Long,dataPos:Long,dataLength:Int)
 
 /**
  *  defines the transaction types

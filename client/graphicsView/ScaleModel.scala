@@ -109,10 +109,16 @@ class ScaleModel {
 			_world_X=zoomStack.head.x
 			_world_Y=zoomStack.head.y
 			_world_Width=zoomStack.head.width
-			_world_Height=zoomStack.head.height
-			calcOffsets
-			notifyScaleChanged()
+			_world_Height=zoomStack.head.height			
+		} else { // zoom farther out
+			_world_X = wbx1-(wbx2-wbx1)/4
+			_world_Width =(wbx2-wbx1)*1.5
+			_world_Y = wby1-(wby2-wby1)/4
+			_world_Height=(wby2-wby1)*1.5
+			zoomStack=collection.immutable.List(new Rectangle2D.Double(_world_X,_world_Y,_world_Width,_world_Height))			
 		}
+		calcOffsets
+		notifyScaleChanged()
 	}
 	
 	def moveLeft= {

@@ -165,10 +165,10 @@ private var userName=""
 		val field=in.readByte
 		val expr=Expression.read(in)
 		try {
-			val ret=TransactionManager.doTransaction {
+			val ret=TransactionManager.doTransaction(userEntry.info.id, {
 				if (!TransactionManager.tryWriteInstanceField(ref,field,expr))
 					error=new CommandError("Unknown Issue",ClientCommands.writeField.id,0)
-			}
+			})
 			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.copyInstance.id,0)
 		} 
 	catch {
@@ -197,11 +197,11 @@ private var userName=""
 		val field=in.readByte
 		val expr=Expression.read(in)
 		try {
-			val ret=TransactionManager.doTransaction {
+			val ret=TransactionManager.doTransaction(userEntry.info.id, {
 				for(ref<-refList)
 				if (!TransactionManager.tryWriteInstanceField(ref,field,expr))
 					error=new CommandError("Unknown Issue",ClientCommands.writeField.id,0)
-			}
+			})
 			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.copyInstance.id,0)
 		} 
 	catch {
@@ -231,11 +231,11 @@ private var userName=""
 		val ownerArray:Array[OwnerReference]=(for (i <-0 until ownerCount) yield OwnerReference.read(in)).toArray
 
 		try {
-			val ret=TransactionManager.doTransaction {
+			val ret=TransactionManager.doTransaction(userEntry.info.id, {
 				val inst= TransactionManager.tryCreateInstance(typ,ownerArray,true)
 				if (inst==null)	error=new CommandError("Unknown Issue",ClientCommands.createInstance.id,0)
 				else result=inst.ref.instance 
-			}
+			})
 			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.createInstance.id,0)
 		} 
 	catch {
@@ -262,10 +262,10 @@ private var userName=""
 		var result:Constant=null
 		val ref=Reference(in)			
 		try {
-			val ret=TransactionManager.doTransaction {
+			val ret=TransactionManager.doTransaction (userEntry.info.id,{
 				if (!TransactionManager.tryDeleteInstance(ref,None))
 					error=new CommandError("Unknown Issue",ClientCommands.writeField.id,0)
-			}
+			})
 			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.deleteInstance.id,0)
 		} 
 	catch {
@@ -295,12 +295,12 @@ private var userName=""
 		var instID=0L
 		//SimpleProfiler.startMeasure("start copy")
 		try {
-			val ret=TransactionManager.doTransaction {
+			val ret=TransactionManager.doTransaction(userEntry.info.id, {
 				instID=TransactionManager.tryCopyInstance(ref,fromOwner,toOwner,true)
 				if(instID<0)
 					error=new CommandError("Unknown Issue",ClientCommands.copyInstance.id,0)
 				//SimpleProfiler.measure("preparing ready")
-			}
+			})
 			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.copyInstance.id,0)
 		} 
 	catch {
@@ -333,7 +333,7 @@ private var userName=""
 					yield (in.readUTF,Expression.readConstant(in))
 		
 		try {
-			val ret=TransactionManager.doTransaction {
+			val ret=TransactionManager.doTransaction(userEntry.info.id, {
 				println("Execute Action "+actionName+ " instances:"+instList.mkString(",")+" create:"+createAction+" new Type:"+newType)
 		    //println("params: "+paramList.mkString(","))
 				if(actionName=="*" && createAction&&instList.size==1) simplyCreateInstance(instList,newType,propField)
@@ -355,7 +355,7 @@ private var userName=""
 						case e => println("unknown type "+e)
 					}		
 				}		
-			}
+			})
 			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.executeAction.id,0)
 		} 
 	catch {
@@ -376,7 +376,7 @@ private var userName=""
 	}
 	
 	def simplyCreateInstance(parentList:Seq[InstanceData],newType:Int,propField:Byte) = {
-		val ownerRef=new OwnerReference(propField,parentList(1).ref)
+		val ownerRef=new OwnerReference(propField,parentList(0).ref)
 		val inst=TransactionManager.tryCreateInstance(newType,Array(ownerRef),true)		
 	}
 	

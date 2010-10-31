@@ -22,10 +22,10 @@ object TransactionManager {
 	
 	
 	// Starts a new Transaction
-	private def startTransaction() =	{		
+	private def startTransaction(userID:Short) =	{		
 	  if(running ) throw new IllegalArgumentException("An Transaction is still running ")
 		running=true
-	  TransLogHandler.incrementTransID();
+	  TransLogHandler.incrementTransID(userID);
 	  //println("Start Trans " +TransLogHandler.transID)
 	}
 	
@@ -653,8 +653,8 @@ object TransactionManager {
 	 *  encapsulates a transaction so that StartTransaction and Finishtransaction/BreakTransaction
 	 *  will always be executed
 	 */
-	def doTransaction (f :  => Unit):Option[Exception] = transLock.synchronized{
-    startTransaction()
+	def doTransaction (userID:Short,f :  => Unit):Option[Exception] = transLock.synchronized{
+    startTransaction(userID)
     var success=true
     try {
         f

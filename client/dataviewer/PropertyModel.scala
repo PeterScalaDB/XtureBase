@@ -8,7 +8,9 @@ import definition.typ._
 import definition.comm._
 import client.comm._
 import scala.swing._
+import scala.swing.event._
 import javax.swing.SwingUtilities
+import java.awt.Color
 
 /** manages all data changes of a property field of a instance
  * the PropertyModels are specialized on a certain allowed class
@@ -24,7 +26,22 @@ class PropertyModel(val mainController:DataViewController) {
 	var tableModMap=scala.collection.mutable.HashMap[Int,TypeTableModel]()
 	
 	val titleLabel=new Label("Prop")
-	val tableArea=new BoxPanel (scala.swing.Orientation.Vertical )
+	val tableArea=new BoxPanel (scala.swing.Orientation.Vertical ) {		
+		//background=Color.green		
+		listenTo(mouse.clicks )
+		reactions+= {
+			case e:FocusGained => {
+				println("Click")
+				
+			}
+			case e:MouseClicked => {
+				println("mouseclick")
+				focusGained
+			}
+		}
+	}
+	
+	
 	val panel=new BorderPanel {
 		add(titleLabel,BorderPanel.Position.North)
 		add(tableArea,BorderPanel.Position.Center)

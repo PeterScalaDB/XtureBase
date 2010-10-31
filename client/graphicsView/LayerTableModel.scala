@@ -21,6 +21,7 @@ class LayerTableModel(controller:GraphViewController) extends AbstractTableModel
   var activeLayer:Int=0
   val javaTrue=new java.lang.Boolean(true)
   val javaFalse=new java.lang.Boolean(false)
+  val newElemLayer=new NewElemLayer(controller)
   
   var canLoadElements:Boolean=false
   
@@ -106,10 +107,10 @@ class LayerTableModel(controller:GraphViewController) extends AbstractTableModel
   
   
   def getNextActiveLayer:Int= {
-  			  for(i <- 0 until layerList.size;val alay=layerList(i))
-  			  	if(alay.visible && alay.edible) return i
-  			  -1
-  			}
+  		for(i <- 0 until layerList.size;val alay=layerList(i))
+  			if(alay.visible && alay.edible) return i
+  			-1
+  	}
   
   
   def containsRef(ref:Reference) = layerList.exists(_.ref ==ref)
@@ -167,17 +168,21 @@ class LayerTableModel(controller:GraphViewController) extends AbstractTableModel
 		bounds.y=Math.MAX_DOUBLE
 		bounds.width=Math.MIN_DOUBLE
 		bounds.height=Math.MIN_DOUBLE
-		for(lay <-layerList) if (lay.visible) {
-			val lb=lay.calcBounds
-			if(lb.x<bounds.x)bounds.x=lb.x
-			if(lb.y<bounds.y)bounds.y=lb.y
-			// use bounds.width as maxX
-			if(lb.x+lb.width>bounds.width)bounds.width=lb.x+lb.width
-			if(lb.y+lb.height>bounds.height)bounds.height=lb.y+lb.height
-		}
+		for(lay <-layerList; if (lay.visible)) 
+			doLayerCheck(lay,bounds)
+		doLayerCheck(newElemLayer,bounds)
 		bounds.width-=bounds.x
 		bounds.height-=bounds.y
 		bounds
+	}
+	
+	private def doLayerCheck(lay:Layer,bounds:Rectangle2D.Double) = {
+		val lb=lay.calcBounds
+		if(lb.x<bounds.x)bounds.x=lb.x
+		if(lb.y<bounds.y)bounds.y=lb.y
+		// use bounds.width as maxX
+		if(lb.x+lb.width>bounds.width)bounds.width=lb.x+lb.width
+		if(lb.y+lb.height>bounds.height)bounds.height=lb.y+lb.height
 	}
 	
 	def setCanLoadElements(value:Boolean)= {
@@ -186,8 +191,14 @@ class LayerTableModel(controller:GraphViewController) extends AbstractTableModel
 	}
 	
 	def checkElementPoints(checkFunc:(GraphElem)=>Seq[(Byte,VectorConstant)]):Seq[(Byte,VectorConstant)]= {
-		layerList.flatMap(_.checkElementPoints(checkFunc))
-		//layerList.flatMap(_.elemList.flatMap(checkFunc))
-		
+		val ret1=layerList.flatMap(_.checkElementPoints(checkFunc))
+		val ret2=(newElemLayer.checkElementPoints(checkFunc))
+		collection.mutable.ArrayBuffer()++=ret1++=ret2		
+	}
+	
+	def filterLayersSelection(filtFunc:(GraphElem)=>Boolean):Seq[GraphElem]= {
+		val ret1=layerList.flatMap(_.filterSelection(filtFunc))
+		val ret2=newElemLayer.filterSelection(filtFunc)
+		collection.mutable.ArrayBuffer()++=ret1++=ret2
 	}
 }

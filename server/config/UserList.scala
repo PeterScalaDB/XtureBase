@@ -6,7 +6,7 @@ package server.config
 /**
  * 
  */
-case class UserInfo(name:String,id:Int,password:String ) {
+case class UserInfo(name:String,id:Short,password:String ) {
 	
 	def toXML():scala.xml.Node = {
 		<User name={name} id={id.toString} password={password}> </User>
@@ -20,7 +20,7 @@ case class UserInfo(name:String,id:Int,password:String ) {
 object UserInfo {
 	def fromXML(node: scala.xml.Node)= {
 		val name=(node \"@name").text
-		val id=(node \"@id").text.toInt
+		val id=(node \"@id").text.toShort
 		val password = (node \"@password").text
 		UserInfo(name,id,password)
 	}

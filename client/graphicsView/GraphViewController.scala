@@ -31,22 +31,17 @@ class GraphViewController {
   val layerModel=new LayerTableModel(this)
 	
 	var pointListener:PointClickListener=_
-	var lastSelectedPoint:VectorConstant=new VectorConstant(0,0,0)
-	
+	var lastSelectedPoint:VectorConstant=new VectorConstant(0,0,0)	
 	var bracketMode:Boolean = false
   
   // cache the state if the visible layer list is empty
-  var cacheVisibleLayers=false
-    
-  private var _viewportState=ViewportState.SelectState
-  
-  def viewportState=_viewportState  
-	
-  var isZoomingIn=false
-  
-  val lineToPointBuffer=collection.mutable.ArrayBuffer[VectorConstant]()
-	
-		
+  var cacheVisibleLayers=false    
+  private var _viewportState=ViewportState.SelectState  
+  def viewportState=_viewportState  	
+  var isZoomingIn=false  
+  //val lineToPointBuffer=collection.mutable.ArrayBuffer[VectorConstant]()
+  var rubberStartPoint:VectorConstant=null
+	var currLineToFactory:(VectorConstant,VectorConstant)=>GraphElem=null		
 	val canvas=new GraphViewCanvas(this)
 	val scalePanel=new ScalePanel(scaleModel,this)
 	
@@ -57,9 +52,7 @@ class GraphViewController {
 	val canvasPanel=new BorderPanel {
 		add(canvas,BorderPanel.Position.Center)
 		add(scalePanel,BorderPanel.Position.North)
-	}
-	
-	
+	}	
 	
 	canvas.peer.addHierarchyBoundsListener( new HierarchyBoundsListener(){			
 			def ancestorMoved(e:HierarchyEvent ) ={}
@@ -68,11 +61,7 @@ class GraphViewController {
 				 //if(e.getChanged==canvas.peer)
 					scaleModel.viewSize=canvas.size			
 			}
-	})
-	
-	def filterLayersSelection(filtFunc:(GraphElem)=>Boolean):Seq[GraphElem]= {
-		layerModel.layerList.flatMap(l => l.filterSelection(filtFunc))
-	}
+	})	
 	
 	def registerContainerListener(newList:ContainerFocusListener) = 
 		containerFocusListeners+=newList
@@ -161,8 +150,14 @@ class GraphViewController {
 	  val minY=Math.min(p1y,p2y)
 	  val maxY=Math.max(p1y,p2y)
 	  val elemList= 
-	  	if(onlyInside) filterLayersSelection(e=> e.minX>=minX && e.maxX<=maxX && e.minY>=minY && e.maxY<=maxY)
-	  	else filterLayersSelection(e=> e.maxX>=minX && e.minX<=maxX && e.maxY>=minY && e.minY<=maxY)	  	
+	  	if(onlyInside) layerModel.filterLayersSelection(e=>{
+	  		val eb=e.getBounds
+	  		eb.x>=minX && eb.width<=maxX && eb.y>=minY && eb.height<=maxY
+	  	})
+	  	else layerModel.filterLayersSelection(e=>{
+	  		val eb=e.getBounds
+	  		eb.width>=minX && eb.x<=maxX && eb.height>=minY && eb.y<=maxY	  	
+	  	})
 	  if(add) {
 	  	if(!elemList.isEmpty)selectModel.addSelection(elemList,false)
 	  } else {
@@ -190,7 +185,7 @@ class GraphViewController {
 		} else _viewportState match {
 			case ViewportState.SelectState => {
 				val lineCatchDistance=canvas.lineCatchDistance.toDouble/scaleModel.scale
-		    val hittedElements=filterLayersSelection(_.hits(clickPosX,clickPosY,lineCatchDistance) )
+		    val hittedElements=layerModel.filterLayersSelection(_.hits(clickPosX,clickPosY,lineCatchDistance) )
 		    //println("hitted elements:"+hittedElements)
 		    if(control) {
 		    	if(!hittedElements.isEmpty) selectModel.addSelection(hittedElements,true)
@@ -229,12 +224,25 @@ class GraphViewController {
 		if(bracketMode) {
 			canvas.repaint
 			//if(lineToPointBuffer.isEmpty) lineToPointBuffer+=point
-			lineToPointBuffer(lineToPointBuffer.size-1)=point
+			//lineToPointBuffer(lineToPointBuffer.size-1)=point
 		}
 		else {
-			lineToPointBuffer+=point
-			pointListener.pointClicked(point)
+			//lineToPointBuffer+=point
+			processPoint(point)
 		}
+	}
+	
+	def processPoint(point:VectorConstant) = {
+		_viewportState match {
+			case ViewportState.LineTo => {
+				val newElem=currLineToFactory(rubberStartPoint,point)
+				layerModel.newElemLayer.addTempElement(newElem)
+			}
+			case _ =>
+		}
+		//println("processpoint rubber:"+rubberStartPoint+" point:"+point)
+		rubberStartPoint=point
+		pointListener.pointClicked(point)		
 	}
 	
 	def changeViewportState(newState:ViewportState.Value) = {
@@ -254,10 +262,10 @@ class GraphViewController {
 	  }		
 	}
 	
-	def cancelModus() = {		
-		changeViewportState(ViewportState.SelectState)
-		bracketMode=false
-		canvas.repaint
+	def cancelModus() = {
+		layerModel.newElemLayer.shutDown
+		changeViewportState(ViewportState.SelectState)		
+		//canvas.repaint
 	}
 	
 	def keyPressed(e:KeyPressed) = {
@@ -288,18 +296,29 @@ class GraphViewController {
 	
 	def askForPointClick(plistener:PointClickListener) = {
 		pointListener=plistener
-		lineToPointBuffer.clear
+		layerModel.newElemLayer.shutDown
+		//lineToPointBuffer.clear
 		changeViewportState(ViewportState.AskPoint)
 	}
 	
-	def askForLineTo(plistener:PointClickListener) = {
+	def askForLineTo(plistener:PointClickListener,
+	                 lineToFactory:(VectorConstant,VectorConstant)=>GraphElem) = {
+		currLineToFactory=lineToFactory
 		pointListener=plistener		
 		changeViewportState(ViewportState.LineTo)
+		println("askforLineTo")
 	}
 	
 	def getNearestPoint(clickPosX:Double,clickPosY:Double):MatchingPoints = {
 		val pointCatchDistance=canvas.pointCatchDistance.toDouble/scaleModel.scale		
-		val hittedPoints=layerModel.checkElementPoints(_.hitPoint(clickPosX, clickPosY, pointCatchDistance))
+		
+		val rubberList = if(rubberStartPoint!=null) 
+			GraphElemFactory.checkHit(clickPosX,clickPosY,pointCatchDistance,rubberStartPoint)
+			else Seq.empty
+		val hittedPoints=if(rubberList.isEmpty)
+			layerModel.checkElementPoints(_.hitPoint(clickPosX, clickPosY, pointCatchDistance))
+			else layerModel.checkElementPoints(_.hitPoint(clickPosX, clickPosY, pointCatchDistance))++rubberList	
+		
 		if(! hittedPoints.isEmpty) {
 			var nearestPoint:VectorConstant= null
 			var nearestX:VectorConstant=null
@@ -350,13 +369,13 @@ class GraphViewController {
 	
 	def startBracketMode() = {
 		bracketMode=true
-		lineToPointBuffer+=lastSelectedPoint
+		//lineToPointBuffer+=lastSelectedPoint
 		canvas.repaint
 	}
 	
 	def stopBracketMode() = {
-		bracketMode=false		
-		pointListener.pointClicked(lastSelectedPoint)
+		bracketMode=false	
+		processPoint(lastSelectedPoint)
 		canvas.repaint
 	}
 	

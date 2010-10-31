@@ -17,6 +17,7 @@ import collection.generic.{CanBuildFrom, GenericTraversableTemplate,
 	GenericCompanion, SeqFactory}
 import collection.mutable.{Builder,ArrayBuffer}
 import collection.immutable.Vector
+import java.awt.Color
 
 
 /** table model for a table showing instances of a certain type
@@ -35,8 +36,7 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 	val table=new Table(){		
 		autoResizeMode=Table.AutoResizeMode.SubsequentColumns
 		//selection.intervalMode=Table.IntervalMode.Single
-		selection.elementMode=Table.ElementMode.Row
-
+		selection.elementMode=Table.ElementMode.Row    		
 		rowHeight=20
 		font=tableFont
 		listenTo(selection)	
@@ -59,11 +59,14 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
       case e:FocusGained =>propMod.focusGained
 		}
 	}
-	table.model=this
+	table.model=this	
+	val colMod=table.peer.getColumnModel()
+	if(colMod.getColumnCount>0) colMod.getColumn(0).setPreferredWidth(30)
 
 	val scroller=new ScrollPane() {
 		viewportView=table
-		preferredSize=new Dimension(100,100)
+		preferredSize=new Dimension(100,100)	
+		
 	}
 
 	def setDataList(data:Seq[InstanceData],selectInstance:Option[Reference]) =  {
@@ -75,8 +78,7 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 			selfAdded=false
 			selectedInstances.buf=data
 			selectedInstances.setFilter(Array())
-		}
-		/*propMod.runSw*/ 
+		}		 
 			fireTableStructureChanged()
 			selectInstance match {
 				case Some(ref) =>if(ref.typ == typ){
@@ -85,11 +87,16 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 				}
 				case _ =>
 			}
-		
+		val colMod=table.peer.getColumnModel()
+		colMod.getColumn(0).setMaxWidth(30)
+		colMod.getColumn(0).setPreferredWidth(30)
 	}
 	
 	def calcSize() = {
-		scroller.preferredSize=new Dimension(100,table.preferredSize.height+30)
+		
+		val tabPrefHeight=table.preferredSize.height+30
+		val mainPanelHeight=propMod.mainController.panel.size.height
+		scroller.preferredSize=new Dimension(100,if(tabPrefHeight>mainPanelHeight-30)mainPanelHeight-30 else tabPrefHeight )
 		//scroller.preferredSize=new Dimension(100,(if (dataList==null || dataList.isEmpty)2 else dataList.size+2)*22)
 		scroller.minimumSize=scroller.preferredSize
 		scroller.revalidate

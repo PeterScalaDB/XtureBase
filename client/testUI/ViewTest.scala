@@ -64,7 +64,7 @@ object ViewTest extends SimpleSwingApplication {
 	
 	val pathScroller =new ScrollPane() {
 				viewportView= pathView
-				pathView.fixedCellHeight=30
+				//pathView.fixedCellHeight=30
 				preferredSize=new Dimension(200,200)
 				def callback(nsize:Int):Unit= {
 					//println(size+" "+pathView.peer.getFixedCellHeight())
@@ -104,7 +104,9 @@ object ViewTest extends SimpleSwingApplication {
 		
 		add (new BorderPanel(){
 			add (pathScroller,BorderPanel.Position.North)
-			add ( viewController.panel,BorderPanel.Position.Center)
+			add (new ScrollPane() {
+				viewportView=viewController.panel
+			},BorderPanel.Position.Center)
 			/*viewController.registerSelectListener(new SelectListener{
 					def selectionChanged(sender:SelectSender,instList:Seq[Referencable])= lastSelected=instList
 				})*/
@@ -142,7 +144,7 @@ object ViewTest extends SimpleSwingApplication {
 		}
 		title="TableTest"
 		contents = mainPanel
-		bounds=new Rectangle(200,200,1600,900)
+		bounds=new Rectangle(20,20,1500,900)
 	}	
 	
 	

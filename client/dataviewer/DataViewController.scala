@@ -9,6 +9,7 @@ import definition.typ._
 import client.dialog._
 
 import scala.swing._
+import java.awt.Color
 
 /** controls the DataViewer
  *  manages the general loading of data
@@ -24,7 +25,7 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	val propertyModels =scala.collection.mutable.ArrayBuffer[PropertyModel]()
 	var numUsedModels=0
 	
-	val panel=new BoxPanel(Orientation.Vertical)
+	val panel=new BoxPanel(Orientation.Vertical) 
 	
 	var selectedInstance: InstanceData= _ // to be deleted
 	
@@ -47,6 +48,7 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	  	val mod=getPropModel
 	  	mod.load(propFieldInfo.allowedClass,i.toByte,propFieldInfo.name,selectRef)
 	  	panel.contents+=mod.panel
+	  	
 	  }
 	  updateHeight()
 	  if(!selectRef.isDefined) selectListener foreach(_.selectionChanged(this,null))

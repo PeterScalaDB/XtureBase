@@ -34,7 +34,7 @@ class AnswerArea extends BoxPanel(scala.swing.Orientation.Vertical ) {
   }
   
   def loadAnswerDefinitions(question:ParamQuestion) = {
-  	reset()
+  	//reset()
   	for(ans <-question.possibleAnswers ) {
   		val panel= ans dataType match {
   			case DataType.BoolTyp =>  boolPool.getPanel()

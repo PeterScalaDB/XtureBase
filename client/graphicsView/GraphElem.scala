@@ -14,25 +14,15 @@ import java.io.{DataInput,DataOutput}
 /** super class for all graphical elements
  * 
  */
-class GraphElem(override val ref:Reference,val color:Int) extends Referencable {
-  def getBounds:Rectangle2D	=new Rectangle2D.Double()
-  def draw(g:Graphics2D,sm:ScaleModel,selectColor:Color=null)={}
-  def minX=0d
-  def maxX=0d
-  def minY=0d
-  def maxY=0d
-  
-  def hits(px:Double,py:Double,dist:Double)=false // hittest  
-  def hitPoint(px:Double,py:Double,dist:Double):Seq[(Byte,VectorConstant)]=Nil
-  
-  def checkHit(px:Double,py:Double,dist:Double,p:VectorConstant):Seq[(Byte,VectorConstant)]={
-  	val xHit=Math.abs(px-p.x)<dist
-  	val yHit=Math.abs(py-p.y)<dist
-  	if(xHit&&yHit) List((GraphElemFactory.HITBOTH,p))
-  	else if(xHit)List((GraphElemFactory.HITX,p))
-  	else if(yHit)List((GraphElemFactory.HITY,p))
-  	else Nil
-  }
+abstract class GraphElem(override val ref:Reference,val color:Int) extends Referencable {
+  def getBounds:Rectangle2D.Double // width counts as maxX, height as maxY	
+  def draw(g:Graphics2D,sm:ScaleModel,selectColor:Color=null)
+  /*def minX:Double
+  def maxX:Double
+  def minY:Double
+  def maxY:Double*/
+  def hits(px:Double,py:Double,dist:Double):Boolean // hittest  
+  def hitPoint(px:Double,py:Double,dist:Double):Seq[(Byte,VectorConstant)]  
 }
 
 object ColorMap {
@@ -46,7 +36,7 @@ object ColorMap {
 		}
 }
 
-class LinearElement(nref:Reference,ncolor:Int,val lineWidth:Int,val lineStyle:Int) extends GraphElem(nref,ncolor)
+abstract class LinearElement(nref:Reference,ncolor:Int,val lineWidth:Int,val lineStyle:Int) extends GraphElem(nref,ncolor)
 
 case class LineElement(nref:Reference,ncolor:Int,nlineWidth:Int,nlineStyle:Int,startPoint:VectorConstant,endPoint:VectorConstant) extends 
 		LinearElement(nref,ncolor,nlineWidth,nlineStyle) {
@@ -56,26 +46,26 @@ case class LineElement(nref:Reference,ncolor:Int,nlineWidth:Int,nlineStyle:Int,s
 	override def toString= "Line ("+startPoint.shortToString+","+endPoint.shortToString+", Col:"+color+", Style:"+lineStyle+")"
 	
 	override def draw(g:Graphics2D,sm:ScaleModel,selectColor:Color=null)={
-		g.setPaint(if(selectColor==null) ColorMap.getColor(color)else selectColor)
-		g.setStroke(sm.getStroke(lineWidth))
+		g.setPaint(if(selectColor==null) ColorMap.getColor(color)else selectColor)		
+		g.setStroke(sm.getStroke(if(lineWidth>0)lineWidth else 1))
 		g.drawLine(sm.xToScreen(startPoint.x) ,sm.yToScreen(startPoint.y) ,
 			sm.xToScreen(endPoint.x),sm.yToScreen(endPoint.y))	
 	}
-	override def minX=if(startPoint.x<endPoint.x) startPoint.x else endPoint.x
-	override def maxX=if(startPoint.x>endPoint.x) startPoint.x else endPoint.x
-	override def minY=if(startPoint.y<endPoint.y) startPoint.y else endPoint.y
-	override def maxY=if(startPoint.y>endPoint.y) startPoint.y else endPoint.y
+	def minX=if(startPoint.x<endPoint.x) startPoint.x else endPoint.x
+	def maxX=if(startPoint.x>endPoint.x) startPoint.x else endPoint.x
+	def minY=if(startPoint.y<endPoint.y) startPoint.y else endPoint.y
+	def maxY=if(startPoint.y>endPoint.y) startPoint.y else endPoint.y
 	
 	override def hits(px:Double,py:Double,dist:Double)= {
 		val calcDist=GraphElemFactory.getLineDistance(startPoint.x,startPoint.y,endPoint.x,endPoint.y,px,py)
 		//println("hittest startp:"+startPoint+" dist:"+calcDist)
-		calcDist<=dist && px>=(minX-dist) && (px<=(maxX)+dist) &&
+		calcDist<=dist && px>=(minX - dist) && (px<=(maxX)+dist) &&
 		  py>=(minY-dist) && (py<=(maxY)+dist)
 	}
 	override def hitPoint(px:Double,py:Double,dist:Double)= {		
 		//println("test x:"+(px-startPoint.x)+ " y:"+(py-startPoint.y))
-		val ret1=checkHit(px,py,dist,startPoint)
-		val ret2=checkHit(px,py,dist,endPoint)
+		val ret1=GraphElemFactory.checkHit(px,py,dist,startPoint)
+		val ret2=GraphElemFactory.checkHit(px,py,dist,endPoint)
 		if(ret1.isEmpty) {
 			if (ret2.isEmpty) Nil
 			else ret2
@@ -90,14 +80,15 @@ case class LineElement(nref:Reference,ncolor:Int,nlineWidth:Int,nlineStyle:Int,s
 case class ArcElement(nref:Reference,ncolor:Int,nlineWidth:Int,nlineStyle:Int,centerPoint:VectorConstant,
 	diameter:Double,startAngle:Double,endAngle:Double) extends 
 		LinearElement(nref,ncolor,nlineWidth,nlineStyle) {
-	lazy val bounds=new Rectangle2D.Double(centerPoint.x-diameter,centerPoint.y-diameter,
-		centerPoint.x+diameter,centerPoint.y+diameter)
+	lazy val bounds=calcArcBounds
+	lazy val points:Seq[VectorConstant]=List(pointFromAngle(startAngle),pointFromAngle(endAngle),centerPoint)
+	//var pointBuffer:collection.mutable.ArrayBuffer[VectorConstant]=null
 	override def getBounds=bounds
 	override def toString= "Arc ("+centerPoint.shortToString+") d="+diameter+", sa:"+startAngle+", eA:"+endAngle+")"
 	
 	override def draw(g:Graphics2D,sm:ScaleModel,selectColor:Color=null)={
 		g.setPaint(if(selectColor==null)ColorMap.getColor(color)else selectColor)
-		g.setStroke(sm.getStroke(lineWidth))
+		g.setStroke(sm.getStroke(if(lineWidth>0)lineWidth else 1))
 		
 		val tx=sm.xToScreen(centerPoint.x-diameter)
 		val ty=sm.yToScreen(centerPoint.y+diameter)
@@ -105,11 +96,17 @@ case class ArcElement(nref:Reference,ncolor:Int,nlineWidth:Int,nlineStyle:Int,ce
 			sm.yToScreen(centerPoint.y-diameter)-ty,
 			startAngle, ((if(endAngle<startAngle)360 else 0)+endAngle-startAngle),Arc2D.OPEN)
 		g.draw(GraphElemFactory.theArc)
-	}
-	override def minX= centerPoint.x-diameter
-	override def maxX= centerPoint.x+diameter
-	override def minY= centerPoint.y-diameter
-	override def maxY= centerPoint.y+diameter
+		val mx=sm.xToScreen(centerPoint.x)
+		val my=sm.yToScreen(centerPoint.y)
+		g.drawLine(mx,my,mx,my)		
+		/*g.setPaint(Color.red)
+		if(pointBuffer!=null)
+		for(p <-pointBuffer) {
+			val px=sm.xToScreen(p.x)
+			val py=sm.yToScreen(p.y)
+			g.drawLine(px,py,px,py)
+		}*/
+	}	
 	
 	override def hits(px:Double,py:Double,dist:Double):Boolean= {
 		val dx=px-centerPoint.x
@@ -118,10 +115,37 @@ case class ArcElement(nref:Reference,ncolor:Int,nlineWidth:Int,nlineStyle:Int,ce
 		if(Math.abs(pd-diameter)>dist) return false
 		var angle=Math.atan2(dy,dx)*180/Math.Pi
 		if(angle<0) angle=360+angle
-		println("Hittest angle:"+angle+" sa:"+startAngle+" ea:"+endAngle)
+		//println("Hittest angle:"+angle+" sa:"+startAngle+" ea:"+endAngle)
 		if(startAngle<endAngle) return (angle>=startAngle)&&(angle<=endAngle)
 		else return (angle>=startAngle)||(angle<=endAngle)
 	}
+	
+	override def hitPoint(px:Double,py:Double,dist:Double)= {		
+		//println("test x:"+(px-startPoint.x)+ " y:"+(py-startPoint.y))	
+		points.flatMap(GraphElemFactory.checkHit(px,py,dist,_))		
+	}
+	
+	def calcArcBounds= {
+		val pointBuffer=collection.mutable.ArrayBuffer[VectorConstant]()+=points.head+=points.tail.head
+		val ea=if(endAngle<startAngle) endAngle+360 else endAngle
+		var nextSegmentAngle=(Math.floor(startAngle/90)+1)*90
+		//println("startAngle "+startAngle+" "+nextSegmentAngle+" ea:"+ea)
+		while (nextSegmentAngle<ea) {
+			val np=pointFromAngle(nextSegmentAngle)
+			//println("nxa:"+nextSegmentAngle+"Np "+np)
+			pointBuffer+=np
+			nextSegmentAngle+=90
+		}
+		//println("calcArcBounds "+pointBuffer.mkString)
+		val b=GraphElemFactory.getPointsBounds(pointBuffer)
+		//println("bounds: "+b)
+		
+		b
+	}
+	def pointFromAngle(angle:Double) = 
+		new VectorConstant(centerPoint.x+Math.cos(angle*Math.Pi/180d)*diameter,
+			centerPoint.y+Math.sin(angle*Math.Pi/180d)*diameter,0)	
+	
 }
 
 
@@ -135,7 +159,7 @@ object GraphElemFactory extends SubscriptionFactory[GraphElem] {
 	val HITY=2.toByte
 	val HITBOTH=3.toByte
 	
-	def emptyFunc(ref:Reference)= new GraphElem(ref,0)
+	def emptyFunc(ref:Reference)= new LineElement(ref,0,0,0,null,null)
 	
 	registerClass(AllClasses.get.getClassIDByName("LineElem"),createLine)
 	registerClass(AllClasses.get.getClassIDByName("ArcElem"),createArc)
@@ -175,6 +199,10 @@ object GraphElemFactory extends SubscriptionFactory[GraphElem] {
 	
 	//def scalarProduct(ax:Double,ay:Double,bx:Double,by:Double,px:Double) = ax*bx+ay*by
 	
+	
+	// Service-Routines -------------------------------------------------
+	
+	
 	def getLineDistance(ax:Double,ay:Double,bx:Double,by:Double,px:Double,py:Double):Double = {
 		val rx=bx-ax
 		val ry=by-ay
@@ -190,6 +218,36 @@ object GraphElemFactory extends SubscriptionFactory[GraphElem] {
 		Math.sqrt(dx*dx+dy*dy)
 	}
 	
+	def checkHit(px:Double,py:Double,dist:Double,p:VectorConstant):Seq[(Byte,VectorConstant)]={
+  	val xHit=Math.abs(px-p.x)<dist
+  	val yHit=Math.abs(py-p.y)<dist
+  	if(xHit&&yHit) List((GraphElemFactory.HITBOTH,p))
+  	else if(xHit)List((GraphElemFactory.HITX,p))
+  	else if(yHit)List((GraphElemFactory.HITY,p))
+  	else Nil
+  }
 	
+	/** width counts as maxX, height as maxY !!!
+	 * 
+	 */
+	def getPointsBounds(points:Seq[VectorConstant]):Rectangle2D.Double = 
+		if(points==null && points.isEmpty) return null
+		else 	{
+			val result=new Rectangle2D.Double(points.head.x,points.head.y,points.head.x,points.head.y)
+			if(points.size>1) for(ix <-1 until points.size) {
+				val p=points(ix)
+				if(p.x<result.x){ result.x=p.x }
+				if(p.y<result.y){ result.y=p.y }
+				if(p.x>result.width) result.width=p.x
+				if(p.y>result.height) result.height=p.y
+			}
+			result
+		}
 	
+	def rectToScreen(r:Rectangle2D.Double,sm:ScaleModel)= {
+		val x=sm.xToScreen(r.x)
+		val y=sm.yToScreen(r.y)
+		val y2=sm.yToScreen(r.height+r.y)
+		new Rectangle2D.Double(x,y2,sm.xToScreen(r.width+r.x)-x,y-y2)
+	}
 }

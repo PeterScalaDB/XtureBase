@@ -110,16 +110,27 @@ class PointAnswerPanel extends AnswerPanel with PointClickListener {
   	active=true
   	println("set Active "+answerDesc.name)
   	if(PointAnswerPanel.currentViewController!=null) {
-  		if(answerDesc.constraint =="LineTo")
-  			PointAnswerPanel.currentViewController.askForLineTo(this)
+  		println("AnswerPanel constraint:"+answerDesc.constraint)
+  		if(answerDesc.constraint.length>3 && answerDesc.constraint.substring(0,3) =="LT_") {
+  			val func=answerDesc.constraint.substring(3,answerDesc.constraint.size) match {
+  				case "Line" => lineFactoryFunc _
+  				case a => throw new IllegalArgumentException("Wrong LineTo Constraint '"+a+"' in answerDesc "+answerDesc)
+  			}
+  			PointAnswerPanel.currentViewController.askForLineTo(this,func)
+  		}
+  			
   		else {
   			if(answerDesc.constraint =="Create")
   				PointAnswerPanel.currentViewController.selectModel.deselect(false)
   			PointAnswerPanel.currentViewController.askForPointClick(this)
   		}
   		
-  	}
-  		
+  	}  		
+  }
+  
+  def lineFactoryFunc (p1:VectorConstant,p2:VectorConstant):GraphElem = {
+  	println("processing factory "+p1+" "+p2)
+  	new LineElement(null,0,10,0,p1,p2) 
   }
   
   override def reset()= {
