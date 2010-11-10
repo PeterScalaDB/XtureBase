@@ -24,6 +24,8 @@ object SessionManager {
   
   val setupListeners=collection.mutable.ArrayBuffer[()=>Unit]()
   
+  
+  
   def registerSetupListener(func:()=>Unit) = {
   	//println("call setup "+func)
   	if(isSetup){
@@ -38,6 +40,12 @@ object SessionManager {
   	AllClasses.set(sc)  	
   	UserList.fromXML(xml.XML.loadFile(FSPaths.configDir+"users.xml" ))
   	StorageManager.init(sc.classList)
+  	ActionNameMap.read
+  	println(ActionNameMap)
+  	//println("transDetail:")
+  	//println(TransDetailLogHandler.readFully.mkString("\n"))
+  	//println("ready")
+  	//println("TimeLog \n"+TimeLogger.readFully.map(a => " TR:"+a._1+"- "+new java.util.Date(a._2*60000L)).mkString("\n"))
   	CommonSubscriptionHandler.init(AllClasses.get.getClassList.toMap)
   	for(li <-setupListeners)
   		li() // call listeners

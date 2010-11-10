@@ -43,6 +43,26 @@ class UserQueryHandler(userSocket: UserSocket) {
 		}
 	}
 	
+	def refreshSubscription(subs:SubscriptionInfo) = {
+		subs match {			
+			case e:PropSubscription=> userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
+				out.writeInt(subs.id )
+				out.writeInt(NotificationType.sendData .id)
+				sendQueryData(out,subs.parentRef,e.propertyField)
+			}	
+			case e:PathSubscription=> userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
+			  out.writeInt(subs.id )
+			  out.writeInt(NotificationType.sendData .id)			  
+				writePathElements(out,subs.id,e.path)
+		  }
+			case e:SingleSubscription=> userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
+				out.writeInt(subs.id )
+				out.writeInt(NotificationType.sendData .id)
+				sendQueryData(out,subs.parentRef,-1)
+			}
+		}
+	}
+	
 	
 	private def changeSubscription(in:DataInputStream ) = {
 		val subsID=in.readInt
@@ -54,7 +74,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 			out.writeInt(subsID )
 			out.writeInt(NotificationType.sendData .id)
 			sendQueryData(out,newRef,newPropField)
-		}
+		}		
 	}
 	
 	

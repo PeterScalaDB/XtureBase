@@ -18,6 +18,7 @@ import java.net._
 import java.io._
 import javax.swing.border._
 import scala.collection.immutable.IndexedSeq
+import client.layout._
 import client.dataviewer._
 import client.dialog._
 import client.graphicsView._
@@ -29,20 +30,27 @@ object ViewTest extends SimpleSwingApplication {
 	var sock:ClientSocket=null	
 	
 	
-	val typEdit=new TextField("10")
-	val instEdit=new TextField("1")
-	val propEdit=new TextField("0")	
+	//val typEdit=new TextField("10")
+	//val instEdit=new TextField("1")
+	//val propEdit=new TextField("0")	
 	
-	val viewController=new DataViewController()
+	//val viewController=new DataViewController()
 	
-	val pathMod=new PathModel()
-	val pathView=new ListView[InstanceData]()
-	val pathContr=new PathController(pathMod,pathView,viewController)
+	//val pathMod=new PathModel()
+	//val pathView=new ListView[InstanceData]()
+//	val pathContr=new PathController(pathMod,pathView,viewController)
 	
 	val actionPan= new ActionPanel
 	
 	val fieldEditPan=new FieldEditorsPanel
-	val newPanelArea=new NewPanelArea
+	//val newPanelArea=new NewPanelArea
+	
+	val undoBut = new Button("Undo")
+	val undoDialog=new UndoDialog(top)
+	
+	val mainBox=new MainBox
+	var startTableViewbox:Viewbox=null 
+	var startContentBox:TableViewbox=null 
 	
 	//val testGraphList=new ListView[GraphElem]()
 	
@@ -59,65 +67,44 @@ object ViewTest extends SimpleSwingApplication {
 			//testGraphList.peer.setModel(TestGraphListModel)
 		},BorderPanel.Position.Center)
 		add(layerPanController.layerPanel,BorderPanel.Position.North)
-		viewController.registerSelectListener(layerPanController)
+		//viewController.registerSelectListener(layerPanController)
 	}
 	
-	val pathScroller =new ScrollPane() {
-				viewportView= pathView
-				//pathView.fixedCellHeight=30
-				preferredSize=new Dimension(200,200)
-				def callback(nsize:Int):Unit= {
-					//println(size+" "+pathView.peer.getFixedCellHeight())
-					preferredSize=new Dimension(400,(nsize+1)*30 )
-					maximumSize=preferredSize
-					mainPanel.revalidate
-					peer.invalidate
-				}
-				pathContr.registerSizeChangeListener(callback)
-			}
+	
 	
 	val mainPanel:BorderPanel=	new BorderPanel()  // main panel
 	{			
-		add ( new GridPanel(1,8) //top rail
+		add ( new BoxPanel(Orientation.Horizontal) //top rail
 		{
-			hGap=10
+			
 			border=BorderFactory.createEmptyBorder(10,10,10,10);
-			val loadBut =new Button("load")
-			val openGraphBut = new Button("open Graph")
+			//val loadBut =new Button("load")			
+			
 			//val deleteBut =new Button("delete Instance")
 			//val stressBut = new Button("stress test")
-			val copyBut = new Button("copy")
-			val createBut= new Button("create")
-			contents += typEdit += instEdit += propEdit += loadBut +=  copyBut+=createBut +=openGraphBut
-			listenTo(loadBut,copyBut,createBut,openGraphBut)
-			reactions += {
-					case ButtonClicked(`loadBut`) => loadData
-					//case ButtonClicked(`openGraphBut`) => openGraphData
+			//val copyBut = new Button("copy")
+			//val createBut= new Button("create")
+			contents /*+= typEdit += instEdit += propEdit  +=  copyBut+=createBut*/+=Swing.HGlue +=undoBut
+			listenTo(undoBut)
+			reactions += {					
+					case ButtonClicked(`undoBut`) => requestUndoData
 					//case ButtonClicked(`deleteBut`) => deleteInstance
 					//case ButtonClicked(`stressBut`) => stressTest
-					case ButtonClicked(`copyBut`) => copyData
-					case ButtonClicked(`createBut`) => createInstance
+					//case ButtonClicked(`copyBut`) => copyData
+					//case ButtonClicked(`createBut`) => createInstance
 			}
 		},BorderPanel.Position.North)
 		
 		add (graphViewPan,BorderPanel.Position.Center) 
-		
-		add (new BorderPanel(){
-			add (pathScroller,BorderPanel.Position.North)
-			add (new ScrollPane() {
-				viewportView=viewController.panel
-			},BorderPanel.Position.Center)
-			/*viewController.registerSelectListener(new SelectListener{
-					def selectionChanged(sender:SelectSender,instList:Seq[Referencable])= lastSelected=instList
-				})*/
-		},BorderPanel.Position.West)
+		//mainBox.preferredSize=new Dimension(300,300)
+		add (mainBox,BorderPanel.Position.West)
 		
 		add( new BorderPanel() {
 			peer.putClientProperty("newPanel","IGNORE")
 			add(new BoxPanel(scala.swing.Orientation.Vertical){
 				contents+=new BorderPanel {
 					add (new Label("Neue Objekte:"){preferredSize=new Dimension(40,30)},BorderPanel.Position.North)
-					add (newPanelArea,BorderPanel.Position.Center)
+					add (NewPanelArea,BorderPanel.Position.Center)
 				}
 				contents+=fieldEditPan
 				
@@ -150,23 +137,33 @@ object ViewTest extends SimpleSwingApplication {
 	
 	
 	override def startup(args: Array[String]) = {		
-		if(args.length<4 ) { println("Usage: TableTest host portnr name password"); quit() }
+		if(args.length<4 ) { println("Usage: TableTest host portnr name password"); quit() }		
 		top.title= "Table Test ["+args(2)+"]"
 		// connect components
+		
+		ClientQueryManager.registerAfterListener (() => {
+			ViewboxContentTypeList.addType(TableViewbox.tableBoxType)
+			startTableViewbox=new Viewbox(mainBox,false,mainBox)
+			startContentBox= new TableViewbox
+			startTableViewbox.addContent(startContentBox)
+			
+			mainBox.centerBox=startTableViewbox
+		}	)
+		
 		actionPan.registerActionPanListener(DialogManager)
-		newPanelArea.registerActionPanListener(DialogManager)
-		viewController.registerSelectListener(actionPan)
-		viewController.registerSelectListener(DialogManager)
-		viewController.registerSelectListener(fieldEditPan)
-		viewController.registerContainerFocusListener(newPanelArea)
+		NewPanelArea.registerActionPanListener(DialogManager)
+		SelectEventDispatcher.registerSelectListener(actionPan)
+		SelectEventDispatcher.registerSelectListener(fieldEditPan)
+		SelectEventDispatcher.registerSelectListener(DialogManager)				
+		
 		
 		graphViewController.selectModel.registerSelectListener(actionPan)
 		graphViewController.selectModel.registerSelectListener(DialogManager)
 		graphViewController.selectModel.registerSelectListener(fieldEditPan)
-		graphViewController.registerContainerListener(newPanelArea)
+		graphViewController.registerContainerListener(NewPanelArea)
 		
 		DialogManager.answerArea.registerCustomPanel[PointAnswerPanel](DataType.VectorTyp)
-		
+		ClientQueryManager.registerStepListReader(undoDialog)
 		//println(top.title)
 		sock=new ClientSocket(InetAddress.getByName(args(0)),args(1).toInt,args(2),args(3))
   	sock.start()
@@ -178,25 +175,21 @@ object ViewTest extends SimpleSwingApplication {
 	
 	
 	
-	def loadData() = {
-		val newRef=Reference(typEdit.text.toInt,instEdit.text.toInt)
-		//tabModel.loadData(newRef,propEdit.text.toByte)
-		pathContr.loadPath( IndexedSeq(newRef))
-	}
 	
-	def createInstance() = {
+	
+	/*def createInstance() = {
 		ClientQueryManager.createInstance(typEdit.text.toInt,Array(new OwnerReference(propEdit.text.toByte,viewController.ref)))
-	}
+	}*/
 	 
 	
 		
-	def deleteInstance():Unit = {
+	/*def deleteInstance():Unit = {
 		if(viewController.selectedInstance ==null) return		
 		val r=ClientQueryManager.deleteInstance(viewController.selectedInstance.ref)
 		println("Delete:"+r  )
-	}
+	}*/
 	
-	def stressTest() = {
+	/*def stressTest() = {
 		val numLoops=100
 		val starttime:Long = System.currentTimeMillis();
 		val owner=Array(new OwnerReference(propEdit.text.toByte,Reference(typEdit.text.toInt,instEdit.text.toInt)))		
@@ -209,18 +202,26 @@ object ViewTest extends SimpleSwingApplication {
 	def copyData():Unit = {
 		val fromOwner=OwnerReference(propEdit.text.toByte,Reference(typEdit.text.toInt,instEdit.text.toInt))
 		val toOwnerList:Array[String]= JOptionPane.showInputDialog(null, "to owner: typ,instance,field ").split(",");
-		val toOwner=OwnerReference(toOwnerList(2).toByte,Reference(toOwnerList(0).toInt,toOwnerList(1).toLong))
+		val toOwner=OwnerReference(toOwnerList(2).toByte,Reference(toOwnerList(0).toInt,toOwnerList(1).toInt))
 		if(viewController.selectedInstance==null) return		
 		val starttime:Long = System.currentTimeMillis();
 		val inst=ClientQueryManager.copyInstance(viewController.selectedInstance.ref,fromOwner,toOwner)	
 		val endtime = System.currentTimeMillis()
 		println("copy time:"+(endtime-starttime))
 		println("inst:"+inst)
-	}
+	}*/
 	
 	def shutDown() = {
 		println("shutdown")
 		sock.quitApplication()
+	}
+	
+	def requestUndoData = {
+		undoDialog.setLocationRelativeTo(undoBut)
+		undoDialog.size=new Dimension(600,300)
+		
+		//undoDialog.visible=true		
+		ClientQueryManager.requestUndoData()
 	}
 
 }

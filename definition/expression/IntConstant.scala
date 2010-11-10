@@ -39,5 +39,5 @@ case class IntConstant(val n:Int) extends Constant {
   	file.writeByte(DataType.IntTyp.id)
   	file.writeInt(n)
   }
-
+  def getNative=n
 }

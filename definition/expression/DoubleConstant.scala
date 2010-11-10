@@ -42,6 +42,8 @@ case class DoubleConstant(n:Double) extends Constant {
   	file.writeDouble(n)
   }
   
+  def getNative= n
+  
 }
 
 

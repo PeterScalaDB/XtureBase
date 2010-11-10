@@ -18,7 +18,7 @@ import definition.data.{Reference,Referencable}
 
 
 
-class NewPanelArea extends AbstractActionPanel with ContainerFocusListener {
+object NewPanelArea extends AbstractActionPanel with ContainerFocusListener {
   var lastContainer:String=null
   var lastSuperInstRef:Reference=null
   var lastPropField:Int=0  
@@ -52,10 +52,7 @@ class NewPanelArea extends AbstractActionPanel with ContainerFocusListener {
 		repaint
 	}
   
-  val dummyAction=new ActionDescription("*",None,true)
- 
-	
-	
+  val dummyAction=new ActionDescription("*",None,true)	
 	
 	/*val IGNOREVALUE=new scala.swing.Component with NewPanelTrait { 
 		def setNewPanelArea(area:NewPanelArea)= {}

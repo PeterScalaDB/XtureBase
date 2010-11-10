@@ -9,6 +9,7 @@ import definition.data._
 import server.storage._
 import transaction.parser.StringParser
 import transaction.handling._
+import definition.comm._
 
 /** Table model for the Instance Field table
  * 
@@ -76,7 +77,7 @@ object InstFieldTableModel extends AbstractTableModel
   	{
   		val f:Byte=(row-1).toByte  		
   		
-  		TransactionManager.doTransaction(0, {	
+  		TransactionManager.doTransaction(0,ClientCommands.writeField.id.toShort,instance.ref,false,0, {	
   			TransactionManager.tryWriteInstanceField(instance.ref,f,StringParser.parse(obj.toString))
   		})
   		

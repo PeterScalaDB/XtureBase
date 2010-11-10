@@ -5,17 +5,17 @@ package definition.data
 import java.io._
 
 
-case class ExtFieldRef(typ:Int,inst:Long,field:Byte){
+case class ExtFieldRef(typ:Int,inst:Int,field:Byte){
 	def write(file:DataOutput) = {
 		//println("Write  "+this)
-		file.writeInt(typ);file.writeLong(inst);file.writeByte(field)		
+		file.writeInt(typ);file.writeInt(inst);file.writeByte(field)		
 	}
 	def getReference=new Reference(typ,inst)
 }
 
 object ExtFieldRef {
 	def read(file:DataInput) = {
-		val ret=new ExtFieldRef(file.readInt,file.readLong,file.readByte)
+		val ret=new ExtFieldRef(file.readInt,file.readInt,file.readByte)
 		//println(ret)
 		ret
 	}
@@ -35,7 +35,7 @@ class ReferencingLinks(override val ref:Reference,val links:Map[Int,List[ExtFiel
    * @param file where to write
    */
 	override def write(file:DataOutput)=    {
-		 print("write "+toString+" "+links.size)
+		 //print("write "+toString+" "+links.size)
   	 file.writeInt(links.size) 
   	 for((fnum,llist) <-links)
   	 {

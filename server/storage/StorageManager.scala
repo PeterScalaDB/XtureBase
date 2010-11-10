@@ -24,6 +24,11 @@ object StorageManager {
   var shuttedDown=false
   var inited=false
   
+  val undoDeleteList=List(TransType.dataChanged.id,TransType.created.id)
+  val undoLinkList=List(TransType.linksChanged.id,TransType.created.id)
+  val undoPropList=List(TransType.propertyChanged.id,TransType.created.id)
+  val undoCollList=List(TransType.collFuncChanged.id,TransType.created.id)
+  
   def init(classList:Map[Int,ServerObjectClass] ) =
   {
   	if(ixHandlerList.isEmpty||shuttedDown)
@@ -38,7 +43,7 @@ object StorageManager {
   { ixHandlerList(typ) } catch {case e:NoSuchElementException => throw new IllegalArgumentException("Storage: Type "+typ+" not found")}
   
   
-  def instanceExists(typ:Int,inst:Long) =getHandler(typ).instanceExists(inst)
+  def instanceExists(typ:Int,inst:Int) =getHandler(typ).instanceExists(inst)
   
   
   /** loads an instance from the data file
@@ -62,7 +67,28 @@ object StorageManager {
   	    instObj
   	  }
   	}
-  }  
+  } 
+  
+  /** loads an instance from the data file. When that instance is deleted, tries to find the old state
+   * 
+   */
+  def getZombieInstanceData(ref:Reference):InstanceData = {
+  	val handler=getHandler(ref.typ)
+  	val rec=handler.getInstanceRecord(ref.instance )
+  	var pos=rec.dataPos
+  	var length=rec.dataLength
+  	if (rec.dataPos == -1 && rec.dataLength==0) { // deleted
+  		val (transType,npos,nlength)=TransLogHandler.getLastLivingData(ref.typ,ref.instance,
+  			TransLogHandler.insertPos-1,List(TransType.created.id,TransType.dataChanged.id))
+  		//println("Last Living "+ref+" is: pos:"+npos+" size:"+nlength)
+  		if(transType== -1) return new InstanceData(ref,Array(),Array(),false)
+  		pos=npos;length=nlength
+  		
+  	}
+  	//else if(rec.dataPos<1) println("get Inst pos<1 :"+ref+" "+rec.dataPos)
+  	val instObj=dataFileHandler.readWithBool(ref,pos,length,false )
+  	instObj
+  }
   
   def pushInstanceData(ref:Reference,out:DataOutput) = {
   	val handler=getHandler(ref.typ)
@@ -115,7 +141,7 @@ object StorageManager {
   /** deletes an instace from the index
    * 
    */
-  def deleteInstance(typ:Int,inst:Long) = 
+  def deleteInstance(typ:Int,inst:Int) = 
   {
   	val handler=getHandler(typ)
   	handler.deleteInstance(inst)
@@ -231,6 +257,7 @@ object StorageManager {
   		dataFileHandler.shutDown
   		propFileHandler.shutDown
   		TransLogHandler.shutDown
+  		TransDetailLogHandler.shutDown
   		linkFileHandler.shutDown
   		collFuncFileHandler.shutDown
   		shuttedDown=true
@@ -240,6 +267,64 @@ object StorageManager {
   
   def printCacheReport() = {
    for (i <- ixHandlerList.valuesIterator) i.printCaches	
+  }
+  
+  def undoLastStep() = {
+  	val currTrID=TransLogHandler.transID
+  	val startLogPos=TransLogHandler.insertPos-1
+  	var currLogPos=startLogPos
+  	println("startUNDO insPos:"+TransLogHandler.insertPos )
+  	var currRec=TransLogHandler.readPosition(currLogPos)
+  	while(currLogPos>0 && currRec.trID ==currTrID)
+  	{
+  		print(currRec.toString)
+  		undoTransRec(currRec,currLogPos)
+  		currLogPos-=1
+  		currRec=TransLogHandler.readPosition(currLogPos)
+  	}
+  	println()
+  	TransLogHandler.undoLastStep(startLogPos-currLogPos)
+  	TransDetailLogHandler.undoLastStep
+  }
+  
+  private def undoTransRec(rec:LogIndexSet,currLogPos:Int) = {
+  	//var ret:(Int,Long,Int)=null
+  	
+  	val handler=getHandler(rec.typ)
+    rec.transTyp match {    	
+    	case TransType.deleted|TransType.dataChanged => {
+    		val (trans,pos,len)=TransLogHandler.getLastLivingData(rec.typ,rec.inst,currLogPos-1,
+    			undoDeleteList)
+    		handler.writeData(rec.inst,pos, len, trans==TransType.created.id,false)	
+    		handler.instCache.removeInstanceData(rec.inst)
+    	}
+    	case TransType.created =>  {
+    		handler.deleteInstance(rec.inst,false)
+    		handler.instCache.removeInstanceData(rec.inst)
+    	}
+    	case TransType.linksChanged => {
+    		val (trans,pos,len)=TransLogHandler.getLastLivingData(rec.typ,rec.inst,currLogPos-1,
+    			undoLinkList)
+    		if(trans==TransType.created.id) // no info since creation
+    		  handler.writeLinksData(rec.inst,0,0,false)
+    		else handler.writeLinksData(rec.inst,pos,len,false)
+    	}
+    	case TransType.propertyChanged => {
+    		val (trans,pos,len)=TransLogHandler.getLastLivingData(rec.typ,rec.inst,currLogPos-1,
+    			undoPropList)
+    		if(trans==TransType.created.id) // no info since creation
+    		  handler.writePropertiesData(rec.inst,0,0,false)
+    		else handler.writePropertiesData(rec.inst,pos,len,false)
+    		handler.propCache.removeInstanceData(rec.inst)
+    	}
+    	case TransType.collFuncChanged => {
+    		val (trans,pos,len)=TransLogHandler.getLastLivingData(rec.typ,rec.inst,currLogPos-1,
+    			undoCollList)
+    		if(trans==TransType.created.id) // no info since creation
+    		  handler.writeCollFuncData(rec.inst,0,0,false)
+    		else handler.writeCollFuncData(rec.inst,pos,len,false)
+    	}
+    }
   }
   
 	

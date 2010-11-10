@@ -167,7 +167,7 @@ object GraphElemFactory extends SubscriptionFactory[GraphElem] {
 	
 	def createLine (ref:Reference,in:DataInput) = {
 		val nfields=in.readByte
-		if(nfields!=5) println("wrong number of fields")
+		if(nfields!=5) println("wrong number of fields "+nfields+" "+ref)
 		val color=Expression.readConstant(in)
 		val lineWidth=Expression.readConstant(in)
 		val lineStyle=Expression.readConstant(in)
@@ -182,7 +182,7 @@ object GraphElemFactory extends SubscriptionFactory[GraphElem] {
 	
 	def createArc (ref:Reference,in:DataInput) = {
 		val nfields=in.readByte
-		if(nfields!=7) println("wrong number of fields "+nfields)
+		if(nfields!=7) println("wrong number of fields "+nfields+ " "+ref)
 		val color=Expression.readConstant(in)
 		val lineWidth=Expression.readConstant(in)
 		val lineStyle=Expression.readConstant(in)

@@ -31,7 +31,9 @@ trait AbstractObjectClass {
 	val actions=LinkedHashMap[String,AbstractAction]()
 	val createActions=LinkedHashMap[String,AbstractAction]()
 	val fieldEditors=LinkedHashSet[String]()
-	
+	def shortFormat:InstFormat
+	def longFormat:InstFormat
+	def resultFormat:InstFormat
 		
 	def inheritsFrom(otherClassID:Int):Boolean =
   {
@@ -78,8 +80,27 @@ trait AbstractObjectClass {
 	
 	
 	override def toString = "Class "+id+" Fields:\n"+fields.mkString("\n")+"PropFields:\n"+propFields.mkString("\n");
-	
-	
-	
+}
 
+case class InstFormat(val formStr:String,val fields:Array[Int]){
+	override def toString= formStr+"|"+fields.mkString(",")
+}
+object NOFORMAT extends InstFormat("",Array.empty) {
+	override def toString=""
+}
+
+object InstFormat {
+	def read(node: scala.xml.NodeSeq) = {
+		val tx=node.text
+		if(tx=="") NOFORMAT
+		else {
+			println("instForm:"+tx)
+			val parts=tx.split('|')
+			println(parts(1))
+			println(parts(1).split(',').mkString(" "))
+			if(parts.size!=2) NOFORMAT
+			else 
+				new InstFormat(parts(0),parts(1).split(',').map(_.toInt).toArray)			
+		}
+	}	
 }

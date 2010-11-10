@@ -28,5 +28,5 @@ case class BoolConstant(val v:Boolean) extends Constant {
   def write(file: DataOutput): Unit = {
   	file.writeByte(DataType.BoolTyp.id)
   	file.writeBoolean(v) }
-
+  def getNative= v
 }

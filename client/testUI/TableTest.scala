@@ -40,13 +40,13 @@ object TableTest extends SimpleSwingApplication {
 	
 	val pathMod=new PathModel()
 	val pathView=new ListView[InstanceData]()
-	val pathContr=new PathController(pathMod,pathView,new PathControllable {
+	val pathContr=new PathController(pathMod,pathView,List(new PathControllable {
 		def openData(parentRef:Reference,selected:Option[Reference]) = {
 			println("controllable open ref " +parentRef)
 			tabModel.loadData(parentRef,propEdit.text.toByte)
 		}
 		def registerOpenChildCallBack(callBack: Reference => Unit) = {}
-	})
+	}))
 	
 	val mainPanel=	new BorderPanel()  // main panel
 	{			
@@ -151,7 +151,7 @@ object TableTest extends SimpleSwingApplication {
 	def copyData():Unit = {
 		val fromOwner=OwnerReference(propEdit.text.toByte,Reference(typEdit.text.toInt,instEdit.text.toInt))
 		val toOwnerList:Array[String]= JOptionPane.showInputDialog(null, "to owner: typ,instance,field ").split(",");
-		val toOwner=OwnerReference(toOwnerList(2).toByte,Reference(toOwnerList(0).toInt,toOwnerList(1).toLong))
+		val toOwner=OwnerReference(toOwnerList(2).toByte,Reference(toOwnerList(0).toInt,toOwnerList(1).toInt))
 		if(dataTable.selection.rows.isEmpty) return
 		val row:Int=(dataTable.selection.rows.toArray).apply(0)
 		val starttime:Long = System.currentTimeMillis();

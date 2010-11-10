@@ -78,7 +78,7 @@ class ScalePanel(model:ScaleModel,controller:GraphViewController) extends BoxPan
 		val nseq=text.split(":")
 		if(nseq.size!=2) null
 		else {
-			(nseq(0).trim.toDouble,nseq(1).trim.toDouble)
+			(nseq(0).trim.replace(',','.').toDouble,nseq(1).trim.replace(',','.').toDouble)
 		}
 	}
 }

@@ -41,4 +41,5 @@ case class StringConstant(val n:String) extends Constant {
   	//Thread.dumpStack()
   	file.writeUTF(n)
   }
+  def getNative=n
 }

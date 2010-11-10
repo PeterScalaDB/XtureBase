@@ -11,21 +11,32 @@ import definition.expression._
 import server.comm._
 import server.test.SimpleProfiler
 
+
 /** manages Transaction handling
  * 
  */
 object TransactionManager {
   @volatile var running=false
+  
+  val numUndoSteps=9
+  var currentUser:Short=0
+  var currentActionCode:Short=0
+  var currentRef:Reference=null
+  var multiInst:Boolean=false
+  var logCreateType:Int=0
+  
 	
 	private val transLock : AnyRef = new Object()	
+  
+ 
 			
-	
+	@volatile var undoUserEntry:UserEntry=null
 	
 	// Starts a new Transaction
-	private def startTransaction(userID:Short) =	{		
+	private def startTransaction() =	{		
 	  if(running ) throw new IllegalArgumentException("An Transaction is still running ")
 		running=true
-	  TransLogHandler.incrementTransID(userID);
+	  TransLogHandler.incrementTransID();
 	  //println("Start Trans " +TransLogHandler.transID)
 	}
 	
@@ -34,9 +45,12 @@ object TransactionManager {
 		
 		if(!running) throw new IllegalArgumentException("Finish: No transaction running ")		
 		ActionList.commitAllData()
+		TransDetailLogHandler.log(TransLogHandler.transID,currentUser,currentRef,multiInst,currentActionCode,logCreateType)
 		//println("Finish Trans "+ TransLogHandler.transID)
 		running=false
 	}
+	
+	def canModify = running && undoUserEntry==null
 	
 	
 	// breaks an transaction if an error occurs during the transaction
@@ -44,6 +58,26 @@ object TransactionManager {
 		 ActionList.breakAllData()		
 		TransLogHandler.resetTransID()
 		running=false
+	 }
+	 
+	 def requestUndoData(user:UserEntry) = {
+		 if(undoUserEntry!=null||running){ // already undoing
+			 user.thread.denyUndoRequest
+		 } else {
+			 undoUserEntry=user
+			 ActiveUsers.lockUsersForUndo(user)
+			 val currTransID=TransLogHandler.transID			 
+			 user.thread.sendUndoInformation( TransDetailLogHandler.readTransStepData(currTransID,currTransID-numUndoSteps))			 
+		 }
+	 }
+	 
+	 def stopUndo(user:UserEntry) = {
+		 if(undoUserEntry==null) println(" Undo process not running !")
+		 else if (user.info .id!=undoUserEntry.info.id) println("UNDO user "+undoUserEntry.info+" but stopped by "+user.info)
+		 else {
+			 ActiveUsers.releaseUsersForUndo(user)
+			 undoUserEntry=null
+		 }
 	 }
 		
 	
@@ -53,7 +87,7 @@ object TransactionManager {
 	 * @param notifyRefandColl should referencing links and collFuncs be notified about the new instance
 	 */
 	def tryCreateInstance(typ:Int,owners:Array[OwnerReference],notifyRefandColl:Boolean) =	{	
-		if(!running ) throw new IllegalArgumentException("No transaction defined ")
+		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
 		//TODO: Check if the child type is allowed in the owner property fields
 		//SimpleProfiler.startMeasure("Create")
 		val newInst=StorageManager.createInstance(typ,owners)
@@ -87,7 +121,7 @@ object TransactionManager {
 	}
 	
 	def tryWriteInstanceData(data:InstanceData) =	{
-		if(!running ) throw new IllegalArgumentException("No transaction defined ")
+		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
 		ActionList.addTransactionData(data.ref,new DataChangeAction (Some(data) ))
 	}
 	
@@ -97,7 +131,7 @@ object TransactionManager {
 	 *  @param newValue the new Value
 	 */
 	def tryWriteInstanceField(ref:Reference,fieldNr:Byte,newExpression:Expression):Boolean = {
-		if(!running ) throw new IllegalArgumentException("No transaction defined ")
+		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
 		//SimpleProfiler.startMeasure("Change inst")
 		var theExpression=newExpression
 		val instD=ActionList.getInstanceData(ref)
@@ -489,7 +523,7 @@ object TransactionManager {
 	 * @param dontNotifyOwner When notifying the parents of that instance, ignore the given parent
 	 */
 	def tryDeleteInstance(ref:Reference,dontNotifyOwner:Option[Reference]):Boolean =	{
-  	if(!running ) throw new IllegalArgumentException("No transaction defined ")
+  	if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
   	val instD=ActionList.getInstanceData(ref)
   	// mark this instance as deleted
   	ActionList.addTransactionData(ref,new DeleteAction(instD))
@@ -579,7 +613,7 @@ object TransactionManager {
 	 *  @param toOwner new owner who will get the subinstance
 	 */
 	def tryMoveInstance(subRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference):Unit = {
-		if(!running ) throw new IllegalArgumentException("No transaction defined ")
+		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
 		// change the property information
 		internRemovePropertyFromOwner(subRef,fromOwner)
 		val instData=ActionList.getInstanceData(subRef)
@@ -592,8 +626,8 @@ object TransactionManager {
 	
 	
 	def tryCopyInstance(instRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference,
-	                    collNotifyOwners:Boolean):Long = {
-		if(!running ) throw new IllegalArgumentException("No transaction defined ")
+	                    collNotifyOwners:Boolean):Int = {
+		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
 		val instD=ActionList.getInstanceData(instRef)
 		// get the other owners of that instance, apart from "fromOwner", and add the new owner toOwner
 		if(!instD.owners.contains(fromOwner)) throw new IllegalArgumentException("Copy: instance "+instRef+" is not owned by "+ fromOwner)
@@ -653,8 +687,13 @@ object TransactionManager {
 	 *  encapsulates a transaction so that StartTransaction and Finishtransaction/BreakTransaction
 	 *  will always be executed
 	 */
-	def doTransaction (userID:Short,f :  => Unit):Option[Exception] = transLock.synchronized{
-    startTransaction(userID)
+	def doTransaction (userID:Short,actionCode:Short,ref:Reference,multi:Boolean,createType:Int,f :  => Unit):Option[Exception] = transLock.synchronized{
+    startTransaction()
+    currentUser=userID
+    currentActionCode=actionCode
+    currentRef=ref
+    multiInst=multi
+    logCreateType=createType
     var success=true
     try {
         f
@@ -664,7 +703,15 @@ object TransactionManager {
 	}
 	
 	
-	
+	def doUndo(user:UserEntry)= {
+		if(undoUserEntry!=null && user.info.id==undoUserEntry.info .id) {
+			println("do undo "+TransLogHandler.transID)
+			StorageManager.undoLastStep()
+			CommonSubscriptionHandler.refreshAfterUndo()
+			ActiveUsers.releaseUsersForUndo(user)
+			undoUserEntry=null
+		}
+	}
 
 }
 

@@ -11,4 +11,5 @@ import definition.data.Referencable
  */
 trait ContainerFocusListener {
 	def containerFocused(superInst:Referencable, propField:Int,containerName:String="")
+	def alsoDeselect=false
 }

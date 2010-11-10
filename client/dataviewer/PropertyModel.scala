@@ -24,21 +24,12 @@ class PropertyModel(val mainController:DataViewController) {
 	var subscriptionID= -1
 	var allowedClass:Int= _	
 	var tableModMap=scala.collection.mutable.HashMap[Int,TypeTableModel]()
-	
+	val vGlue=new ClickComp
 	val titleLabel=new Label("Prop")
+	titleLabel.font=mainController.smallFont
 	val tableArea=new BoxPanel (scala.swing.Orientation.Vertical ) {		
-		//background=Color.green		
-		listenTo(mouse.clicks )
-		reactions+= {
-			case e:FocusGained => {
-				println("Click")
-				
-			}
-			case e:MouseClicked => {
-				println("mouseclick")
-				focusGained
-			}
-		}
+		//opaque=true
+		//background=Color.green
 	}
 	
 	
@@ -60,7 +51,9 @@ class PropertyModel(val mainController:DataViewController) {
 		selectRef=selRef
 		allowedClass=nallowedClass
 		propertyField=fieldToLoad
-		titleLabel.text="Property ("+fieldToLoad+") "+fieldName+ " allowedClass:"+allowedClass
+		titleLabel.text=" ("+fieldToLoad+") "+fieldName+(if(allowedClass==0) "" else  " erlaubt:"+ 
+		AllClasses.get.getClassByID(allowedClass).name)
+		titleLabel.horizontalAlignment=Alignment.Left
 		if(subscriptionID<0)
 			subscriptionID=ClientQueryManager.createSubscription(mainController.ref,propertyField)(callBack) 
 		else { // subscription already there
@@ -68,9 +61,6 @@ class PropertyModel(val mainController:DataViewController) {
 		}		
 		loaded=true
 	}
-	
-	
-	
 	
 	
 	def callBack(notType:NotificationType.Value,data: IndexedSeq[InstanceData]) = 
@@ -105,16 +95,21 @@ class PropertyModel(val mainController:DataViewController) {
 	} 
 	
 	def createTableModel(typ:Int) = {
-		//println("create new model")
+		//print("create new model "+typ)
 		val newMod= if(tableModMap.contains(typ)) tableModMap(typ)
 		else {
 			val anewMod=new TypeTableModel(typ,this)
 			tableModMap(typ)=anewMod
 			anewMod
 		}
-		tableArea.contents +=newMod.scroller		
-		//tableArea.revalidate
+		//print(" "+tableArea.contents.size)
+		if(tableArea.contents.isEmpty)
+			tableArea.contents +=newMod.scroller
+			else tableArea.contents(tableArea.contents.size-1)=newMod.scroller
+		tableArea.contents+=vGlue
+		
 		mainController.updateHeight
+		tableArea.revalidate
 		newMod
 	}
 	
@@ -138,6 +133,24 @@ class PropertyModel(val mainController:DataViewController) {
 		for(m <-tableModMap.valuesIterator;if(m.typ!=selectedType)) m.deselect()
 	}
 	
-	def getHeight=tableModMap.values.foldRight(0){(n,result)=> result+n.scroller.preferredSize.height} 
-
+	def getHeight=tableModMap.values.foldRight(0){(n,result)=> result+n.scroller.preferredSize.height}
+	
+	
+	class ClickComp extends Component {
+		//val prefSiz=new Dimension(50,2000)		
+		opaque=true
+		background=Color.green
+		focusable=true				
+		
+		listenTo(mouse.clicks)
+		reactions+= {			
+			case e:MouseReleased => {				
+				println("mouseclick "+peer.isFocusOwner+" "+size)
+				requestFocus
+				focusGained
+			}
+		//preferredSize=prefSiz	
+	}
 }
+}
+

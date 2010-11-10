@@ -43,7 +43,7 @@ class StorageTests extends JUnitSuite
 		assert(newInst!=null)
 	}
 
-	@Test def createPropTest():Unit =   {
+	/*@Test def createPropTest():Unit =   {
 		assert(TransactionManager.doTransaction(0,{
 			val inst=TransactionManager.tryCreateInstance(3,Array(new OwnerReference(0,new Reference(3,1))),true)
 			println(inst)			
@@ -109,7 +109,7 @@ class StorageTests extends JUnitSuite
 		StorageManager.shutDown()		
 	}
 
-
+*/
 
 
 

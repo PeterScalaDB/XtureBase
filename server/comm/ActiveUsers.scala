@@ -48,4 +48,15 @@ object ActiveUsers {
    }
    
    def checkFinish() = if(wantQuit && list.isEmpty() && (finalFunc!=null)) finalFunc()
+   
+   def lockUsersForUndo(undoUser:UserEntry) = {
+  	 for( u<-list.values.iterator();if(u.info.id !=undoUser.info.id))
+  		 u.thread.sendUndoLockInfo(undoUser.info .name) 
+   }
+   
+   def releaseUsersForUndo(undoUser:UserEntry) = {
+  	 for( u<-list.values.iterator();if(u.info.id !=undoUser.info.id))
+  		 u.thread.releaseUndoLock() 
+   }
+   
 }

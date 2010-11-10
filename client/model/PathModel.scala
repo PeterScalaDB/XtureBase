@@ -17,7 +17,7 @@ import javax.swing.SwingUtilities
 class PathModel extends AbstractListModel {
 	
 	var subsID= -1
-	var dataList:Option[Seq[InstanceData]]= None
+	var dataList:Option[collection.immutable.Seq[InstanceData]]= None	
 	
 	private [model] def loadPath(newPath:Seq[Reference])(readyFunc:() => Unit) = {
 		if(subsID== -1) {

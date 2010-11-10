@@ -7,6 +7,8 @@ import definition.typ._
 import definition.data._
 import javax.swing._
 import javax.swing.table._
+import javax.swing.event._
+import java.awt.event.MouseAdapter
 import java.awt.{Dimension,Font}
 import scala.swing._
 import scala.swing.event._
@@ -20,6 +22,7 @@ import collection.immutable.Vector
 import java.awt.Color
 
 
+
 /** table model for a table showing instances of a certain type
  * 
  */
@@ -30,14 +33,19 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 	var selfSelectChanged=false
 	var selfAdded=false
 	val selectedInstances=new SelectList(dataList)
+	var dragColumn:Int= -1
+	var dragColumnNewPos:Int=0
+	
+	val defaultRowHeight=20
 
 	val listLock=new Object
 
 	val table=new Table(){		
-		autoResizeMode=Table.AutoResizeMode.SubsequentColumns
+		autoResizeMode=Table.AutoResizeMode.Off
 		//selection.intervalMode=Table.IntervalMode.Single
-		selection.elementMode=Table.ElementMode.Row    		
-		rowHeight=20
+		selection.elementMode=Table.ElementMode.Row 
+		peer.setAutoCreateColumnsFromModel(false)
+		rowHeight=defaultRowHeight
 		font=tableFont
 		listenTo(selection)	
 		listenTo(mouse.clicks,this)
@@ -56,30 +64,51 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 				val row= peer.rowAtPoint(e.point)
 				if(row>=0 && row<dataList.size) listLock.synchronized { propMod.mainController.openChild(dataList(row).ref)}
 			}
-      case e:FocusGained =>propMod.focusGained
+			case e:FocusGained =>propMod.focusGained
 		}
-	}
-	table.model=this	
-	val colMod=table.peer.getColumnModel()
-	if(colMod.getColumnCount>0) colMod.getColumn(0).setPreferredWidth(30)
+		model=TypeTableModel.this
+		peer.setColumnModel(TableHeaderMap.getColumnModel(typ))		
+		showGrid=true
+		gridColor=Color.gray
+		// prevent first column from getting moved
+		peer.getColumnModel().addColumnModelListener(new TableColumnModelListener(){ 
+			def columnAdded(e:TableColumnModelEvent ) {}
+			def columnMarginChanged(e:ChangeEvent ) {} 
+			def columnMoved(e:TableColumnModelEvent){ 
+				if (dragColumn == -1) 
+					dragColumn = e.getFromIndex();
+				dragColumnNewPos = e.getToIndex(); 
+			}
+			def columnRemoved(e:TableColumnModelEvent ) {}
+			def columnSelectionChanged(e:javax.swing.event.ListSelectionEvent ) {} 
+		});
+		peer.getTableHeader().addMouseListener(new java.awt.event.MouseAdapter() { 
+			override def mouseReleased(e:java.awt.event.MouseEvent) {
+				if (dragColumn != -1 && (dragColumn == 0 || dragColumnNewPos == 0)) 
+					peer.moveColumn(dragColumnNewPos, dragColumn); 
+				dragColumn = -1;  dragColumnNewPos = -1; 
+			} 
+		}); 
+	}	
+	
 
 	val scroller=new ScrollPane() {
-		viewportView=table
-		preferredSize=new Dimension(100,100)	
 		
+		viewportView=table
+		preferredSize=new Dimension(100,100)		
 	}
 
 	def setDataList(data:Seq[InstanceData],selectInstance:Option[Reference]) =  {
 		listLock.synchronized {
-			
-			dataList=data
-			calcSize()
+			//println("set Data "+data.mkString)
+			dataList=data			
 			selfSelectChanged=false
 			selfAdded=false
 			selectedInstances.buf=data
 			selectedInstances.setFilter(Array())
 		}		 
 			fireTableStructureChanged()
+			calcSize()
 			selectInstance match {
 				case Some(ref) =>if(ref.typ == typ){
 					val ix= dataList.findIndexOf(_.ref==ref)
@@ -87,18 +116,20 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 				}
 				case _ =>
 			}
-		val colMod=table.peer.getColumnModel()
-		colMod.getColumn(0).setMaxWidth(30)
-		colMod.getColumn(0).setPreferredWidth(30)
+		//setupColumns()		
 	}
+	
+	
 	
 	def calcSize() = {
 		
-		val tabPrefHeight=table.preferredSize.height+30
+		val tabPrefHeight=table.preferredSize.height+defaultRowHeight*2+6
 		val mainPanelHeight=propMod.mainController.panel.size.height
-		scroller.preferredSize=new Dimension(100,if(tabPrefHeight>mainPanelHeight-30)mainPanelHeight-30 else tabPrefHeight )
+		scroller.preferredSize=new Dimension(100,if(tabPrefHeight>(mainPanelHeight-defaultRowHeight)&&mainPanelHeight>defaultRowHeight)
+			(mainPanelHeight-defaultRowHeight) else tabPrefHeight )
 		//scroller.preferredSize=new Dimension(100,(if (dataList==null || dataList.isEmpty)2 else dataList.size+2)*22)
-		scroller.minimumSize=scroller.preferredSize
+		scroller.maximumSize=new Dimension(2000,scroller.preferredSize.height)
+		//println("typTable calcsize "+scroller.preferredSize+ " tabPrefHeight "+tabPrefHeight+" mainpan: "+mainPanelHeight)
 		scroller.revalidate
 	}
 
@@ -119,7 +150,10 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 	}
 
 	def addInstance(newInst:InstanceData) = listLock.synchronized {
-		if(dataList==null) dataList=IndexedSeq(newInst)
+		if(dataList==null) {
+			dataList=IndexedSeq(newInst)
+			//setupColumns()
+		}
 		else {
 			dataList=dataList :+ newInst			
 		}
@@ -238,6 +272,6 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 		} else filterSet=newFilter
 	 }
 
-
+  
 
 }

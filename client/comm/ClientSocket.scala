@@ -96,6 +96,7 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 		println("reading user settings "+UserSettings.writeProperties)
 				
 		ClientQueryManager.notifySetupListeners
+		ClientQueryManager.notifyAfterSetupListeners
 	}
 	
 	

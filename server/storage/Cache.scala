@@ -23,7 +23,7 @@ class Cache[T <: Referencable](val typ:Int)(implicit m: Manifest[T]) {
   var cacheMiss=0
   var added=0
 	
-  def getInstanceData (inst:Long):Option[T] = {
+  def getInstanceData (inst:Int):Option[T] = {
   	for(i <- 0 until cacheSize)
   		if(cache(i)!=null && cache(i).ref.instance ==inst ) {
   			cacheHit +=1
@@ -45,7 +45,7 @@ class Cache[T <: Referencable](val typ:Int)(implicit m: Manifest[T]) {
 		cache(pointer)=inst
 	}	
 	
-	def removeInstanceData (inst:Long):Unit = {
+	def removeInstanceData (inst:Int):Unit = {
 		for(i <- 0 until cacheSize)
   		if(cache(i)!=null && cache(i).ref.instance ==inst  ) {
   			cache(i)=null.asInstanceOf[T]

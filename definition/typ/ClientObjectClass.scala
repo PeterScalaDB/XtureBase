@@ -13,7 +13,8 @@ import scala.collection.immutable.IndexedSeq
  */
 class ClientObjectClass (val name:String,val id:Int,val description:String,protected val ownFields:Seq[FieldDefinition],
 	 protected val ownPropFields:Seq[PropertyFieldDefinition],protected val theActions:Seq[ActionDescription], 
-	 protected val theCreateActions:Seq[ActionDescription],protected val superClasses:Seq[String])
+	 protected val theCreateActions:Seq[ActionDescription],protected val superClasses:Seq[String],
+	 val shortFormat:InstFormat,val longFormat:InstFormat,val resultFormat:InstFormat)
 	 extends AbstractObjectClass
 {  
    //println("Class "+name+" actions:"+actions.mkString(","))
@@ -39,13 +40,22 @@ object ClientObjectClass
 		val id=(node \"@id").text.toInt
 		val actionsNode=node \"Actions"
 		val createActionsNode=node \"CreateActions"
+		var shortForm:InstFormat=null
 		new ClientObjectClass(name,id ,  (node \"@desc").text,
 			for(afield <-(node \\"FieldDef")) yield FieldDefinition.fromXML(afield),
 		  for(bfield <-(node \\"PropertyFieldDef")) yield PropertyFieldDefinition.fromXML(bfield),
 		  for(efield <-(actionsNode \\"Action"))yield ActionDescription.fromXML(efield),
 		  for(efield <-(createActionsNode \\"Action"))yield ActionDescription.fromXML(efield),
-		  for(cfield <-(node \\ "sc"))  yield (cfield \ "@name").text 			 )
-	}
+		  for(cfield <-(node \\ "sc"))  yield (cfield \ "@name").text,{
+		  	shortForm=InstFormat.read(node \"@shortForm")
+		  	shortForm
+		  }
+		  ,{
+		  	val lf=InstFormat.read(node \"@longForm")
+		  	if(lf==null) shortForm else lf
+		  },InstFormat.read(node \"@resForm"))	}
+	
+	
 }
 
 

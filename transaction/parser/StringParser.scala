@@ -36,10 +36,10 @@ class StringParser extends JavaTokenParsers {
         
   def fieldRef:Parser[Expression] =
   	   ("[#][Tt]".r ~> intNumber ~ ("[iI]".r ~>intNumber) ~ ("[fF]".r~> intNumber) ) ^^ {
-        	case typ~inst~field => new FieldReference(Some(typ.toInt),Some(inst.toLong),field.toByte) 
+        	case typ~inst~field => new FieldReference(Some(typ.toInt),Some(inst.toInt),field.toByte) 
         } |
         ("[#][iI]".r ~>intNumber ~ ("[fF]".r~> intNumber) ) ^^ {
-        	case inst~field => new FieldReference(None,Some(inst.toLong),field.toByte) 
+        	case inst~field => new FieldReference(None,Some(inst.toInt),field.toByte) 
         } |
         ("[#][fF]".r~> intNumber ) ^^ {
         	case field => new FieldReference(None,None,field.toByte) 

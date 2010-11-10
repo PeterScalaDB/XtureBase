@@ -27,12 +27,13 @@ case class StringValue(override val name:String,override val value:String) exten
 	def writeString="{"+UserSettings.quoteString(name)+":"+UserSettings.quoteString(value)+"}"
 }
 
-case class ListValue[T](override val name:String,override val value:Seq[T]) extends PropertyValue {
+case class ListValue[T](override val name:String,override val value:collection.Seq[T]) extends PropertyValue {
 	def writeString="{"+UserSettings.quoteString(name)+": ["+value.map {
 		_ match {
 			case i:Int => i.toString
 			case s:String => UserSettings.quoteString(s)	
 			case r:Reference => r.sToString()
+			case e:Tuple2[_,_] => "("+e._1+":"+e._2+")"
 		}
 	}.mkString(",")+"] }"	
 }
@@ -91,7 +92,7 @@ object UserSettings {
 	def setIntProperty(group:String,name:String,value:Int) =
 		getGroup(group).properties(name)=new IntValue(name,value)
 
-	def setListProperty[T](group:String,name:String,value:Seq[T]) =
+	def setListProperty[T](group:String,name:String,value:collection.Seq[T]) =
 		getGroup(group).properties(name)=new ListValue[T](name,value)	
 
 	def removeProperty(group:String,name:String) = getGroup(group).properties.remove(name)	
@@ -156,6 +157,10 @@ object UserSettings {
 		def reference: Parser[Reference] = (("(" ~> intNumber ) ~ ("," ~> intNumber) <~ ")") ^^ {
 			case typ ~ inst => new Reference(typ,inst) 
 		}
+		
+		def tuple: Parser[Tuple2[Int,Int]] = (("(" ~> intNumber ) ~ (":" ~> intNumber) <~ ")") ^^ {
+			case typ ~ inst => (typ,inst) 
+		}
 
 		def intVal:Parser[IntValue] = ("{" ~> (string <~ ":") ~ (intNumber <~"}")) ^^ { 
 			case name ~ value => new IntValue (name,value) 
@@ -177,7 +182,12 @@ object UserSettings {
 			case name ~ list => new ListValue(name,list)  
 		}
 		
-		def propertyGroup:Parser[PropertyGroup] = ("{" ~> (string <~ ":\n") ~ (rep(intVal|stringVal|intListVal|stringListVal|refListVal) <~"}")) ^^ {
+		def tupleListVal: Parser[ListValue[Tuple2[Int,Int]]] = ("{" ~> (string <~ ": [") ~ repsep(tuple, ",") <~ "] }") ^^ {
+			case name ~ list => new ListValue(name,list)  
+		}
+		
+		def propertyGroup:Parser[PropertyGroup] = ("{" ~> (string <~ ":\n") ~ 
+				(rep(intVal|stringVal|intListVal|stringListVal|refListVal|tupleListVal) <~"}")) ^^ {
 			case name ~ list => {				
 				val n=HashMap[String,PropertyValue](list.map(a => (a.name , a)) : _*)
 				//val hm=new collection.mutable.HashMap[String,PropertyValue]()++m

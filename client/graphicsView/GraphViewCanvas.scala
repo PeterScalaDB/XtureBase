@@ -20,7 +20,7 @@ class GraphViewCanvas(controller:GraphViewController) extends Component  {
 	val dragTreshold=8 // how much pixels can you drag the mouse before it is handled as drag	
 	val lineCatchDistance=4
 	val pointCatchDistance=6	
-	var lockedColor=new Color(0,70,50)
+	var lockedColor=new Color(0,90,70)
 	val lineToColor=Color.black
 	var inside=true
 	var drawCrossHairInPaint=false		

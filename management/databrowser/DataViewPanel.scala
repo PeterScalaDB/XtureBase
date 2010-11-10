@@ -9,6 +9,7 @@ import javax.swing.JOptionPane
 import server.storage._
 import transaction.handling._
 import definition.data._
+import definition.comm._
 
 /** Panel to show the Data of a certain class
  * 
@@ -108,7 +109,7 @@ object DataViewPanel extends BorderPanel
 		if(! (ixTable.selection.rows.isEmpty))		 
 		{			
 			val ix:Int= ixTable.selection.rows.head
-			val inst:Long=IndexTableModel.ixList(ix).inst
+			val inst:Int=IndexTableModel.ixList(ix).inst
 			println("inst: "+inst)
 			if (StorageManager.instanceExists(InstFieldTableModel.theClass.id,inst))
 			{
@@ -123,7 +124,8 @@ object DataViewPanel extends BorderPanel
 	
 	def createInstance() =
 	{
-		TransactionManager.doTransaction(0,{
+		TransactionManager.doTransaction(0,ClientCommands.createInstance.id.toShort,Reference(0,0),false,
+			InstFieldTableModel.theClass.id,{
 		  val inst=TransactionManager.tryCreateInstance(InstFieldTableModel.theClass.id, Array(),true)
 		  //TransactionManager.tryWriteInstanceData(inst)	
 		}		)
@@ -135,11 +137,12 @@ object DataViewPanel extends BorderPanel
 		if(! (ixTable.selection.rows.isEmpty))		 
 		{			
 			val ix:Int= ixTable.selection.rows.head
-			val inst:Long=IndexTableModel.ixList(ix).inst
+			val inst:Int=IndexTableModel.ixList(ix).inst
 			//println("inst: "+inst)
 		  InstFieldTableModel.setInstance(null)	
-		  TransactionManager.doTransaction(0,{
-			  TransactionManager.tryDeleteInstance(new Reference(InstFieldTableModel.theClass.id,inst),None)	
+		  val ref=new Reference(InstFieldTableModel.theClass.id,inst)
+		  TransactionManager.doTransaction(0,ClientCommands.deleteInstance.id.toShort,ref,false,0,{
+			  TransactionManager.tryDeleteInstance(ref,None)	
 			}	  )
 		  
 		  IndexTableModel.readTheList
@@ -151,7 +154,7 @@ object DataViewPanel extends BorderPanel
 		if(! (ixTable.selection.rows.isEmpty))		 
 		{			
 			val ix:Int= ixTable.selection.rows.head
-			val inst:Long=IndexTableModel.ixList(ix).inst
+			val inst:Int=IndexTableModel.ixList(ix).inst
 			//println("inst: "+inst)
 			
 			println(ActionList.getCollData(new Reference(InstFieldTableModel.theClass.id,inst)))		  

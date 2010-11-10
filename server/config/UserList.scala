@@ -44,4 +44,9 @@ object UserList {
 	def addUser(newUser:UserInfo) = {
 		list = list + (newUser.name -> newUser)
 	}
+	
+	def getUserName(id:Int) = list.valuesIterator.find(_.id == id) match {
+		case Some(uinfo) => uinfo.name 
+		case None => "unknown"
+	}
 }

@@ -22,6 +22,8 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	var ref:Reference= _
 	var mainClass:AbstractObjectClass = _
 	
+	var smallFont=new Font("Arial",0,10)
+	
 	val propertyModels =scala.collection.mutable.ArrayBuffer[PropertyModel]()
 	var numUsedModels=0
 	
@@ -34,11 +36,14 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	
 	var containerFocusListener= collection.mutable.HashSet[ContainerFocusListener]()
 	
+	
+	val vGlue=Swing.VGlue
 	/** is called by PathModel when another instance should be loaded
 	 *  @param parentRef the new Instance to be loaded
 	 *  @param selectRef reference of an instance that should be selected
 	 */
 	def openData(nparentRef:Reference,selectRef:Option[Reference]) = {
+		//println("open Data: "+nparentRef+" "+loaded)
 	  if(loaded) shutDown()
 	  selectedInstance=null
 	  ref=nparentRef
@@ -46,10 +51,11 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	  for(i <- 0 until mainClass.propFields.size) {
 	  	val propFieldInfo=mainClass.propFields(i)
 	  	val mod=getPropModel
-	  	mod.load(propFieldInfo.allowedClass,i.toByte,propFieldInfo.name,selectRef)
-	  	panel.contents+=mod.panel
-	  	
+	  	panel.contents+=mod.panel	  	
+	  	mod.load(propFieldInfo.allowedClass,i.toByte,propFieldInfo.name,selectRef)	  	
+	  		  	
 	  }
+	  panel.contents+=vGlue
 	  updateHeight()
 	  if(!selectRef.isDefined) selectListener foreach(_.selectionChanged(this,null))
 	  loaded =true
@@ -71,7 +77,7 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	def updateHeight() = {
 		javax.swing.SwingUtilities.invokeLater(new Runnable(){
 			def run= {
-			  //panel.preferredSize=new Dimension(10,getHeight)		
+			  panel.preferredSize=new Dimension(10,getHeight)		
 			  panel.revalidate
 			  panel.repaint	
 			}
@@ -116,7 +122,8 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	def deselect(notify:Boolean) = {
 		for(i <- 0 until numUsedModels;val mod=propertyModels(i))
 			mod.deselect(-1)
-		
+		for(cfl <- containerFocusListener;if(cfl.alsoDeselect))
+			cfl.containerFocused(null,0)
 	}
 	
 	/** sends a message to the path controller that it should open a child instance

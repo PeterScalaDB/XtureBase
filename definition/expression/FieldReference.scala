@@ -12,7 +12,7 @@ import java.io._
  * @field remInst optional instance of the remote object. can be ommitted when the referred field
  * is in the same instance  
  */
-case class FieldReference(remType:Option[Int],remInst:Option[Long],remField:Byte,var cachedValue:Constant=EMPTY_EX) extends Expression {
+case class FieldReference(remType:Option[Int],remInst:Option[Int],remField:Byte,var cachedValue:Constant=EMPTY_EX) extends Expression {
 
 
 	lazy val term:String = { 
@@ -40,6 +40,8 @@ def getChildNr(ix: Int): Expression = { null }
 
 def getTerm(): String = term
 
+def getNative=toString
+
 override def toString():String = "Ref["+remType+","+remInst+","+remField+",cv:"+cachedValue+"]"
 
 
@@ -66,8 +68,8 @@ def write(file: DataOutput): Unit = {
 		case _ => file.writeInt(0)
 	}
 	remInst match {
-		case Some(i) => file.writeLong(i)
-		case _ => file.writeLong(0)
+		case Some(i) => file.writeInt(i)
+		case _ => file.writeInt(0)
 	}
 	file.writeByte(remField)
 	//println("write "+toString+" cached Value:"+cachedValue)
@@ -88,7 +90,7 @@ def setCachedValue(newVal:Constant) = {
 object FieldReference {
 	def apply (file: DataInput):Expression = {
 		val t=file.readInt
-		val i=file.readLong
+		val i=file.readInt
 		val f=file.readByte
 		val ret =new FieldReference(if(t==0)None else Some(t),if(i==0)None else Some(i),f,Expression.read(file).asInstanceOf[Constant])
 		//println(" read "+ret+" cv: "+ret.cachedValue )

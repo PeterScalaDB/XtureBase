@@ -69,5 +69,8 @@ case class VectorConstant(val x:Double,val y:Double,val z:Double) extends Consta
   	val dz=y-oy
   	dx*dx+dy*dy+dz*dz
   }
+  def getNative=shortToString
 }
+
+object NULLVECTOR extends VectorConstant(0,0,0)
 

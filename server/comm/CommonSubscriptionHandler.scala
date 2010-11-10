@@ -210,4 +210,9 @@ object CommonSubscriptionHandler {
 				removeSubscription(subs.id)				 
 			}
 	}
+	
+	def refreshAfterUndo() = {
+		for(subs <- subscriptionList; if (subs!=null))
+			subs.user.queryHandler.refreshSubscription(subs)
+	}
 }

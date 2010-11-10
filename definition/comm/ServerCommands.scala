@@ -18,6 +18,7 @@ object ServerCommands extends Enumeration {
   val sendSubscriptionNotification=Value("send notification")
   //val sendPathSubsNotification=Value("send path notification")
   val wantQuit=Value("want quit")
-  
-
+  val lockForUndo=Value("Lock for Undo")
+  val releaseUndoLock=Value("Release Undo Lock")
+  val sendUndoInformation= Value("Send Undo information")
 }

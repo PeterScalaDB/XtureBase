@@ -15,6 +15,11 @@ import javax.swing.SwingUtilities
 /** manages Queries and Subscriptions
  * 
  */
+
+trait StepListReader{
+	def loadStepList(list:Seq[TransStepData])
+}
+
 object ClientQueryManager {
 	//type InstArrayFunc=(Array[InstanceData])=> Unit
 	type UpdateFunc=(NotificationType.Value,IndexedSeq[InstanceData])=>Unit
@@ -33,7 +38,7 @@ object ClientQueryManager {
 	private val newSubscriberQueue=new ArrayBlockingQueue[Subscriber](3)
 	private val subscriptionMap=new ConcurrentHashMap[Int,Subscriber]()
 	
-	
+	private var stepListReader:StepListReader=null
 	
 	private val commandResultQueue = new SynchronousQueue[Option[Constant]]()
 	private val subscriptionAcceptQueue = new SynchronousQueue[Int]()
@@ -43,6 +48,7 @@ object ClientQueryManager {
 	private val myPool=Executors.newCachedThreadPool() 
 	private var isSetup=false
 	private var setupListenerMap=collection.mutable.HashSet[Function0[Unit]]()
+	private var afterSetupListeners=collection.mutable.HashSet[Function0[Unit]]()
 	private val storeSettingsListenerMap= collection.mutable.HashSet[Function0[Unit]]()
 	
 	def setClientSocket(newSock:ClientSocket) = {
@@ -52,6 +58,9 @@ object ClientQueryManager {
 		sock.registerCommandHandler(ServerCommands.acceptSubscription)(handleAcceptSubscription)	
 		sock.registerCommandHandler(ServerCommands.sendSubscriptionNotification )(handleSubsNotifications)
 		sock.registerCommandHandler(ServerCommands.sendCommandResponse )(handleCommandResponse)
+		sock.registerCommandHandler(ServerCommands.lockForUndo )(lockForUndo)
+		sock.registerCommandHandler(ServerCommands.releaseUndoLock )(releaseUndoLock)
+		sock.registerCommandHandler(ServerCommands.sendUndoInformation )(sendUndoInformation)
 	}
 	
 		
@@ -180,7 +189,7 @@ object ClientQueryManager {
 	 * @param owners the owners of the new instance
 	 * @return the ID of the new class
 	 */
-	def createInstance(classType:Int,owners:Array[OwnerReference]):Long = {
+	def createInstance(classType:Int,owners:Array[OwnerReference]):Int = {
 		sock.sendData(ClientCommands.createInstance ) { out =>
 		   out.writeInt(classType)
 		   out.writeInt(owners.size)
@@ -189,19 +198,19 @@ object ClientQueryManager {
 		}
 		//println("create "+Thread.currentThread.getName)
 		commandResultQueue.take() match {
-			case Some(const) => const.toLong
+			case Some(const) => const.toInt
 			case None => throw new IllegalArgumentException("no instance ID returned when creating type "+classType)
 		}
 	}
 	
-	def copyInstance(ref:Reference,fromOwner:OwnerReference,toOwner:OwnerReference):Long = {
+	def copyInstance(ref:Reference,fromOwner:OwnerReference,toOwner:OwnerReference):Int = {
 		sock.sendData(ClientCommands.copyInstance ) { out =>
 			ref.write(out)
 			fromOwner.write(out)
 			toOwner.write(out)
 		}
 		commandResultQueue.take() match {
-			case Some(const) =>const.toLong
+			case Some(const) =>const.toInt
 			case None => throw new IllegalArgumentException("no instance ID returned when copying instance "+ref)
 		}
 	}
@@ -361,15 +370,28 @@ object ClientQueryManager {
 		else setupListenerMap+=listener // else put it in the list to be notified later
 	}
 	
+	def registerAfterListener(listener:Function0[Unit]) {
+		if(isSetup) listener() // call listener instantly when types are already setup
+		else afterSetupListeners+=listener // else put it in the list to be notified later
+	}
+	
+	
 	def registerStoreSettingsListener(listener:Function0[Unit]) {
 		storeSettingsListenerMap+=listener
 		
 	}
 	
-	def notifySetupListeners() = runInPool{
+	def notifySetupListeners() = {
 		setupListenerMap.foreach(a => a())
 		isSetup=true
 	}
+	
+	def notifyAfterSetupListeners() = runInPool{
+		afterSetupListeners.foreach(a => a())
+		
+	}
+	
+	
 	
 	def notifyStoreSettingsListeners() = {
 		storeSettingsListenerMap.foreach(a => a())
@@ -389,6 +411,52 @@ object ClientQueryManager {
 			func
 	})
 		
+	// ************************************ UNDO ********************************************
+	
+	private def lockForUndo(in:DataInputStream ) = {
+		val lockUser=in.readUTF
+		println("LOCK FOR UNDO by User "+lockUser)
+	}
+	
+	private def releaseUndoLock(in:DataInputStream ) = {
+		println("UNDO LOCK RELESED")
+	}
+	
+	private def sendUndoInformation(in:DataInputStream ) = {		
+		val stepListSize=in.readInt
+		//println("Sending Undo Information "+stepListSize)
+		val stepList=collection.mutable.ArrayBuffer[TransStepData]()
+		for(i <-0 until stepListSize) {
+			val newElem=TransStepData.read(in) 
+			stepList+= newElem
+			//println(newElem.toString)
+		}		
+		if(stepListReader!=null) stepListReader.loadStepList(stepList)
+		//println("send ready ")
+			
+	}
+	
+	def registerStepListReader(slr:StepListReader)= {
+		stepListReader=slr
+	}
+	
+	def requestUndoData() = {
+		sock.sendData(ClientCommands.requestUndoData) { out =>
+		  
+		}
+	}
+	
+	def doUndo() = {
+		sock.sendData(ClientCommands.undo) { out =>
+		  
+		}
+	}
+	
+	def stopUndo() = {
+		sock.sendData(ClientCommands.stopUndo) { out =>
+		  
+		}
+	}
 	
 	
 }

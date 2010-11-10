@@ -28,5 +28,9 @@ object ClientCommands extends Enumeration {
   val executeCreateAction=Value("execute Action")
   val logOut=Value("logout")
   val getUserSettings=Value("get user settings")
-  val writeUserSettings=Value("write user settings")  
+  val writeUserSettings=Value("write user settings")
+  
+  val requestUndoData=Value("Request undo data")
+  val undo=Value("Undo transaction")
+  val stopUndo=Value("Stop undo session")
 }

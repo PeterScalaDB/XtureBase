@@ -42,6 +42,9 @@ private var userName=""
 	registerCommandHandler(ClientCommands.executeCreateAction  )(executeAction(true))
 	registerCommandHandler(ClientCommands.getUserSettings  )(getUserSettings)
 	registerCommandHandler(ClientCommands.writeUserSettings  )(writeUserSettings)
+	registerCommandHandler(ClientCommands.requestUndoData  )(requestUndoData)
+	registerCommandHandler(ClientCommands.undo  )(doUndo)
+	registerCommandHandler(ClientCommands.stopUndo  )(stopUndo)
 
 
 	override def run ():Unit = { // receiving loop
@@ -165,7 +168,8 @@ private var userName=""
 		val field=in.readByte
 		val expr=Expression.read(in)
 		try {
-			val ret=TransactionManager.doTransaction(userEntry.info.id, {
+			val ret=TransactionManager.doTransaction(userEntry.info.id,ClientCommands.writeField.id.toShort,
+				ref,false,0,{
 				if (!TransactionManager.tryWriteInstanceField(ref,field,expr))
 					error=new CommandError("Unknown Issue",ClientCommands.writeField.id,0)
 			})
@@ -197,7 +201,8 @@ private var userName=""
 		val field=in.readByte
 		val expr=Expression.read(in)
 		try {
-			val ret=TransactionManager.doTransaction(userEntry.info.id, {
+			val ret=TransactionManager.doTransaction(userEntry.info.id,ClientCommands.writeMultiFields.id.toShort,
+				refList.head,true,0,{
 				for(ref<-refList)
 				if (!TransactionManager.tryWriteInstanceField(ref,field,expr))
 					error=new CommandError("Unknown Issue",ClientCommands.writeField.id,0)
@@ -225,16 +230,18 @@ private var userName=""
 
 	private def wantCreateInstance(in:DataInputStream) = {
 		var error:CommandError=null
-		var result:Long = -1
+		var result:Int = -1
 		val typ=in.readInt
 		val ownerCount=in.readInt
 		val ownerArray:Array[OwnerReference]=(for (i <-0 until ownerCount) yield OwnerReference.read(in)).toArray
 
 		try {
-			val ret=TransactionManager.doTransaction(userEntry.info.id, {
+			val ret=TransactionManager.doTransaction(userEntry.info.id,ClientCommands.createInstance.id.toShort,
+				ownerArray.head.ownerRef ,false,typ,{
 				val inst= TransactionManager.tryCreateInstance(typ,ownerArray,true)
 				if (inst==null)	error=new CommandError("Unknown Issue",ClientCommands.createInstance.id,0)
-				else result=inst.ref.instance 
+				else result=inst.ref.instance
+				//TransactionManager.currentRef=inst.ref // HACK to set the transDetailLog correctly
 			})
 			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.createInstance.id,0)
 		} 
@@ -252,7 +259,7 @@ private var userName=""
 	else {
 		out.writeBoolean(false) // no errors		
 		out.writeBoolean(true)
-		LongConstant(result).write(out) // the result value
+		IntConstant(result).write(out) // the result value
 	}
 	}			 
 	}
@@ -262,7 +269,8 @@ private var userName=""
 		var result:Constant=null
 		val ref=Reference(in)			
 		try {
-			val ret=TransactionManager.doTransaction (userEntry.info.id,{
+			val ret=TransactionManager.doTransaction (userEntry.info.id,ClientCommands.deleteInstance.id.toShort,
+				ref,false,0,{
 				if (!TransactionManager.tryDeleteInstance(ref,None))
 					error=new CommandError("Unknown Issue",ClientCommands.writeField.id,0)
 			})
@@ -292,10 +300,11 @@ private var userName=""
 		val ref=Reference(in)		
 		val fromOwner=OwnerReference.read(in)
 		val toOwner=OwnerReference.read(in)
-		var instID=0L
+		var instID=0
 		//SimpleProfiler.startMeasure("start copy")
 		try {
-			val ret=TransactionManager.doTransaction(userEntry.info.id, {
+			val ret=TransactionManager.doTransaction(userEntry.info.id,ClientCommands.copyInstance.id.toShort,
+				ref,false,0,{
 				instID=TransactionManager.tryCopyInstance(ref,fromOwner,toOwner,true)
 				if(instID<0)
 					error=new CommandError("Unknown Issue",ClientCommands.copyInstance.id,0)
@@ -316,7 +325,7 @@ private var userName=""
 		else {
 			out.writeBoolean(false) // no errors
 			out.writeBoolean(true)
-			LongConstant(instID).write(out)				  
+			IntConstant(instID).write(out)				  
 		}
 	}			 
 	}
@@ -333,7 +342,8 @@ private var userName=""
 					yield (in.readUTF,Expression.readConstant(in))
 		
 		try {
-			val ret=TransactionManager.doTransaction(userEntry.info.id, {
+			val ret=TransactionManager.doTransaction(userEntry.info.id,ActionNameMap.getActionID(actionName),
+				instList.head.ref,instList.size>1,newType,{
 				println("Execute Action "+actionName+ " instances:"+instList.mkString(",")+" create:"+createAction+" new Type:"+newType)
 		    //println("params: "+paramList.mkString(","))
 				if(actionName=="*" && createAction&&instList.size==1) simplyCreateInstance(instList,newType,propField)
@@ -413,6 +423,47 @@ private var userName=""
 	def tellToQuit() = {
 		println("tell Quit to "+userName)
 		sendData(ServerCommands.wantQuit ) {out =>}
+	}
+	
+	
+	def requestUndoData(in:DataInputStream) = {
+		println("User "+userName+" requests Undo data")
+		TransactionManager.requestUndoData(userEntry)		
+	}
+	
+	def doUndo(in:DataInputStream) = {
+		TransactionManager.doUndo(userEntry)	
+	}
+	
+	def stopUndo(in:DataInputStream) = {
+		println("Stop Undo ")
+		TransactionManager.stopUndo(userEntry)
+	}
+	
+	def denyUndoRequest()= {
+		sendData(ServerCommands.sendUndoInformation ) {out =>
+		out.writeBoolean(false)
+		}
+	}
+	
+	def sendUndoLockInfo(undoUserName:String)= {
+		sendData(ServerCommands.lockForUndo  ) {out =>
+		  out.writeUTF(undoUserName)
+		}
+	}
+	
+	def releaseUndoLock() = {
+		sendData(ServerCommands.releaseUndoLock  ) {out =>		  
+		}
+	}
+	
+	def sendUndoInformation(stepList:Seq[TransStepData]) = {
+		//println(stepList.mkString("\n"))
+		sendData(ServerCommands.sendUndoInformation   ) {out =>
+		  out.writeInt(stepList.size)
+		  println("StepList size:"+stepList.size)
+		  stepList.foreach(_.write(out))
+		}
 	}
 }
 

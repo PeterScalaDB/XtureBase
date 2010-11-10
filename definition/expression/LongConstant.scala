@@ -38,5 +38,5 @@ case class LongConstant(val n:Long) extends Constant {
   	file.writeByte(DataType.LongTyp.id)
   	file.writeLong(n)
   }
-
+  def getNative=n
 }

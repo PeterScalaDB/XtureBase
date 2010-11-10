@@ -14,7 +14,7 @@ import scala.collection.immutable.IndexedSeq
 class ServerObjectClass (val name:String,val id:Int,val description:String,protected val ownFields:Seq[FieldDefinition],
 	 protected val ownPropFields:Seq[PropertyFieldDefinition],protected val theActions:Seq[AbstractAction], 
 	 protected val theCreateActions:Seq[AbstractAction],protected val superClasses:Seq[String],
-	 moduleName:String)
+	 moduleName:String,val shortFormat:InstFormat,val longFormat:InstFormat,val resultFormat:InstFormat)
 	 extends AbstractObjectClass {
 	
 	def ownActions = theActions.iterator
@@ -24,7 +24,8 @@ class ServerObjectClass (val name:String,val id:Int,val description:String,prote
 	{
 		//if(theCreateActions.size>0) println("class "+name+" DUMP createActions:"+theCreateActions.map(a =>a.toXML))
 		val sc=superClasses.map { a =>  <sc name= { a }  />  }		
-		<ObjectClass name={name} id={id.toString} desc={description}>
+		<ObjectClass name={name} id={id.toString} desc={description} shortForm={shortFormat.toString}
+		longForm={longFormat.toString} resForm={resultFormat.toString}>
 		<Fields> 		{			ownFields.map(i => i.toXML)	}</Fields>
 		<PropFields> 		{			ownPropFields.map(i => i.toXML)	}</PropFields>
 		<SuperClasses> {  sc }</SuperClasses>
@@ -86,6 +87,7 @@ object ServerObjectClass
 		  for(bfield <-(node \\"PropertyFieldDef")) yield PropertyFieldDefinition.fromXML(bfield),
 		  actionList,createActionList,
 		  for(cfield <-(node \\ "sc"))  yield (cfield \ "@name").text,
-		  moduleName)
+		  moduleName,InstFormat.read(node \"@shortForm"),InstFormat.read(node \"@longForm"),
+		  InstFormat.read(node \"@resForm"))
 	}
 }

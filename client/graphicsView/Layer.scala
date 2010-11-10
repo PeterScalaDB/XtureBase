@@ -149,6 +149,6 @@ object Layer {
 	
 	def createLayer(controller:GraphViewController,data:InstanceData) = {
 		if(data.ref.typ!=displayListTyp) throw new IllegalArgumentException("Create Layer not possible for typ "+data.ref)
-		new Layer(controller,data.ref,data.fieldValue(0).toString,true,true)
+		new Layer(controller,data.ref,data.fieldValue(1).toString,true,true)
 	}
 }
