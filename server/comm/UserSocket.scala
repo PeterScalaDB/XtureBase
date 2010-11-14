@@ -37,7 +37,8 @@ private var userName=""
 	registerCommandHandler(ClientCommands.writeMultiFields) (wantWriteMultiFields)
 	registerCommandHandler(ClientCommands.createInstance)(wantCreateInstance)
 	registerCommandHandler(ClientCommands.deleteInstance)(wantDeleteInstance)
-	registerCommandHandler(ClientCommands.copyInstance)(wantCopyInstance)
+	registerCommandHandler(ClientCommands.copyInstances)(wantCopyInstances)
+	registerCommandHandler(ClientCommands.moveInstances)(wantMoveInstances)
 	registerCommandHandler(ClientCommands.executeAction  )(executeAction(false))	
 	registerCommandHandler(ClientCommands.executeCreateAction  )(executeAction(true))
 	registerCommandHandler(ClientCommands.getUserSettings  )(getUserSettings)
@@ -106,7 +107,7 @@ private var userName=""
 					command match {
 						case ClientCommands.getTypes => sendTypes()
 						case ClientCommands.logOut => {wantRun=false }
-						case ClientCommands.getSetupData => sendSetupData()
+						//case ClientCommands.getSetupData => sendSetupData()
 						case ClientCommands.storeSetupData=> storeSetupData()
 						case a => if (commandHandlerMap.contains(a))commandHandlerMap(a)(in)
 						else println("unhandled command "+a)
@@ -149,9 +150,10 @@ private var userName=""
 		}
 	}
 
-	private def sendSetupData() = {
+	/*private def sendSetupData() = {
 
 	}
+	*/
 
 	private def storeSetupData() = {
 		println("store setup data")
@@ -173,7 +175,7 @@ private var userName=""
 				if (!TransactionManager.tryWriteInstanceField(ref,field,expr))
 					error=new CommandError("Unknown Issue",ClientCommands.writeField.id,0)
 			})
-			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.copyInstance.id,0)
+			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.writeField.id,0)
 		} 
 	catch {
 		case e:Exception =>
@@ -207,7 +209,7 @@ private var userName=""
 				if (!TransactionManager.tryWriteInstanceField(ref,field,expr))
 					error=new CommandError("Unknown Issue",ClientCommands.writeField.id,0)
 			})
-			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.copyInstance.id,0)
+			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.writeMultiFields.id,0)
 		} 
 	catch {
 		case e:Exception =>
@@ -294,28 +296,40 @@ private var userName=""
 	}			 
 	}
 
-	private def wantCopyInstance(in:DataInputStream) = {
+	private def wantCopyInstances(in:DataInputStream) = {
+		copyOrMove(in,ClientCommands.copyInstances,false)
+	}
+	
+	private def wantMoveInstances(in:DataInputStream) = {
+		copyOrMove(in,ClientCommands.moveInstances,true)
+	}
+	
+	private def copyOrMove(in:DataInput,command:ClientCommands.Value,move:Boolean)= {		
 		var error:CommandError=null
 		var result:Constant=null
-		val ref=Reference(in)		
-		val fromOwner=OwnerReference.read(in)
-		val toOwner=OwnerReference.read(in)
+		val numInstances=in.readShort
+		val refList:Seq[Reference] = for(i <- 0 until numInstances) yield Reference(in)		
+		val fromOwner:OwnerReference=OwnerReference.read(in)
+		val toOwner:OwnerReference=OwnerReference.read(in)
+		val atPos:Int = in.readInt
 		var instID=0
 		//SimpleProfiler.startMeasure("start copy")
 		try {
-			val ret=TransactionManager.doTransaction(userEntry.info.id,ClientCommands.copyInstance.id.toShort,
-				ref,false,0,{
-				instID=TransactionManager.tryCopyInstance(ref,fromOwner,toOwner,true)
-				if(instID<0)
-					error=new CommandError("Unknown Issue",ClientCommands.copyInstance.id,0)
-				//SimpleProfiler.measure("preparing ready")
+			val ret=TransactionManager.doTransaction(userEntry.info.id,command.id.toShort,
+				refList.first,false,0,{
+				if(move)TransactionManager.tryMoveMultiInstances(refList,fromOwner,toOwner,atPos)
+				else {
+					instID=TransactionManager.tryCopyMultiInstances(refList,fromOwner,toOwner,atPos)
+					if(instID<0) error=new CommandError("Unknown Issue",command.id,0)
+				}
+				//println("actionList:"+ActionList.theList.mkString(" |"))
 			})
-			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.copyInstance.id,0)
+			for(transError <-ret) error=new CommandError(transError.getMessage,command.id,0)
 		} 
 	catch {
 		case e:Exception =>
 		e.printStackTrace()
-		error=new CommandError(e.toString,ClientCommands.copyInstance.id,0)
+		error=new CommandError(e.toString,command.id,0)
 	}
 	sendData(ServerCommands.sendCommandResponse ) {out =>
 		if(error!=null) {

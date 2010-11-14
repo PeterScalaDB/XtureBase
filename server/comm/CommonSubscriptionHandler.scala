@@ -174,18 +174,14 @@ object CommonSubscriptionHandler {
 		true
 	}
 	
-	def instanceChanged(newState:InstanceData) = {		
-		// notify subscriptions for this single instance	
-		classHandlerMap(newState.ref.typ ).singleInstanceChanged(newState)
-		// notify subscriptions for this instance as child		
-		/*if(burstOwnerRefs==null && arrayCompare(newState.owners ,lastOwnerRefs)) { // owners were already notified
-			println("burst started "+lastOwnerRefs)
-			burstOwnerRefs=lastOwnerRefs
-		}
-		if(! arrayCompare(newState.owners , burstOwnerRefs))*/	 
+	def instanceChanged(newState:InstanceData) = {				
+		classHandlerMap(newState.ref.typ ).singleInstanceChanged(newState)			 
 		for(owner <-newState.owners )
-			classHandlerMap(owner.ownerRef.typ).childInstanceChanged(owner.ownerRef,owner.ownerField,newState)
-		//lastOwnerRefs=newState.owners
+			classHandlerMap(owner.ownerRef.typ).childInstanceChanged(owner.ownerRef,owner.ownerField,newState)		
+	}
+	
+	def refreshSubscriptionsFor(parentRef:Reference) = {
+		classHandlerMap(parentRef.typ ).refreshSubscriptionsFor(parentRef)
 	}
 	
 	

@@ -50,7 +50,7 @@ object TransLogHandler
 	}	
 	
 	def dataChanged(transTyp: TransType.Value,typ:Int,inst:Int,dataPos:Long,dataLength:Int) =	{		
-		println("TransLog changed ID:" + transID+ " transtyp:"+transTyp+" "+typ+", "+inst )		
+		//println("TransLog changed ID:" + transID+ " transtyp:"+transTyp+" "+typ+", "+inst )		
 		bufferStream.reset()		
 		outStream.writeByte(transTyp.id)
 		outStream.writeInt(transID)

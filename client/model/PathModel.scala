@@ -77,7 +77,7 @@ class PathModel extends AbstractListModel {
   def getSize(): Int = { 
   	for(list <-dataList) return list.size
   	return 0
- }
+  }
 
   def getElementAt(index: Int): Object = 
   	if (dataList.isDefined) {  		
@@ -98,5 +98,10 @@ class PathModel extends AbstractListModel {
   		subsID= -1
   	}
   }
+  
+  def getTitleText:String = {
+		if(dataList.isDefined) dataList.get.mkString(" \\ ")
+		else " empty "
+	}
 
 }

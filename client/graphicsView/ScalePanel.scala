@@ -12,9 +12,9 @@ import java.awt.{Font,Color,Insets}
  */
 class ScalePanel(model:ScaleModel,controller:GraphViewController) extends BoxPanel(scala.swing.Orientation.Horizontal) {
 		
-	val zoomAllBut=new Button("Zoom All")
-	val zoomInBut=new ToggleButton(" + ")
-	val zoomOutBut=new Button(" - ")
+	val zoomAllBut=new Button("Alles")
+	val zoomInBut=new ToggleButton("+")
+	val zoomOutBut=new Button("-")
 	val scaleEdit=new TextField("")
 	val relativeEdit=new TextField("1 : 100")
 	val smallFont=new Font("Arial",0,10)
@@ -65,8 +65,8 @@ class ScalePanel(model:ScaleModel,controller:GraphViewController) extends BoxPan
 	})
 	background=Color.gray
 	
-	contents+=zoomAllBut+=zoomInBut+=zoomOutBut +=Swing.HGlue+= new Label("Anzeige-Masstab: ")+=
-		scaleEdit+=Swing.HStrut(20)+=new Label("Bezugs-Masstab: ")+=relativeEdit
+	contents+=zoomAllBut+=zoomInBut+=zoomOutBut +=Swing.HGlue+= new Label("Anzeige: ")+=
+		scaleEdit+=Swing.HStrut(20)+=new Label("Bezug: ")+=relativeEdit
 		
 	def scaleToText(sc:Number):String= sc match {
 		case a:Integer => a.toString

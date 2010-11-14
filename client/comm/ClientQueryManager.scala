@@ -23,6 +23,7 @@ trait StepListReader{
 object ClientQueryManager {
 	//type InstArrayFunc=(Array[InstanceData])=> Unit
 	type UpdateFunc=(NotificationType.Value,IndexedSeq[InstanceData])=>Unit
+	//type PosUpdateFunc=(NotificationType.Value,IndexedSeq[InstanceData],Int)=>Unit
 	
 	type FactUpdateFunc[T<: Referencable]=(NotificationType.Value,IndexedSeq[T])=>Unit
 	
@@ -31,6 +32,7 @@ object ClientQueryManager {
 	//case class Query(func: InstArrayFunc)
 	trait Subscriber
 	case class SimpleSubscriber(func: UpdateFunc) extends Subscriber
+	//case class PositionSubscriber(func: PosUpdateFunc) extends Subscriber
 	case class FactSubscriber[T<: Referencable](factory:SubscriptionFactory[T],func: FactUpdateFunc[T]) extends Subscriber
 	//case class PathSubscriber(func:PathUpdateFunc)
 	
@@ -88,6 +90,19 @@ object ClientQueryManager {
 		}
 		subscriptionAcceptQueue.take()
 	}
+	/** creates a new subscription that wants to get position information when instances are moved
+	 * 
+	 */
+	/*def createPosSubscription(parentRef:Reference,propertyField:Byte)(updateFunc: PosUpdateFunc):Int = {		
+		sock.sendData(ClientCommands.startSubscription ) {out =>
+			newSubscriberQueue.add( PositionSubscriber(updateFunc))
+			//println("adding subscription "+parentRef+ " "+Thread.currentThread)
+			parentRef.write(out)
+			out.writeByte(propertyField)
+		}
+		subscriptionAcceptQueue.take()
+	}*/
+	
 	
 	/** creates a Subscription with a Factory
 	 * 
@@ -203,17 +218,30 @@ object ClientQueryManager {
 		}
 	}
 	
-	def copyInstance(ref:Reference,fromOwner:OwnerReference,toOwner:OwnerReference):Int = {
-		sock.sendData(ClientCommands.copyInstance ) { out =>
-			ref.write(out)
+	
+	def copyInstances(refList:Seq[Reference],fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int):Int = {
+		copyOrMove(refList,fromOwner,toOwner,atPos,ClientCommands.copyInstances )
+	}
+	
+	def moveInstances(refList:Seq[Reference],fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int):Int = {
+		copyOrMove(refList,fromOwner,toOwner,atPos,ClientCommands.moveInstances )
+	}
+	
+	def copyOrMove(refList:Seq[Reference],fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int,command:ClientCommands.Value)= {		
+		sock.sendData(command ) { out =>
+		  out.writeShort(refList.size)
+		  for(ref <-refList) ref.write(out)
 			fromOwner.write(out)
 			toOwner.write(out)
+			out.writeInt(atPos)
 		}
 		commandResultQueue.take() match {
 			case Some(const) =>const.toInt
-			case None => throw new IllegalArgumentException("no instance ID returned when copying instance "+ref)
+			case None => throw new IllegalArgumentException("no instance ID returned when copying instances "+refList.mkString)
 		}
 	}
+	
+	
 	
 	
 	def deleteInstance(ref:Reference) = {
@@ -289,6 +317,10 @@ object ClientQueryManager {
 				val data=readList(in)
 				a.func(NotificationType.sendData,data)
 			}
+			/*case c:PositionSubscriber =>{
+				val data=readList(in)
+				c.func(NotificationType.sendData,data,-1)
+			}*/
 			case b:FactSubscriber[_] => {
 				val data=readListWithFactory(in,b.factory)
 				b.func(NotificationType.sendData,data)
@@ -303,44 +335,80 @@ object ClientQueryManager {
 		val subs=subscriptionMap.get(substID) 
 		
 		subs match {
-			case subscriber:SimpleSubscriber => NotificationType(in.readInt) match {
+			case subscriber:SimpleSubscriber => { val nt=NotificationType(in.readInt)
+				//print("simple "+nt)
+				nt match {
+					case NotificationType.FieldChanged => {
+						val inst=InstanceData.readWithChildInfo(Reference(in),in)
+						//println(" field changed:"+inst)
+						runInPool(subscriber.func(NotificationType.FieldChanged,IndexedSeq(inst)))
+					}
+					case NotificationType.childAdded => {
+						//val atPos=in.readInt						
+						val inst=InstanceData.readWithChildInfo(Reference(in),in)
+						//println(" child added:"+inst)
+						runInPool(subscriber.func(NotificationType.childAdded,IndexedSeq(inst)))
+					}
+					case NotificationType.instanceRemoved => {
+						val ref=Reference(in)
+						runInPool(subscriber.func(NotificationType.instanceRemoved,
+							IndexedSeq(new InstanceData(ref,Array(),Array(),false)))) // empty instance
+					}
+					case NotificationType.sendData => {
+						val list=readList(in)
+						//println(" send Data:"+list)
+						runInPool(subscriber.func(NotificationType.sendData,list))
+					}
+				}
+			}
+			/*case subscriber:PositionSubscriber => NotificationType(in.readInt) match {
 				case NotificationType.FieldChanged => {
 					val inst=InstanceData.readWithChildInfo(Reference(in),in)
-					runInPool(subscriber.func(NotificationType.FieldChanged,IndexedSeq(inst)))
+					runInPool(subscriber.func(NotificationType.FieldChanged,IndexedSeq(inst),0))
 				}
 				case NotificationType.childAdded => {
+					//val atPos=in.readInt
 					val inst=InstanceData.readWithChildInfo(Reference(in),in)
-					runInPool(subscriber.func(NotificationType.childAdded,IndexedSeq(inst)))
+					runInPool(subscriber.func(NotificationType.childAdded,IndexedSeq(inst),atPos))
 				}
 				case NotificationType.instanceRemoved => {
 					val ref=Reference(in)
 					runInPool(subscriber.func(NotificationType.instanceRemoved,
-						IndexedSeq(new InstanceData(ref,Array(),Array(),false)))) // empty instance
+						IndexedSeq(new InstanceData(ref,Array(),Array(),false)),0)) // empty instance
 				}
 				case NotificationType.sendData => {
 					val list=readList(in)
-					runInPool(subscriber.func(NotificationType.sendData,list))
+					runInPool(subscriber.func(NotificationType.sendData,list,0))
 				}
+			}*/
+			case factSubs:FactSubscriber[_] => {
+				val nt=NotificationType(in.readInt)
+				//print("fact ":+nt)
+				nt match {
+					case NotificationType.FieldChanged => {						
+						val inst=factSubs.factory.createObject(Reference(in),in)
+						//println(" field changed:"+inst)
+						runInPool(factSubs.func(NotificationType.FieldChanged,IndexedSeq(inst)))
+					}
+					case NotificationType.childAdded => {
+						
+						//val atPos=in.readInt
+						val inst=factSubs.factory.createObject(Reference(in),in)
+						//println(" child added :"+inst)
+						runInPool(factSubs.func(NotificationType.childAdded,IndexedSeq(inst)))
+					}
+					case NotificationType.instanceRemoved => {
+						val ref=Reference(in)
+						runInPool(factSubs.func(NotificationType.instanceRemoved,
+							IndexedSeq(factSubs.factory.createEmptyObject(ref)))) // empty instance
+					}
+					case NotificationType.sendData => {						
+						val list=readListWithFactory(in,factSubs.factory)
+						//println(" send Data:"+list)
+						runInPool(factSubs.func(NotificationType.sendData,list))
+					}
 			}
-			case factSubs:FactSubscriber[_] => NotificationType(in.readInt) match {
-				case NotificationType.FieldChanged => {
-					val inst=factSubs.factory.createObject(Reference(in),in)
-					runInPool(factSubs.func(NotificationType.FieldChanged,IndexedSeq(inst)))
-				}
-				case NotificationType.childAdded => {
-					val inst=factSubs.factory.createObject(Reference(in),in)
-					runInPool(factSubs.func(NotificationType.childAdded,IndexedSeq(inst)))
-				}
-				case NotificationType.instanceRemoved => {
-					val ref=Reference(in)
-					runInPool(factSubs.func(NotificationType.instanceRemoved,
-						IndexedSeq(factSubs.factory.createEmptyObject(ref)))) // empty instance
-				}
-				case NotificationType.sendData => {
-					val list=readListWithFactory(in,factSubs.factory)
-					runInPool(factSubs.func(NotificationType.sendData,list))
-				}
-			}
+			}	
 		}
 				
 	}

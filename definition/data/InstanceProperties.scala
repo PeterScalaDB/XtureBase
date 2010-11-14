@@ -28,17 +28,23 @@ class InstanceProperties(override val ref:Reference, val propertyFields:Array [P
 		result
 	}
 	
-	def addChildInstance (field:Byte,newInst:Reference):InstanceProperties = {
+	def addChildInstance (field:Byte,newInst:Reference,atPos:Int):InstanceProperties = {
 		if(field>=propertyFields.length) throw new 
 		    IllegalArgumentException("Can't add children: No Property Field #"+field+ " in instance "+ref)
 		val newFields=propertyFields.clone
-		newFields(field)=newFields(field).addPropertyInstance(newInst)
+		newFields(field)=newFields(field).addPropertyInstance(newInst,atPos)
 		new InstanceProperties(ref,newFields)
 	}
 	
 	def removeChildInstance (field:Byte,remInst:Reference):InstanceProperties = {
 		val newFields=propertyFields.clone
 		newFields(field)=newFields(field).removePropertyInstance(remInst)
+		new InstanceProperties(ref,newFields)   
+	}
+	
+	def moveChildInstanceToPos (field:Byte,inst:Reference,pos:Int):InstanceProperties = {
+		val newFields=propertyFields.clone
+		newFields(field)=newFields(field).moveInstanceToPos(inst,pos)
 		new InstanceProperties(ref,newFields)   
 	}
 	

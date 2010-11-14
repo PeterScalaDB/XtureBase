@@ -155,7 +155,7 @@ object TableTest extends SimpleSwingApplication {
 		if(dataTable.selection.rows.isEmpty) return
 		val row:Int=(dataTable.selection.rows.toArray).apply(0)
 		val starttime:Long = System.currentTimeMillis();
-		val inst=ClientQueryManager.copyInstance(tabModel.getInstance(row).ref,fromOwner,toOwner)	
+		val inst=ClientQueryManager.copyInstances(List(tabModel.getInstance(row).ref),fromOwner,toOwner,-1)	
 		val endtime = System.currentTimeMillis()
 		println("copy time:"+(endtime-starttime))
 		println("inst:"+inst)

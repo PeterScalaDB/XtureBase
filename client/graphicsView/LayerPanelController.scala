@@ -7,28 +7,33 @@ import client.dialog._
 import scala.swing._
 import scala.swing.event._
 import definition.data._
+import javax.swing.ImageIcon
+import java.net.URL
 /** manages the Layer panel
  * 
  */
 class LayerPanelController(viewController:GraphViewController) extends SelectListener {
 	
+  	
   val layerTable:Table=new Table() {
+		
   	var lastColumn:Int= -1
-  	var lastRow:Int= -1
+  	var lastRow:Int= -1  	
   	
 		peer.setModel(viewController.layerModel)
 		autoResizeMode=Table.AutoResizeMode.Off
 		selection.intervalMode=Table.IntervalMode.Single
 		selection.elementMode=Table.ElementMode.None
-		val colMod=peer.getColumnModel()
-		colMod.getColumn(0).setMinWidth(50)
-		colMod.getColumn(0).setPreferredWidth(400)
-		colMod.getColumn(1).setPreferredWidth(60)
-		colMod.getColumn(2).setPreferredWidth(60)
-		colMod.getColumn(3).setPreferredWidth(60)
+		rowHeight= LayerPanelController.lineHeight
+		focusable=false
+		val colMod=peer.getColumnModel()		
+		colMod.getColumn(0).setPreferredWidth(40)
+		colMod.getColumn(1).setPreferredWidth(40)
+		colMod.getColumn(2).setPreferredWidth(40)
+		colMod.getColumn(3).setPreferredWidth(200)
 		colMod.getColumn(4).setPreferredWidth(50)
-		colMod.getColumn(5).setPreferredWidth(70)
-		colMod.getColumn(6).setPreferredWidth(70)
+		//colMod.getColumn(5).setPreferredWidth(70)
+		//colMod.getColumn(6).setPreferredWidth(70)
 		listenTo(mouse.clicks)
 		reactions+={
 			case e:MousePressed => {
@@ -41,17 +46,56 @@ class LayerPanelController(viewController:GraphViewController) extends SelectLis
 					tableCellClicked(lastColumn,lastRow)
 			}
 		}
+  	def boolIdentity(o:Boolean)= o
+  	
+  	val eyeRend = new MyRenderer[Boolean] ( boolIdentity  ,LayerPanelController.eyeIcon,true)
+  	val editRend = new MyRenderer[Boolean] ( boolIdentity  ,LayerPanelController.editIcon,true)
+  	val newElemRend = new MyRenderer[Boolean] ( boolIdentity  ,LayerPanelController.newElemIcon,false)
+  	override def rendererComponent(sel: Boolean, foc: Boolean, row: Int, col: Int) = {
+  		//FIND VALUE
+  		val v = model.getValueAt(
+  			peer.convertRowIndexToModel(row), 
+  			peer.convertColumnIndexToModel(col))
+  		//if(col<2) println("rendererComp col:"+col+" row:"+row+" v:"+v)
+  		
+  		
+  			if (row >= viewController.layerModel .layerList .size) super.rendererComponent(sel,foc,row,col) 
+  			else {  				
+  				col match {
+  					case 0 => eyeRend.componentFor(this, sel, foc, v.asInstanceOf[Boolean], row, col)
+  					case 1 => editRend.componentFor(this, sel, foc, v.asInstanceOf[Boolean], row, col)
+  					case 2 => newElemRend.componentFor(this, sel, foc, v.asInstanceOf[Boolean], row, col)
+  					case _ => super.rendererComponent(sel,foc,row,col)
+  				}  
+
+  			}
+
+
+  	}
+  	
+  	class MyRenderer[A](convert: A => Boolean,myIcon:ImageIcon,showIconUnselected:Boolean) extends Table.AbstractRenderer[A, Label](new Label) {	    
+	   
+	    def configure(table: Table, isSelected: Boolean, hasFocus: Boolean, a: A, row: Int, column: Int) {
+	      val checked = convert(a)	      
+	      component.icon = if(showIconUnselected) myIcon else  {if (checked) myIcon else null } 
+	      component.text = ""
+	      component.background = if (checked) LayerPanelController.selectColor
+	      else LayerPanelController.notSelectColor
+	      //else component.background = table.background
+	    }
+	  }
+
 	}
   
   def tableCellClicked(col:Int,row:Int)= {
-  	if(col==0) {
+  	if(col==3) {
   		if (row==viewController.layerModel.layerList.size) addLayer
   	}
   	else if(row<viewController.layerModel.layerList.size)
   	col match {  		 
-  		case 1 => toggleVisible(row)
-  		case 2 => toggleEdible(row)
-  		case 3 => toggleActive(row)
+  		case 0 => toggleVisible(row)
+  		case 1 => toggleEdible(row)
+  		case 2 => toggleActive(row)
   		case 4 => removeLayer(row) 
   		case _ =>
   	}
@@ -60,31 +104,20 @@ class LayerPanelController(viewController:GraphViewController) extends SelectLis
   // instances from other models
   var selectedInstances:Seq[Referencable]=Seq.empty
   
-  val addBut =new Button("Hinzufügen")
+ /*val addBut =new Button("Hinzufügen")
 	val removeBut =new Button("Entfernen")
 	val activateBut =new Button("Aktivieren")
 	val visibleBut =new Button("Sichtbar")
-	val edibleBut:Button =new Button("Veränderbar")
+	val edibleBut:Button =new Button("Veränderbar")*/
   
-  val layerPanel:BorderPanel = new BorderPanel() {
+  /*val layerPanel:BorderPanel = new BorderPanel() {
   	
 		add(new ScrollPane() {
 			viewportView= layerTable
 			preferredSize=new Dimension(100,100)
 		},BorderPanel.Position.Center)
-		/*add(new GridPanel(1,5){
-			
-			//contents+=addBut+=removeBut+=visibleBut+=edibleBut+=activateBut
-			/*listenTo(addBut,removeBut,visibleBut,edibleBut,activateBut)
-			reactions+= {
-				case ButtonClicked(`addBut`) => addLayer
-				//case ButtonClicked(`removeBut`) => removeLayer
-				/*case ButtonClicked(`visibleBut`) => toggleVisible
-				case ButtonClicked(`edibleBut`) => toggleEdible
-				case ButtonClicked(`activateBut`) => toggleActive*/
-			}*/
-		},BorderPanel.Position.South)*/
-	}
+		
+	}*/
   
   def selectionChanged(sender:SelectSender,instList:Seq[Referencable])= {
 		selectedInstances=instList
@@ -109,19 +142,16 @@ class LayerPanelController(viewController:GraphViewController) extends SelectLis
   
   def updateProperty = {  	
   	//layerPanel.peer.putClientProperty("newPanel", if(viewController.layerModel.hasVisibleLayers) viewController.newPanel else null)
-  	viewController.canvas.repaint
+  	viewController.canvas.repaint()
   }
   	 
   
   def getSelectedLayer:Int = if ( layerTable.selection.rows.isEmpty) -1 else layerTable.selection.rows.head 
 	
-	def removeLayer(ix:Int) = {
-		 //val ix=getSelectedLayer 
+	def removeLayer(ix:Int) = {		 
 		 if(ix> -1) {
 			 viewController.layerModel.layerList(ix).shutDown
-			 viewController.layerModel.removeLayer(ix)
-			 //updateProperty
-			 //TestGraphListModel.update()
+			 viewController.layerModel.removeLayer(ix)			 
 		 }
 		 viewController.selectModel.deselect(true)
 	}
@@ -142,4 +172,27 @@ class LayerPanelController(viewController:GraphViewController) extends SelectLis
 		updateProperty
 	}
   
+   
+   
+     
+}
+
+object LayerPanelController {
+	val lineHeight=20
+	val eyeIcon=createImageIcon("eye.gif")
+  val editIcon=createImageIcon("editsmall.gif")
+  val newElemIcon=createImageIcon("newElem.gif")
+  val selectColor=new Color(70,160,230)
+	val notSelectColor=new Color(250,250,250)
+  
+  def  createImageIcon(path:String):ImageIcon = {
+		val imgURL:URL   = this.getClass.getResource(path)
+		if (imgURL != null) {
+			null
+			return new ImageIcon(imgURL);
+		} else {
+			System.err.println("Couldn't find file: " + path);
+			return null;
+		}
+	}
 }

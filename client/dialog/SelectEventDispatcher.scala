@@ -18,6 +18,10 @@ object SelectEventDispatcher extends SelectListener with SelectSender{
 		listenerList += listener
 	}
 	
+	def removeSelectListener(listener:SelectListener) = {
+		listenerList -=listener
+	}
+	
 	
 	def selectionChanged(sender:SelectSender,instList:Seq[Referencable]) = {
 	  for( li <-listenerList) li.selectionChanged(sender,instList)

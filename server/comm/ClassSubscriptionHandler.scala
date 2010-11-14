@@ -16,7 +16,7 @@ class ClassSubscriptionHandler(typID:Int) {
 	var propSubsMap=Map[Reference,List[PropSubscription]]()
 	
 	def addSubscription(s:SubscriptionInfo) = {
-		println("csm addSubs:"+s)
+		//println("csm addSubs:"+s)
 		s match {
 			case a:SingleSubscription => addSingleS(a)
 			case b:PropSubscription => addPropS(b)
@@ -24,7 +24,7 @@ class ClassSubscriptionHandler(typID:Int) {
 	}
 	
 	def addPathSubscription(p:PathSubscription,ref:Reference) = {
-		println("csm addPathSubs:"+p+ " => "+ref)
+		//println("csm addPathSubs:"+p+ " => "+ref)
 		if(singleSubsMap.contains(ref )) { // add to existing
 			val list=singleSubsMap(ref)
 			singleSubsMap.put(ref,p :: list)
@@ -46,6 +46,14 @@ class ClassSubscriptionHandler(typID:Int) {
 			val list=singleSubsMap(newState.ref)
 			for(subs <-list)
 				subs.user.queryHandler.notifyInstanceChanged(subs,newState)
+		}
+	}
+	
+	def refreshSubscriptionsFor(parentRef:Reference) = {
+		if(propSubsMap.contains(parentRef)) {
+			val list=propSubsMap(parentRef)
+			for(subs <-list)				
+					subs.user.queryHandler.refreshSubscription(subs)
 		}
 	}
 	
@@ -119,7 +127,7 @@ class ClassSubscriptionHandler(typID:Int) {
 	}
 	
 	private def removeSingleS(s:SingleSubscription) = {
-		println("csm remove singleSubs:"+s)
+		//println("csm remove singleSubs:"+s)
 		if(singleSubsMap.contains(s.parentRef)) {
 			val list=singleSubsMap(s.parentRef)
 			if(list.contains(s))
@@ -129,7 +137,7 @@ class ClassSubscriptionHandler(typID:Int) {
 	}
 	
 	private def removePropS(s:PropSubscription) = {
-		println("csm remove propSubs:"+s)
+		//println("csm remove propSubs:"+s)
 		if(propSubsMap.contains(s.parentRef)) {
 		val list=propSubsMap(s.parentRef)
 		if(list.contains(s))
@@ -138,7 +146,7 @@ class ClassSubscriptionHandler(typID:Int) {
 	}	
 	
 	def removePathS(s:PathSubscription) = {
-		println("csm remove pathSubs:"+s)
+		//println("csm remove pathSubs:"+s)
 		for((k,list) <-singleSubsMap.iterator)
 			if(list.contains(s))
 				 singleSubsMap.put(k,list.filterNot (_ == s))

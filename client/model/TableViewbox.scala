@@ -23,14 +23,15 @@ class TableViewbox extends BorderPanel with ViewboxContent {
 	var viewbox:Viewbox=null
 	val openPathListener = new PathControllable {
 		def openData(parentRef:Reference,selectRef:Option[Reference])= 
-			viewbox.setTitle("Tabelle "+ (if(pathMod.dataList.isDefined) pathMod.dataList.get.last else "[leer]"))
+			viewbox.setTitle( pathMod.getTitleText)
 		def registerOpenChildCallBack(callBack: (Reference)=> Unit) = {}
 	}
 	val pathController=new PathController(pathMod,pathView,List(dataviewController,openPathListener))
 	var pathFactoryIndex= -1
 	var pathBoxOpen=true
+	val emptyBox=Swing.HStrut(0)
 	
-	val pathLabel=new Label()
+	//val pathLabel=new Label()
 	
 	border=BorderFactory.createEtchedBorder(EtchedBorder.LOWERED);
   val pathScroller =new ScrollPane() {
@@ -45,22 +46,22 @@ class TableViewbox extends BorderPanel with ViewboxContent {
 				}
 				pathController.registerSizeChangeListener(callback)
 			}
-  val switchPathButton=new Button("-")
+  val switchPathButton=new Button("\u02c4")
 	
 	val pathBox=new BorderPanel{
 		add(pathScroller,BorderPanel.Position.Center)
 		add(new BoxPanel(Orientation.Vertical) {
 			contents+= Swing.VGlue += switchPathButton
-		},BorderPanel.Position.East)
+		},BorderPanel.Position.West)
 		listenTo(switchPathButton)
 		reactions += {
 			case ButtonClicked(`switchPathButton`) => {
 				switchPathBox()
 			}
 		}
-		def setCenterComp(comp:Component) = add(comp,BorderPanel.Position.Center)
+		//def setCenterComp(comp:Component) = add(comp,BorderPanel.Position.Center)
 	}
-	pathLabel.horizontalAlignment=Alignment.Left
+	//pathLabel.horizontalAlignment=Alignment.Left
   switchPathButton.margin=new Insets(0,0,0,0)
 	switchPathButton.focusable=false
   preferredSize=new Dimension(400,pathController.lineHeight )
@@ -90,30 +91,28 @@ class TableViewbox extends BorderPanel with ViewboxContent {
   	dataviewController.shutDown
   }
 
-  def getType(): ViewboxContentType = { TableViewbox.tableBoxType }
+  //def getType(): ViewboxContentType = { TableViewbox.tableBoxType }
   
   def setViewbox(newbox:Viewbox)= viewbox=newbox
   
   def switchPathBox():Unit = {
   	if(pathBoxOpen) { // close
-  		switchPathButton .text="+"
-  		pathLabel.text=if (pathMod.dataList.isDefined) 
-  			pathController.getLabelText(pathMod.dataList.get.last,pathMod.dataList.get.size-1)
-  			else "empty"
-  		pathBox.setCenterComp(pathLabel)
-  		pathBox.revalidate
+  		//switchPathButton .text="+"  		
+  		add(emptyBox,BorderPanel.Position.North)
+  		viewbox.setTitle(	pathMod.getTitleText)//(pathMod.dataList.get.last,pathMod.dataList.get.size-1)else "empty")
+  		viewbox.minimizeHeaderPanel(switchPathBox)
+  		//pathBox.setCenterComp(pathLabel)
+  		revalidate
   	}else {
-  		switchPathButton .text="-" // open
-  		pathBox.setCenterComp(pathScroller)
-  		pathBox.revalidate
+  		//switchPathButton .text="-" // open
+  		add (pathBox,BorderPanel.Position.North)
+  		//revalidate
   	}
   	pathBoxOpen= !pathBoxOpen
   }
 }
 
 object TableViewbox {
-	val tableBoxType=new ViewboxContentType(1,"table","T",()=>{
-		new TableViewbox
-	})
+	
 	
 }

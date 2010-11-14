@@ -13,7 +13,7 @@ trait ViewboxContent {
 	type CompType=ViewboxContent with Component
 	def open()
 	def close()
-	def getType:ViewboxContentType
+	//def getType:ViewboxContentType
 	//def title:String
 	def setViewbox(box:Viewbox)
 }

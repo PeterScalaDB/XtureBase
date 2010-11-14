@@ -8,7 +8,7 @@ package definition.comm
  */
 object ServerCommands extends Enumeration {
 	val sendTypes=Value("send Types")
-	val getSetupData=Value("set Setup Data")
+	//val getSetupData=Value("set Setup Data")
   val sendQueryResponse=Value("sendQueryResponse")
   val sendCommandResponse=Value("sendCommandResponse")
   val sendUserSettings=Value ("send user settings")

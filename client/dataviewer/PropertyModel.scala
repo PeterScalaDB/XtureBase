@@ -9,7 +9,7 @@ import definition.comm._
 import client.comm._
 import scala.swing._
 import scala.swing.event._
-import javax.swing.SwingUtilities
+import javax.swing.{SwingUtilities,JList}
 import java.awt.Color
 
 /** manages all data changes of a property field of a instance
@@ -23,8 +23,9 @@ class PropertyModel(val mainController:DataViewController) {
 	var loaded=false
 	var subscriptionID= -1
 	var allowedClass:Int= _	
+	var listLock=new Object
 	var tableModMap=scala.collection.mutable.HashMap[Int,TypeTableModel]()
-	val vGlue=new ClickComp
+	val vGlue=new ClickComp(this)
 	val titleLabel=new Label("Prop")
 	titleLabel.font=mainController.smallFont
 	val tableArea=new BoxPanel (scala.swing.Orientation.Vertical ) {		
@@ -61,28 +62,32 @@ class PropertyModel(val mainController:DataViewController) {
 		}		
 		loaded=true
 	}
+	def getPropFieldDefinition= mainController.mainClass.propFields (propertyField)
 	
 	
 	def callBack(notType:NotificationType.Value,data: IndexedSeq[InstanceData]) = 
-		ClientQueryManager.runSw {		
+		ClientQueryManager.runSw  { listLock.synchronized{		
 		//println("Proberty modification :"+notType+ " "+(if(data.isEmpty)" [Empty] "else   data.first.ref)+", ... "+	
 		//		 "subsID:"+subscriptionID+ " ** "+ Thread.currentThread.getName)
 		//println()				
 		notType match {
 			case NotificationType.sendData => {
+				println("send data "+data)
 				val grouped=data.view.groupBy(_.ref.typ)
 				for((i,data) <-grouped.iterator) {
-					val mod=createTableModel(i)
+					val mod=if(tableModMap.contains(i)) tableModMap(i) else createTableModel(i)
 					mod.setDataList(data,selectRef)
 				}					
 			}
 			case NotificationType.childAdded => {
+				println("child added:"+data)
 				val typ=data(0).ref.typ
 				val mod = if(tableModMap.contains(typ)) tableModMap(typ)
-					else createTableModel(typ)
+					else createTableModel(typ)					
 				mod.addInstance(data(0))
 			}
 			case NotificationType.FieldChanged => {
+				println("field added:"+data)
 				val typ=data(0).ref.typ
 				tableModMap(typ).changeInstance(data(0))
 			}
@@ -91,7 +96,7 @@ class PropertyModel(val mainController:DataViewController) {
 				val typ=data(0).ref.typ
 				tableModMap(typ).removeInstance(data(0).ref)							
 			}		
-		}
+		}}
 	} 
 	
 	def createTableModel(typ:Int) = {
@@ -121,27 +126,31 @@ class PropertyModel(val mainController:DataViewController) {
 	
 	def focusGained = mainController.containerFocused(propertyField)
 	
-	def shutDown() = {
+	def shutDown() = listLock.synchronized{
 		ClientQueryManager.pauseSubscription(subscriptionID)
 		tableArea.contents.clear
 		tableModMap.clear
 		loaded=false
 	}
 	
-	def deselect(selectedType:Int) = {
+	def deselect(selectedType:Int) = listLock.synchronized {
 		//println("des")
 		for(m <-tableModMap.valuesIterator;if(m.typ!=selectedType)) m.deselect()
 	}
 	
-	def getHeight=tableModMap.values.foldRight(0){(n,result)=> result+n.scroller.preferredSize.height}
+	def getHeight= listLock.synchronized {
+		tableModMap.values.foldRight(0){(n,result)=> result+n.scroller.preferredSize.height}
+	}
 	
 	
-	class ClickComp extends Component {
+	class ClickComp(propMod:PropertyModel) extends Component {
 		//val prefSiz=new Dimension(50,2000)		
 		opaque=true
 		background=Color.green
-		focusable=true				
+		focusable=true	
+		peer.setTransferHandler(new PropAreaTransferHandler(propMod))
 		
+		//peer.setDropMode(DropMode.ON_OR_INSERT_ROWS)
 		listenTo(mouse.clicks)
 		reactions+= {			
 			case e:MouseReleased => {				

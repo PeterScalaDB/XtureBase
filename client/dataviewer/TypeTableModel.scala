@@ -2,31 +2,27 @@
  * Author: Peter Started:17.09.2010
  */
 package client.dataviewer
+import client.comm._
+import collection.generic.{GenericCompanion}
+import definition.data._
+import definition.expression._
 
 import definition.typ._
-import definition.data._
 import javax.swing._
-import javax.swing.table._
 import javax.swing.event._
+import javax.swing.table._
+import java.awt.{Color, Dimension, Font}
 import java.awt.event.MouseAdapter
-import java.awt.{Dimension,Font}
 import scala.swing._
 import scala.swing.event._
-import definition.expression._
 import transaction.parser._
-import client.comm._
-import collection.generic.{CanBuildFrom, GenericTraversableTemplate,
-	GenericCompanion, SeqFactory}
-import collection.mutable.{Builder,ArrayBuffer}
-import collection.immutable.Vector
-import java.awt.Color
 
 
 
 /** table model for a table showing instances of a certain type
  * 
  */
-class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableModel {
+class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableModel {
 	val objClass=AllClasses.get.getClassByID(typ)
 	var dataList:Seq[InstanceData]= _
 	val tableFont=new Font("Arial",0,15)
@@ -37,6 +33,8 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 	var dragColumnNewPos:Int=0
 	
 	val defaultRowHeight=20
+	
+	val transferHandler=new TableTransferHandler(this)
 
 	val listLock=new Object
 
@@ -45,8 +43,13 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 		//selection.intervalMode=Table.IntervalMode.Single
 		selection.elementMode=Table.ElementMode.Row 
 		peer.setAutoCreateColumnsFromModel(false)
+		//peer.setFillsViewportHeight(true)
+		peer.setTransferHandler(transferHandler)
+		peer.setDragEnabled(true)
+		peer.setDropMode(DropMode.ON_OR_INSERT_ROWS)
 		rowHeight=defaultRowHeight
 		font=tableFont
+		
 		listenTo(selection)	
 		listenTo(mouse.clicks,this)
 		reactions += {
@@ -91,6 +94,8 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 		}); 
 	}	
 	
+	def getParentRef=propMod.mainController.ref
+	def getPropField= propMod.propertyField
 
 	val scroller=new ScrollPane() {
 		
@@ -100,7 +105,7 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 
 	def setDataList(data:Seq[InstanceData],selectInstance:Option[Reference]) =  {
 		listLock.synchronized {
-			//println("set Data "+data.mkString)
+			//println("tableMod set Data "+data.mkString)
 			dataList=data			
 			selfSelectChanged=false
 			selfAdded=false
@@ -134,7 +139,7 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 	}
 
 	def changeInstance(newInst:InstanceData):Unit = listLock.synchronized {
-		
+		//println("tablemod change inst: "+newInst.ref)
 		val pos = { var ret= -1
 			for(i <-0 until dataList.size;if(dataList(i).ref==newInst.ref)) {ret=i} 
 			ret
@@ -150,12 +155,15 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 	}
 
 	def addInstance(newInst:InstanceData) = listLock.synchronized {
+		//println("tablemod add inst: "+newInst.ref)
 		if(dataList==null) {
 			dataList=IndexedSeq(newInst)
 			//setupColumns()
 		}
 		else {
-			dataList=dataList :+ newInst			
+			//if(pos<0 || pos >=dataList.size)
+				dataList=dataList :+ newInst
+				//else  dataList=(dataList.take(pos):+newInst)++ dataList.drop(pos)
 		}
 		selectedInstances.buf=dataList
 		//println("added "+dataList.size+" "+Thread.currentThread+ " "+table.selection.rows)
@@ -171,7 +179,8 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 			//table.peer.setRowSelectionInterval(newSize-1,newSize-1)}
 	}
 
-	def removeInstance(ref:Reference) = listLock.synchronized{		
+	def removeInstance(ref:Reference) = listLock.synchronized{	
+		//println("tablemod remove inst: "+ref)
 		val pos=dataList.indexWhere(_.ref==ref)
 		if(pos<0) println("Remove Instance "+ref+" not found !")
 		else {
@@ -206,7 +215,7 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 	}
 
 	override def setValueAt(aValue: Object, rowIndex: Int, columnIndex: Int): Unit =		
-		if(dataList!=null&& columnIndex >0)  {  		
+		if(dataList!=null&& columnIndex >0)  listLock.synchronized {  		
 			val expr=parseValue(columnIndex,aValue) 		
 			if(rowIndex==dataList.size) { // create new
 				selfAdded=true
@@ -244,7 +253,7 @@ class TypeTableModel(val typ:Int,propMod:PropertyModel) extends AbstractTableMod
 	}
 
 
-	def deselect() = {
+	def deselect() = listLock.synchronized{
 		//println("deselect " +typ+ " rows:"+table.selection.rows)
 		if(dataList!=null && (! table.selection.rows.isEmpty)) {
 			selfSelectChanged=true

@@ -23,22 +23,32 @@ class LayerTableModel(controller:GraphViewController) extends AbstractTableModel
   val javaFalse=new java.lang.Boolean(false)
   val newElemLayer=new NewElemLayer(controller)
   
+  var sizeChangeListener:(Int) => Unit = null
+  
   var canLoadElements:Boolean=false
   
   def addLayer(newLayer:Layer) = listLock.synchronized{
   	layerList +=newLayer
   	val newSize=layerList.size
   	fireTableRowsInserted(newSize,newSize)
+  	notifySizeChanged()
   }
   
   def removeLayer(ix:Int) = listLock.synchronized{
   	layerList.remove(ix)
   	fireTableRowsDeleted(ix,ix)
+  	notifySizeChanged()
+  }
+  
+  def removeAllLayers() = listLock.synchronized {
+  	layerList.foreach (_.shutDown)
+  	layerList.clear
+  	notifySizeChanged()
   }
   
   def changeLayerState(pos:Int,newState:Layer) = listLock.synchronized{
   	layerList(pos)=newState
-  	fireTableRowsUpdated(pos,pos)
+  	fireTableRowsUpdated(pos,pos)  	
   }
   
   /** checks if there are visible Layers
@@ -58,7 +68,20 @@ class LayerTableModel(controller:GraphViewController) extends AbstractTableModel
   	else layerList(activeLayer)
   }
   
+  def getLabelText = {
+  	val al=getActiveLayer
+  	val activeName=if(al==null) "empty" else al.name
+  	val edibleNames=layerList.filter(el => el.ref!=al.ref && el.edible).map(_.name).mkString(", ")
+  	val visibleNames= layerList.filter(el => el.ref!=al.ref && !el.edible&&el.visible).map(_.name).mkString(", ")
+  	activeName+" | "+edibleNames+" | "+visibleNames
+  }
   
+  def registerSizeChangeListener(newList:(Int) => Unit) =  {
+  	sizeChangeListener=newList
+  	notifySizeChanged
+  }
+  
+  def notifySizeChanged() = if(sizeChangeListener!=null) sizeChangeListener(layerList.size)
   
   def toggleVisibility(ix:Int):Unit = listLock.synchronized{
   	val layer=layerList(ix)
@@ -78,6 +101,7 @@ class LayerTableModel(controller:GraphViewController) extends AbstractTableModel
   	}
   	else layer.load	  	
   	fireTableDataChanged()
+  	
   }
   
   def toggleEdible(ix:Int):Unit = listLock.synchronized{
@@ -94,7 +118,7 @@ class LayerTableModel(controller:GraphViewController) extends AbstractTableModel
   		}
   		layer.lock()
   	}
-  	else layer.edible=true	  	
+  	else {layer.edible=true;if(!layer.visible)toggleVisibility(ix)}	  	
   	fireTableDataChanged()  	
   }
   
@@ -119,47 +143,47 @@ class LayerTableModel(controller:GraphViewController) extends AbstractTableModel
 		 layerList.size	+1	
 	}
   
-	def getColumnCount= 7
+	def getColumnCount= 5
 	
 	def boolToJava(value:Boolean) = if(value)javaTrue else javaFalse
 
 	def getValueAt(row:Int,col:Int):Object = listLock.synchronized{
 		if( row<layerList.size) {
 			val layer=layerList(row)
-			col match {
-				case 0 => layer.name
-				case 1 => boolToJava(layer.visible)
-				case 2 => boolToJava(layer.edible)
-				case 3 => boolToJava(row==activeLayer)
+			col match {				
+				case 0 => layer.visible.asInstanceOf[AnyRef]
+				case 1 => layer.edible.asInstanceOf[AnyRef]
+				case 2 => (row==activeLayer).asInstanceOf[AnyRef]
+				case 3 => layer.name
 				case 4 => " X "
 				case _ => ""
 			}
 		}
-		else if(row==layerList.size&& col==0) // last line
+		else if(row==layerList.size&& col==3) // last line
 			if(canLoadElements)"  --> Layer hinzufügen " else " - "
 		else null
 	}
 	
 	override def getColumnName(col:Int) =  {
 		col match {
-			case 0 =>"Layer-Name"
-			case 1 =>"Sichtbar"
-			case 2 =>"Änderbar"
-			case 3 =>"Aktiv"
+			case 0 =>"Sich"
+			case 1 =>"Änd"
+			case 2 =>"Neu"
+			case 3 =>"Layer-Name"
 			case 4 =>"Raus"
-			case 5 =>"El.Vers"
-			case 6 =>"El.Kop"
+			//case 5 =>"El.Vers"
+			//case 6 =>"El.Kop"
 		}
 	}
 	
-	override def getColumnClass(col:Int) = col match {
-		case 0 => classOf[String]
-		case 1 => classOf[java.lang.Boolean]
+	override def getColumnClass(col:Int) = col match {		
+		case 0 => classOf[Boolean]
+		case 1 => classOf[Boolean]
 		case 2 => classOf[java.lang.Boolean]
-		case 3 => classOf[java.lang.Boolean]
+		case 3 => classOf[String]
 		case 4 => classOf[javax.swing.JButton]
-		case 5 => classOf[String]
-		case 6 => classOf[java.lang.Boolean]
+		//case 5 => classOf[String]
+		//case 6 => classOf[java.lang.Boolean]
 	}
 	
 	def calcAllLayerBounds()= {

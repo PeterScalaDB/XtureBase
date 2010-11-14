@@ -8,7 +8,7 @@ package definition.comm
  */
 object ClientCommands extends Enumeration {
   val getTypes=Value("Get Types")
-  val getSetupData=Value("Get Setup Data")
+  //val getSetupData=Value("Get Setup Data")
   val storeSetupData=Value("Store Setup Data")
   val queryInstance=Value("Query Instance")
   val startSubscription=Value("Start Subscription")
@@ -23,7 +23,8 @@ object ClientCommands extends Enumeration {
   val writeField=Value("write Field")
   val writeMultiFields=Value("write Field of multiple instances")
   val deleteInstance=Value("delete Instance")
-  val copyInstance=Value("copy Instance")
+  val copyInstances=Value("copy Instances")
+  val moveInstances=Value("move Instances")
   val executeAction=Value("execute Action")
   val executeCreateAction=Value("execute Action")
   val logOut=Value("logout")

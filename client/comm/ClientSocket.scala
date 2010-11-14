@@ -71,7 +71,7 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 			}
 			catch {
 				case a:EOFException => if(!wantQuit) a.printStackTrace else return
-				case e:Exception => e.printStackTrace; return
+				case e:Exception => e.printStackTrace 
 			}
 		}			
 	}

@@ -30,7 +30,8 @@ object ActionNameMap {
   	case None => ClientCommands(id) match {
   		case ClientCommands.createInstance => "Neu erstellt"
   		case ClientCommands.deleteInstance => "Gelöscht"
-  		case ClientCommands.copyInstance => "Kopiert"
+  		case ClientCommands.copyInstances => "Kopiert"
+  		case ClientCommands.moveInstances => "Verschoben"
   		case ClientCommands.writeField => "Feld geschrieben in"
   		case ClientCommands.writeMultiFields => "Felder geschrieben in"
   		case _ =>"Unbekannt"

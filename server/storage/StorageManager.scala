@@ -59,7 +59,7 @@ object StorageManager {
   		case None =>
   	  {
   	    val rec=handler.getInstanceRecord(ref.instance )
-  	    if (rec.dataPos == 0 && rec.dataLength==0) throw new 
+  	    if (rec.dataPos < 1 && rec.dataLength==0) throw new 
   	               IllegalArgumentException("get Instance() instance "+ref+" is deleted")
   	    val instObj=dataFileHandler.readWithBool(ref,rec.dataPos,rec.dataLength,(rec.propPos !=0)&&(rec.propLength !=0) )
   	    //println(" cacheMiss:"+instObj)

@@ -85,18 +85,19 @@ object TransactionManager {
 	/** creates a new Instance
 	 * @param typ the class id of the new instance
 	 * @param notifyRefandColl should referencing links and collFuncs be notified about the new instance
+	 * @param notifySubs notify subscribers of the parent inst that the new instance was added
 	 */
-	def tryCreateInstance(typ:Int,owners:Array[OwnerReference],notifyRefandColl:Boolean) =	{	
+	def tryCreateInstance(typ:Int,owners:Array[OwnerReference],notifyRefandColl:Boolean,pos:Int= -1,notifySubs:Boolean=true) =	{	
 		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
 		//TODO: Check if the child type is allowed in the owner property fields
-		//SimpleProfiler.startMeasure("Create")
-		val newInst=StorageManager.createInstance(typ,owners)
-		//SimpleProfiler.measure("stored")
-		ActionList.addTransactionData(newInst.ref,new CreateAction(newInst.ref,Some(newInst) ))		
+		
+		val newInst=StorageManager.createInstance(typ,owners)	
+		val copyInfo:Option[CopyMoveInfo]=if(!notifySubs) AddDontNotifyOwners.some  else None 
+		ActionList.addTransactionData(newInst.ref,new CreateAction(newInst.ref,Some(newInst),None,None,copyInfo))		
 		// notify owners
 		for(owner <-owners)
 		{
-			internAddPropertyToOwner(newInst,owner)
+			internAddPropertyToOwner(newInst,owner,pos,!notifySubs)
 		}
 		if(notifyRefandColl)
 			for(i <- 0 until newInst.fieldData.size;if (newInst.fieldData(i)!=EMPTY_EX))
@@ -107,17 +108,28 @@ object TransactionManager {
 	
 		
 	// internal routine
-	private def internAddPropertyToOwner(newInst:InstanceData,owner:OwnerReference) = {
+	private def internAddPropertyToOwner(newInst:InstanceData,owner:OwnerReference,pos:Int,refreshDestination:Boolean=false) = {
 		val newProp= (ActionList.getInstanceProperties(owner.ownerRef) match {
 				// Property data found				
 				case Some(a) => a 
 				// so far no Property data there, create an empty one
 				case _ => StorageManager.createInstanceProperties(owner.ownerRef)
 			} // and add the new child to the prop list
-			).addChildInstance(owner.ownerField ,newInst.ref) 
+			).addChildInstance(owner.ownerField ,newInst.ref,pos) 
 			
-		  ActionList.addTransactionData(owner.ownerRef,DataChangeAction(None,Some(newProp)))
-		  
+		  ActionList.addTransactionData(owner.ownerRef,DataChangeAction(None,Some(newProp),None,None, if(refreshDestination)RefreshDestinationOwner.some else None))		  
+	}
+	
+	private def movePropertyToPos(ref:Reference,owner:OwnerReference,pos:Int) = {
+		val newProp= (ActionList.getInstanceProperties(owner.ownerRef) match {
+  				// Property data found				
+  				case Some(a) => a 
+  				// so far no Property data there, something is wrong here
+  				case _ => throw new IllegalArgumentException("move pos "+ref+"  but owner "+owner.ownerRef+" has no Property data ")
+  			} // and add the new child to the prop list
+  			).moveChildInstanceToPos(owner.ownerField ,ref,pos)
+  	ActionList.addTransactionData(owner.ownerRef,DataChangeAction(None,Some(newProp),None,None,
+  		 Some(RefreshDestinationOwner) ))
 	}
 	
 	def tryWriteInstanceData(data:InstanceData) =	{
@@ -225,9 +237,9 @@ object TransactionManager {
 		//CommonSubscriptionHandler.instanceChanged(newInst)
 	}	
 	
-	private def passOnNewInstanceToCollFuncParents(newInst:InstanceData)
+	private def passOnNewInstanceToCollFuncParents(newInst:InstanceData,ownerList:Seq[OwnerReference])
 	{
-		for(owner <-newInst.owners ) {
+		for(owner <-ownerList ) {
 			ActionList.getCollData(owner.ownerRef) match {
 				case Some(collData) => {
 					for(i <- 0 until newInst.fieldData.size;if (newInst.fieldData (i)!=EMPTY_EX))
@@ -238,6 +250,19 @@ object TransactionManager {
 		}
 	}
 	
+	
+	private def passOnDeletedInstanceToCollFuncParents(instD:InstanceData,ownerList:Seq[OwnerReference]) = {
+		for(owner <-ownerList) 	{
+  		//println(" "+owner.ownerRef)
+  		ActionList.getCollData(owner.ownerRef) match {
+				case Some(collData) => {
+					//println("notify CollFunc Child Deleted, owner:"+owner+" child"+instD.ref)
+					notifyCollFunc_ChildDeleted(owner ,collData,instD)
+				}
+				case b => //println("check "+owner+" for Colldata:"+b) // more beer !
+			}
+  	}
+	}
 	
 	// **************************** FieldReference Management **************************************************************
 	
@@ -374,7 +399,7 @@ object TransactionManager {
 		newTerm.replaceExpression((ex:Expression) => {
 		  	 ex match {
 		  		 case fc:CollectingFuncCall => {
-		  			   println("setFuncResults fc:"+fc + "call:"+call+" =="+(fc==call)+" newValue:"+newValue)
+		  			   //println("setFuncResults fc:"+fc + "call:"+call+" =="+(fc==call)+" newValue:"+newValue)
 		  			   if(fc==call) return fc.setValue(newValue)
 		  			   else return fc
 		  			 }
@@ -390,7 +415,7 @@ object TransactionManager {
 	 * @return a new version of the owner's InstanceData
 	 */
 	private def updateOwnerCollFunc(ownerInst:InstanceData,collData:CollFuncResult,newValue:Constant):InstanceData = {
-		println("updateOwnerCollFunc "+ownerInst.fieldData(collData.parentField ))
+		//println("updateOwnerCollFunc "+ownerInst.fieldData(collData.parentField ))
 		val newExpression=ownerInst.fieldData(collData.parentField ).replaceExpression((ex:Expression) => {
 		  	 ex match {
 		  		 case fc:CollectingFuncCall => {
@@ -401,7 +426,7 @@ object TransactionManager {
 		  		 case a => a 
 		  	 }
 		   })
-		 println(" newExpr:"+newExpression)  
+		 //println(" newExpr:"+newExpression)  
 		 ownerInst.setField(collData.parentField,newExpression)
 	}
 	
@@ -579,17 +604,7 @@ object TransactionManager {
   	
   	// notify CollFuncs of the parent instances
   	//println("check Coll "+ instD.owners.mkString(", "))
-  	for(owner <-instD.owners)
-  	{
-  		//println(" "+owner.ownerRef)
-  		ActionList.getCollData(owner.ownerRef) match {
-				case Some(collData) => {
-					println("notify CollFunc Child Deleted, owner:"+owner+" child"+instD.ref)
-					notifyCollFunc_ChildDeleted(owner ,collData,instD)
-				}
-				case b => //println("check "+owner+" for Colldata:"+b) // more beer !
-			}
-  	}
+  	passOnDeletedInstanceToCollFuncParents(instD,instD.owners)
   	
   	//TODO delete instance from caches !!!
   	
@@ -606,34 +621,61 @@ object TransactionManager {
   	true
   }
 	
+	def tryMoveMultiInstances(subRefs:Seq[Reference],fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int):Unit = {
+		//println(" move Instances: "+subRefs.mkString(",")+ " from:"+fromOwner+ " to:"+toOwner+" pos:"+atPos)
+		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
+		var pos=atPos
+	  for(ref <-subRefs) {
+	  	tryMoveInstance(ref,fromOwner,toOwner,pos)
+	  	if(atPos> -1) pos +=1
+	  }
+	}
 	
 	/** moves one instance to another owner
 	 *  @param subRef Instance to be moved
 	 *  @param fromOwner old owner who will loose the subinstance
 	 *  @param toOwner new owner who will get the subinstance
 	 */
-	def tryMoveInstance(subRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference):Unit = {
+	def tryMoveInstance(subRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference,pos:Int):Unit = {
 		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
-		// change the property information
-		internRemovePropertyFromOwner(subRef,fromOwner)
+		// change the property information		
 		val instData=ActionList.getInstanceData(subRef)
-		internAddPropertyToOwner(instData,toOwner)
-		
-		// change the owner ref inside of the instance data
-		
-		ActionList.addTransactionData(subRef, new DataChangeAction(Some( instData.changeSingleOwner(fromOwner,toOwner)),None,None))
+		val differentOwners= fromOwner!=toOwner
+		if(differentOwners) {
+			internAddPropertyToOwner(instData,toOwner,pos,true)		
+			internRemovePropertyFromOwner(subRef,fromOwner,differentOwners)
+			// change the owner ref inside of the instance data
+			val newInst=if(differentOwners) instData.changeSingleOwner(fromOwner,toOwner) else instData
+			ActionList.addTransactionData(subRef, new DataChangeAction(Some( newInst),None,None,None,Some(ChangeDontNotifyOwners)))
+			passOnNewInstanceToCollFuncParents(newInst,List(toOwner))
+			passOnDeletedInstanceToCollFuncParents(instData,List(fromOwner))
+		} else {
+			movePropertyToPos(subRef,fromOwner,pos)
+		}
 	}
 	
 	
-	def tryCopyInstance(instRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference,
+	def tryCopyMultiInstances(instList:Seq[Reference],fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int) = {
+		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
+		var pos=atPos
+		var lastInst:Int=0
+		//println("copy Multi :"+instList.mkString(",")+" from:"+fromOwner+" to:"+toOwner+" pos:"+atPos)
+		for(ref <-instList) {
+			lastInst=tryCopyInstance(ref,fromOwner,toOwner,pos,true)
+			if(atPos> -1) pos +=1
+		}
+		lastInst
+	}
+	
+	def tryCopyInstance(instRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int,
 	                    collNotifyOwners:Boolean):Int = {
 		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
 		val instD=ActionList.getInstanceData(instRef)
 		// get the other owners of that instance, apart from "fromOwner", and add the new owner toOwner
 		if(!instD.owners.contains(fromOwner)) throw new IllegalArgumentException("Copy: instance "+instRef+" is not owned by "+ fromOwner)
-		if(instD.owners.contains(toOwner)) throw new IllegalArgumentException("Copy: instance "+instRef+" is already owned by "+ toOwner)
+		//if(instD.owners.contains(toOwner)) throw new IllegalArgumentException("Copy: instance "+instRef+" is already owned by "+ toOwner)
 		val newOwners:Array[OwnerReference]= instD.owners.filter(x => x!=fromOwner) :+ toOwner
-		var createInst=tryCreateInstance(instRef.typ ,newOwners,false) // new instance created by DB
+		var createInst=tryCreateInstance(instRef.typ ,newOwners,false,atPos,false) // new instance created by DB
 		
 		createInst=instD.clone(createInst.ref,newOwners)
 		
@@ -649,7 +691,7 @@ object TransactionManager {
 		ActionList.addTransactionData(createInst.ref,new DataChangeAction(Some(createInst),None,None,ActionList.getCollData(instRef)))		
 		// notify owners
 		if(collNotifyOwners)
-		passOnNewInstanceToCollFuncParents(createInst)
+		passOnNewInstanceToCollFuncParents(createInst,createInst.owners)
 		
 		// now copy all owned child instances
 		ActionList.getInstanceProperties(instRef) match {
@@ -659,7 +701,7 @@ object TransactionManager {
 					val fieldData=prop.propertyFields(fieldNr) // get the data for the prop field
 					for(childRef <-fieldData.propertyList) // go through all children of that field
 						tryCopyInstance(childRef,new OwnerReference(fieldNr.toByte,instRef), // copy them to the new instance
-							new OwnerReference(fieldNr.toByte,createInst.ref),false)
+							new OwnerReference(fieldNr.toByte,createInst.ref),-1,false)
 				}
 			}
 			case _ => {} // if no children, do nothing
@@ -669,7 +711,7 @@ object TransactionManager {
 	
 	
 	// internal routine
-	private def internRemovePropertyFromOwner(subRef:Reference,fromOwner:OwnerReference)
+	private def internRemovePropertyFromOwner(subRef:Reference,fromOwner:OwnerReference,notifyOwner:Boolean=false)
 	{
 		val newProp= (ActionList.getInstanceProperties(fromOwner.ownerRef) match {
   				// Property data found				
@@ -678,7 +720,8 @@ object TransactionManager {
   				case _ => throw new IllegalArgumentException("Delete "+subRef+" /Notify Owner but owner "+fromOwner.ownerRef+" has no Property data ")
   			} // and add the new child to the prop list
   			).removeChildInstance(fromOwner.ownerField ,subRef)
-  	ActionList.addTransactionData(fromOwner.ownerRef,DataChangeAction(None,Some(newProp)))
+  	ActionList.addTransactionData(fromOwner.ownerRef,DataChangeAction(None,Some(newProp),None,None,
+  		if(notifyOwner) Some(new RemoveNotifySourceOwners(fromOwner,List(subRef))) else None ))
   	//  notify subscriptions
   	//CommonSubscriptionHandler.instanceDeleted(fromOwner,subRef)
 	}

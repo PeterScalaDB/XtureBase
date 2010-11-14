@@ -52,58 +52,34 @@ object ViewTest extends SimpleSwingApplication {
 	var startTableViewbox:Viewbox=null 
 	var startContentBox:TableViewbox=null 
 	
+	val tableViewboxType=new ViewboxContentType(1,"table","T",()=>{
+		new TableViewbox
+	})
+	val graphicsViewboxType=new ViewboxContentType(1,"graphics","G",()=>{
+		new GraphicsViewbox
+	})
+	
 	//val testGraphList=new ListView[GraphElem]()
 	
 	//var lastSelected:Seq[Referencable]=Seq.empty
 	
-	val graphViewController=new GraphViewController
-	val layerPanController=new LayerPanelController(graphViewController)
 	
-	val graphViewPan:BorderPanel=new BorderPanel () {
-		preferredSize=new Dimension(400,200)
-		add(new ScrollPane() {
-			preferredSize=new Dimension(200,200)
-			viewportView=graphViewController.canvasPanel
-			//testGraphList.peer.setModel(TestGraphListModel)
-		},BorderPanel.Position.Center)
-		add(layerPanController.layerPanel,BorderPanel.Position.North)
-		//viewController.registerSelectListener(layerPanController)
-	}
+	
+	
 	
 	
 	
 	val mainPanel:BorderPanel=	new BorderPanel()  // main panel
 	{			
-		add ( new BoxPanel(Orientation.Horizontal) //top rail
-		{
-			
-			border=BorderFactory.createEmptyBorder(10,10,10,10);
-			//val loadBut =new Button("load")			
-			
-			//val deleteBut =new Button("delete Instance")
-			//val stressBut = new Button("stress test")
-			//val copyBut = new Button("copy")
-			//val createBut= new Button("create")
-			contents /*+= typEdit += instEdit += propEdit  +=  copyBut+=createBut*/+=Swing.HGlue +=undoBut
-			listenTo(undoBut)
-			reactions += {					
-					case ButtonClicked(`undoBut`) => requestUndoData
-					//case ButtonClicked(`deleteBut`) => deleteInstance
-					//case ButtonClicked(`stressBut`) => stressTest
-					//case ButtonClicked(`copyBut`) => copyData
-					//case ButtonClicked(`createBut`) => createInstance
-			}
-		},BorderPanel.Position.North)
-		
-		add (graphViewPan,BorderPanel.Position.Center) 
+		 
 		//mainBox.preferredSize=new Dimension(300,300)
-		add (mainBox,BorderPanel.Position.West)
+		add (mainBox,BorderPanel.Position.Center)
 		
 		add( new BorderPanel() {
 			peer.putClientProperty("newPanel","IGNORE")
 			add(new BoxPanel(scala.swing.Orientation.Vertical){
 				contents+=new BorderPanel {
-					add (new Label("Neue Objekte:"){preferredSize=new Dimension(40,30)},BorderPanel.Position.North)
+					add (new Label("Objekte erzeugen:"){preferredSize=new Dimension(40,30)},BorderPanel.Position.North)
 					add (NewPanelArea,BorderPanel.Position.Center)
 				}
 				contents+=fieldEditPan
@@ -116,8 +92,15 @@ object ViewTest extends SimpleSwingApplication {
 					viewportView= actionPan				
 				},BorderPanel.Position.Center)
 			},BorderPanel.Position.Center)
-		},BorderPanel.Position.East)
-		add( DialogManager.dialogPanel,BorderPanel.Position.South)
+		},BorderPanel.Position.West)
+		add( new BoxPanel(Orientation.Horizontal) {
+			contents+= undoBut+=Swing.HStrut(50)+=DialogManager.dialogPanel
+		},BorderPanel.Position.South)
+		
+		listenTo(undoBut)
+		reactions += {					
+					case ButtonClicked(`undoBut`) => requestUndoData					
+		}
 	}
 	
 	val top = new MainFrame ()
@@ -142,7 +125,8 @@ object ViewTest extends SimpleSwingApplication {
 		// connect components
 		
 		ClientQueryManager.registerAfterListener (() => {
-			ViewboxContentTypeList.addType(TableViewbox.tableBoxType)
+			ViewboxContentTypeList.addType(tableViewboxType)
+			ViewboxContentTypeList.addType(graphicsViewboxType)
 			startTableViewbox=new Viewbox(mainBox,false,mainBox)
 			startContentBox= new TableViewbox
 			startTableViewbox.addContent(startContentBox)
@@ -154,13 +138,7 @@ object ViewTest extends SimpleSwingApplication {
 		NewPanelArea.registerActionPanListener(DialogManager)
 		SelectEventDispatcher.registerSelectListener(actionPan)
 		SelectEventDispatcher.registerSelectListener(fieldEditPan)
-		SelectEventDispatcher.registerSelectListener(DialogManager)				
-		
-		
-		graphViewController.selectModel.registerSelectListener(actionPan)
-		graphViewController.selectModel.registerSelectListener(DialogManager)
-		graphViewController.selectModel.registerSelectListener(fieldEditPan)
-		graphViewController.registerContainerListener(NewPanelArea)
+		SelectEventDispatcher.registerSelectListener(DialogManager)		
 		
 		DialogManager.answerArea.registerCustomPanel[PointAnswerPanel](DataType.VectorTyp)
 		ClientQueryManager.registerStepListReader(undoDialog)

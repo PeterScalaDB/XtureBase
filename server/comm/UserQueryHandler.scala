@@ -44,6 +44,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	}
 	
 	def refreshSubscription(subs:SubscriptionInfo) = {
+		//println("refreshing subscription "+subs)
 		subs match {			
 			case e:PropSubscription=> userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 				out.writeInt(subs.id )
@@ -151,7 +152,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	
 	
 	def notifyInstanceChanged(subs:SubscriptionInfo,data:InstanceData) = {
-		print("NC "+subs+" "+data.ref)
+		//print("Notify instance changed "+subs+" "+data.ref)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 			out.writeInt(subs.id )
 			out.writeInt(NotificationType.FieldChanged.id)
@@ -169,17 +170,18 @@ class UserQueryHandler(userSocket: UserSocket) {
 	}*/
 	
 	def notifyInstanceAdded(subs:SubscriptionInfo,data:InstanceData) = {
-		println("Notify added "+subs+" "+data.ref)
+		//println("Notify added "+subs+" "+data.ref)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 		out.writeInt(subs.id)
 		out.writeInt(NotificationType.childAdded.id )
+		//out.writeInt(atPos)
 		data.ref.write(out)
 		data.writeWithChildInfo(out)
 		}
 	}
 	
 	def notifyInstanceDeleted(subs:SubscriptionInfo,ref:Reference) = {
-		println("Notify deleted "+subs+" "+ref)
+		//println("Notify deleted "+subs+" "+ref)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 		out.writeInt(subs.id)
 		out.writeInt(NotificationType.instanceRemoved.id )
@@ -240,6 +242,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	}
 	
 	private def pushInstances(childRefs:IndexedSeq[Reference],out:DataOutput) = {
+		println("bulk push" +childRefs.head + " num:"+childRefs.size)
 		var bulkStart= 0
   	var oldRef=childRefs.head
   	for(i <-1 until childRefs.size) {

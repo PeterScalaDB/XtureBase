@@ -29,6 +29,10 @@ class Viewbox(val mainbox:MainBox,val showCloseButton:Boolean,var holder:Viewbox
 	val widthSet= -1
 	val heightSet= -1
 	
+	var minimizeHeaderCallBack:()=>Unit =null
+	
+	
+	
 	var rightFirstExpanded=false
   border=BorderFactory.createEtchedBorder(EtchedBorder.LOWERED);
 
@@ -121,14 +125,21 @@ class Viewbox(val mainbox:MainBox,val showCloseButton:Boolean,var holder:Viewbox
 		  
 		} else if(!holder.deleteMe(this)) return
 		content.close()
+		add(null,BorderPanel.Position.Center)
+		content=null
 		mainbox.remove(this)
-		mainbox.revalidate
+		mainbox.revalidate		
 		mainbox.repaint
 	}
 	
 	def isDoubleConnected=rightEdge.isExpanded&&bottomEdge.isExpanded
 	
 	def setTitle(title:String)= header.setTitle(title)
+	
+	def minimizeHeaderPanel(callBack:()=>Unit) = {
+		minimizeHeaderCallBack=callBack
+		header.openContentHeaderBut.visible=true
+	}
 	
 }
 
@@ -137,15 +148,25 @@ class ViewboxHeader(viewbox:Viewbox) extends BoxPanel(Orientation.Horizontal) {
 	background=Color.gray
 	preferredSize=new Dimension(100,30)
 	val label=new Label
+	label.foreground=Color.white
+	val openContentHeaderBut=new Button("\u02c5")
 	val closeBut=new Button("X")
 	closeBut.margin=new Insets(0,0,0,0)
+	openContentHeaderBut.margin=closeBut.margin
+	openContentHeaderBut.visible=false
+	openContentHeaderBut.focusable=false
+	closeBut.focusable=false
 	//if(viewbox.showCloseButton)
-		contents+=label+=Swing.HGlue+=closeBut
+		contents +=openContentHeaderBut+=Swing.HStrut(10)+=label+=Swing.HGlue+=Swing.HStrut(10)+=closeBut
 	//	else contents+=label+=Swing.HGlue
-	listenTo(closeBut)
+	listenTo(closeBut,openContentHeaderBut)
 	reactions += {
-			case e:ButtonClicked => {
+			case ButtonClicked(`closeBut`) => {
 				viewbox.close
+			}
+			case ButtonClicked(`openContentHeaderBut`) => {
+				openContentHeaderBut.visible=false
+				viewbox.minimizeHeaderCallBack()
 			}
 		}
 	

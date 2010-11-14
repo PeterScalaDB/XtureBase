@@ -54,48 +54,27 @@ class PathController (val model:PathModel, val view:ListView[InstanceData],val l
 	listener.foreach (_.registerOpenChildCallBack(openChildFromListener))
 	view.focusable=false
 	view.peer.setModel(model)
+	view.peer.setDragEnabled(true)
 	view.selection.intervalMode=ListView.IntervalMode.Single
-	//view.prototypeCellValue=new InstanceData(new Reference(0,0),Array(),Array(),false)
+	
 	view.fixedCellHeight=lineHeight
 	view.background=new Color(225,225,230)
 	view.selectionForeground=new Color(0,0,40)
 	view.selectionBackground=new Color(210,210,215)
-	//view.peer.setFixedCellHeight(15)
+	
 	view.listenTo(view.selection)
 	view.renderer=new ListView.AbstractRenderer[InstanceData,MyRenderer](renderPrototype){
 		def configure(list: ListView[_], isSelected: Boolean, focused: Boolean, a: InstanceData, index: Int) {
 			component.config(isSelected,focused,a,index)
 		}
-		/*override def preConfigure(list: ListView[_], isSelected: Boolean, focused: Boolean, a: InstanceData, index: Int) {
-			super.preConfigure(list,if(!renderPrototype.dataIsSelected)false else isSelected,focused,a,index)      
-    }*/
+		
 	}
 	view.reactions += {
 		case ListSelectionChanged(list,range,live) => {			
 			if (!live&& !view.selection.indices.isEmpty) selectionChanged(view.selection.indices.first)			
 		}		
 	}
-	/*for ( l <-listener;if (l.isInstanceOf[DataViewController]);val dvc=l.asInstanceOf[DataViewController]) {
-		dvc.registerContainerFocusListener(new ContainerFocusListener()  {
-			def containerFocused(superInst:Referencable, propField:Int,containerName:String=""):Unit=  {
-				renderPrototype.dataIsSelected=(superInst!=null) 
-				view.repaint
-			}
-			override def alsoDeselect=true
-		})
-	}*/
 	
-	/*ClientQueryManager.registerSetupListener(() => {
-		val p=UserSettings.getListProperty("pathController","currentPath",Seq(Reference(10,1)))
-		println("loading path "+p)
-		loadPath(p)
-	})*/
-	/*ClientQueryManager.registerStoreSettingsListener(() => {
-		UserSettings.setListProperty("TablePaths","0",model.dataList match {
-			case Some(list) => list.map(_.ref).asInstanceOf[collection.immutable.Seq[Reference]]
-			case None => Seq(Reference(10,1))
-		})		
-	})*/
 	
 	def getLabelText(a:InstanceData,index:Int):String = {
 		val prefix=if(index==0) "\u252c"
@@ -104,6 +83,8 @@ class PathController (val model:PathModel, val view:ListView[InstanceData],val l
   	val indent="    " * (if(index==0) 0 else (index-1))
   	indent+prefix+" "+(if(a!=null) a.toString else "") 
 	}
+	
+	
 	
 	def selectionChanged(newPos:Int)= {		
 		if (!updating &&  (newPos!=oldIndex) && (newPos < model.getSize) ) {
