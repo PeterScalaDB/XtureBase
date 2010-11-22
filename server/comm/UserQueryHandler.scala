@@ -152,7 +152,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	
 	
 	def notifyInstanceChanged(subs:SubscriptionInfo,data:InstanceData) = {
-		//print("Notify instance changed "+subs+" "+data.ref)
+		//println("Notify instance changed "+subs+" changedInst:"+data.ref)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 			out.writeInt(subs.id )
 			out.writeInt(NotificationType.FieldChanged.id)

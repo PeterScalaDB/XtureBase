@@ -37,7 +37,11 @@ abstract class AllClasses [B <:AbstractObjectClass] (node: scala.xml.Node)  {
   def fromXML(node: scala.xml.Node):Map[Int,B]
   
   // resolves all superfields from all classes. Will be called after reading all classes from XLM
-  def resolveFields()= for(cl <-classList.valuesIterator) cl.resolveSuperFields()
+  def resolveFields()=
+  	 for(cl <-classList.valuesIterator){
+  		 cl.resolveSuperFields()
+  		 println(cl.name+" "+cl.superClassIDs.mkString(","))
+  }
   	
   /** gets the most common class that all classes inherit from
    * 

@@ -84,7 +84,7 @@ class TableTransferHandler(tableMod:TypeTableModel) extends TransferHandler {
     } catch {
     	case e => println(e);return false
     }
-    println(" row:"+row)
+    println(" row:"+row+" insert:"+tabLoc.isInsertRow)
     action match {
     	case TransferHandler.COPY =>{
     		println("Copied")

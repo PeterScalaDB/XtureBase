@@ -23,7 +23,7 @@ object ExtFieldRef {
 
 
 /** Stores the external links to this instance
- * @param myRef Reference of this instance
+ * @param ref Reference of this instance
  * @param links Map that contains for each field all the external links to it
  * key = fildNr, value = list to references to external instances
  */

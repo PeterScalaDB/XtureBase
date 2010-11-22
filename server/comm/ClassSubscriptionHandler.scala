@@ -16,7 +16,7 @@ class ClassSubscriptionHandler(typID:Int) {
 	var propSubsMap=Map[Reference,List[PropSubscription]]()
 	
 	def addSubscription(s:SubscriptionInfo) = {
-		//println("csm addSubs:"+s)
+		//println("csh typ:"+typID+" addSubs:"+s)
 		s match {
 			case a:SingleSubscription => addSingleS(a)
 			case b:PropSubscription => addPropS(b)
@@ -24,15 +24,15 @@ class ClassSubscriptionHandler(typID:Int) {
 	}
 	
 	def addPathSubscription(p:PathSubscription,ref:Reference) = {
-		//println("csm addPathSubs:"+p+ " => "+ref)
-		if(singleSubsMap.contains(ref )) { // add to existing
-			val list=singleSubsMap(ref)
-			singleSubsMap.put(ref,p :: list)
-		} else // add new
-		singleSubsMap.put(ref ,List(p))
+		
+		  // add to existing
+			val list=if(singleSubsMap.contains(ref )) (p:: singleSubsMap(ref)) else List(p)
+			singleSubsMap.put(ref, list)		 
+			//println("csh addPathSubs:"+p+ " => "+ref+" List:"+list)
 	}
 	
-	def removeSubscription(s:SubscriptionInfo) = {		
+	def removeSubscription(s:SubscriptionInfo) = {
+		//println("csh typ:"+typID+" addSubs:"+s)
 		s match {
 			case c:PathSubscription => removePathS(c)
 			case a:SingleSubscription => removeSingleS(a)
@@ -40,10 +40,18 @@ class ClassSubscriptionHandler(typID:Int) {
 		}
 	}
 	
+	def removeSinglePathSubs(s:PathSubscription,forElem:Reference):Unit= {
+		if(singleSubsMap.contains(forElem)) {
+			val list=singleSubsMap(forElem)
+			singleSubsMap.put(forElem,list.filterNot (_ == s))
+		} else println("RemoveSingePathSubs "+s+" forElem:"+forElem+" Cant find elem !!")				 
+	}
+	
 	
 	def singleInstanceChanged(newState:InstanceData) = {
 		if (singleSubsMap.contains(newState.ref))	{
 			val list=singleSubsMap(newState.ref)
+			//println("single instance changed subslist:"+list.mkString(", "))
 			for(subs <-list)
 				subs.user.queryHandler.notifyInstanceChanged(subs,newState)
 		}
@@ -58,6 +66,7 @@ class ClassSubscriptionHandler(typID:Int) {
 	}
 	
 	def childInstanceChanged(ownerRef:Reference,propField:Byte,childInst:InstanceData) = {
+		//println("csh single instance changed subslist owner:"+ownerRef+" childInst:"+childInst)
 		if(propSubsMap.contains(ownerRef)) {
 			val list=propSubsMap(ownerRef)
 			for(subs <-list)

@@ -21,7 +21,7 @@ object ActionList {
 		println("Break")
 	for(trans <- theList.valuesIterator)
 		trans match {
-			case CreateAction(ref,_,_,_,_) => { // delete the Instances that got created during the try phase
+			case CreateAction(ref,_,_,_,_,_) => { // delete the Instances that got created during the try phase
 				try {
 					StorageManager.deleteInstance(ref.typ, ref.instance)
 				} catch {case e => {println("BreakAllData error "+e)}} 
@@ -37,32 +37,32 @@ def reset() = {theList.clear}
 def commitAllData() = {
 	var hasMoveOrCopy:Boolean=false
 	try {		
-		//println(theList)
+		println("actions:\n"+theList.mkString("\n"))
 		for(trans <- theList.valuesIterator)
 			trans match {
-				case CreateAction(ref,a,b,co,cmi) => { // Instances get created during the Try-Phase of the transaction
-					for (pdata <-b){
+				case CreateAction(ref,instData,propData,linkData,collData,cmi) => { // Instances get created during the Try-Phase of the transaction
+					for (pdata <-propData){
 						StorageManager.writeInstanceProperties(pdata) // if propdata is defined, write						
 					}
-					for (data <-a) {
+					for (data <-instData) {
 						StorageManager.writeInstance(data,true) // if instdata is defined, write
-						val sendData =if(b.isDefined && b.get.hasChildren !=data.hasChildren) data.setHasChildren(b.get.hasChildren)
+						val sendData =if(propData.isDefined && propData.get.hasChildren !=data.hasChildren) data.setHasChildren(propData.get.hasChildren)
 						   else data
 						cmi match {
 						  	 case Some(AddDontNotifyOwners) => {}
 						  	 case _ => for(owner <-data.owners) // in all other cases notify owners
 						  		 						CommonSubscriptionHandler.instanceCreated(owner,sendData)
 						   }
-						//if(!cmi.isDefined || ! cmi.get.isInstanceOf[AddDontNotifyOwners.type] ) 
-							
+						//if(!cmi.isDefined || ! cmi.get.isInstanceOf[AddDontNotifyOwners.type] )							
 					}
 					
-					for (c <- co) StorageManager.writeCollectingFuncData(c)
+					for (c <- collData) StorageManager.writeCollectingFuncData(c)
+					for(l <- linkData) StorageManager.writeReferencingLinks(l)					
 				}
-				case DataChangeAction(in,pr,li,co,cmi) => {
-					for(i <- in){
+				case DataChangeAction(instData,propData,linkData,collData,cmi) => {
+					for(i <- instData){
 						StorageManager.writeInstance(i,false); // if instance is defined, write
-						val sendData =if(pr.isDefined && pr.get.hasChildren !=i.hasChildren) i.setHasChildren(pr.get.hasChildren)
+						val sendData =if(propData.isDefined && propData.get.hasChildren !=i.hasChildren) i.setHasChildren(propData.get.hasChildren)
 						   else i
 						cmi match {
 						  	 case Some(ChangeDontNotifyOwners) => {}
@@ -70,7 +70,7 @@ def commitAllData() = {
 						   }   
 						
 					}
-					for(p <- pr){
+					for(p <- propData){
 						StorageManager.writeInstanceProperties(p) // if properties ...	
 						 // child was copied or moved here
 						cmi match {
@@ -81,8 +81,8 @@ def commitAllData() = {
 						}
 							
 					}
-					for(l <- li) StorageManager.writeReferencingLinks(l)
-					for(c <- co) StorageManager.writeCollectingFuncData(c)
+					for(l <- linkData) StorageManager.writeReferencingLinks(l)
+					for(c <- collData) StorageManager.writeCollectingFuncData(c)
 				}
 				
 				case DeleteAction(inst) => {
@@ -119,7 +119,8 @@ def addTransactionData (ref:Reference,newRec:TransactionData) = {
 				case  DataChangeAction(in,pr,li,co,cmi ) => {
 					if (in!=None) a.newInstData = in // add the new data to the createAction
 					if (pr!=None) a.newPropData = pr
-					if (li!=None) throw new IllegalArgumentException("Cant add external links to created Instance "+ref+" "+li)
+					if (li!=None) if(a.newLinksData!=None) throw new IllegalArgumentException("Cant add external links to created Instance "+ref+" "+li+" oldlinks:"+a.newLinksData )
+					else a.newLinksData =li
 					if (co!=None) a.newCollData= co	
 					if(cmi.isDefined) a.cmi=if(a.cmi.isDefined) Some(a.cmi.get.replaceWith(cmi.get)) else cmi
 					//if(pos != -1) a.atPosition=pos
@@ -153,7 +154,7 @@ def addTransactionData (ref:Reference,newRec:TransactionData) = {
 def getInstanceData(ref:Reference):InstanceData = {
 	if (theList.contains(ref))
 		(theList(ref))  match {
-		case CreateAction(_,Some(data),_,_,_) => return data
+		case CreateAction(_,Some(data),_,_,_,_) => return data
 		case DataChangeAction(Some(data),_,_,_,_) => return data
 		case a:DeleteAction => return null 
 		case _ => // drink another beer
@@ -165,7 +166,7 @@ def getInstanceData(ref:Reference):InstanceData = {
 def getInstanceProperties(ref:Reference):Option[InstanceProperties] = {
 	if (theList.contains(ref))
 		(theList(ref)) match {
-		case CreateAction(_,_, a @ Some(_),_,_) => return a
+		case CreateAction(_,_, a @ Some(_),_,_,_) => return a
 		case DataChangeAction(_,a @ Some(_),_,_,_) => return a
 		case _ => // ignore
 	}
@@ -178,7 +179,8 @@ def getInstanceProperties(ref:Reference):Option[InstanceProperties] = {
 def getReferencingLinks(ref:Reference):Option[ReferencingLinks] = {
 	if(theList.contains(ref))
 		(theList(ref)) match {
-		   case DataChangeAction(_,_,a@ Some(_),_,_) => return a
+			 case CreateAction(_,_,_, a @ Some(_),_,_) =>{println("get links hit create"); return a}
+		   case DataChangeAction(_,_,a@ Some(_),_,_) => {println("get links hit change"); return a}
 		   case _ => 
 	  }
 	StorageManager.getReferencingLinks(ref)
@@ -188,7 +190,7 @@ def getCollData(ref:Reference):Option[CollFuncResultSet] =
 {
 	if (theList.contains(ref))
 		(theList(ref)) match {
-		case CreateAction(_,_,_,a@ Some(_),_) => return a
+		case CreateAction(_,_,_,_,a@ Some(_),_) => return a
 		case DataChangeAction(_,_,_,b @ Some(_),_) => return b
 		case _ => // ignore
 	}

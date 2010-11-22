@@ -24,9 +24,18 @@ trait Expression
 	
 	def isConstant:Boolean
 	
+	def isEmpty=false
+	
 	def write(file:DataOutput):Unit
 	
 	
+	
+	/** is called when generating an instance 
+	 * will be overridden by generatorConstants like $Now and $Today
+	 * 
+	 * @return the actual state of that expression during generation time
+	 */
+	def generate:Expression =createCopy
 	
 	
 	/** returns all Elements of the given type from this expression

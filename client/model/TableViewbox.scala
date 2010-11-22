@@ -80,10 +80,12 @@ class TableViewbox extends BorderPanel with ViewboxContent {
   	pathController.loadPath(entry._2)  
   	}
 
-  def close(): Unit = {
+  def close(): Unit = { shutDown }
+  
+  def storeSettings() = {
   	if(pathController.model.dataList.isDefined)
   	PathFactory.releasePathEntry(pathFactoryIndex, pathController.model.dataList.get.map(_.ref))
-  	shutDown
+  	
   }
   
   def shutDown() = {
@@ -110,6 +112,8 @@ class TableViewbox extends BorderPanel with ViewboxContent {
   	}
   	pathBoxOpen= !pathBoxOpen
   }
+  
+  def typeID:String = "Table"
 }
 
 object TableViewbox {

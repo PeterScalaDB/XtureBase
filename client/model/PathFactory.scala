@@ -35,25 +35,29 @@ object PathFactory {
 	
   
   ClientQueryManager.registerStoreSettingsListener (() => {
-  	println("store path info "+pathList.mkString)
+  	//println("store path info "+pathList.mkString)
   	UserSettings.setIntProperty("TablePaths","num",pathList.size)
   	for(i <-pathList.indices)
   		UserSettings.setListProperty[Reference]("TablePaths",i.toString,pathList(i).list)
   }	)
   
   def getNextPathEntry:(Int,Seq[Reference]) = {
+		
   	for( i <-pathList.indices) 
   		if(! pathList(i).used) {
   			pathList(i).used=true
+  			println("get Path Entry:"+i+" "+pathList(i).list .mkString(","))
   			return (i,pathList(i).list)
   		}
   	// no free entry found, create a new one:
   	val newEntry=new Entry(true,List(standardRef))
   	pathList +=newEntry
+  	println("create next Path Entry:"+(pathList.size-1)+" "+newEntry.list .mkString(","))
   	(pathList.size-1,newEntry.list)
   }
   
   def releasePathEntry(index:Int,path:Seq[Reference])= {
+  	println("realease Entry "+index+" "+path.mkString)
   	val entry=pathList(index)
   	entry.used=false
   	entry.list=path

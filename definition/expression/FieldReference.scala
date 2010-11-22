@@ -77,7 +77,7 @@ def write(file: DataOutput): Unit = {
 }
 
 def setCachedValue(newVal:Constant) = {
-	//print("SetCachedValue "+toString+" oldval:"+cachedValue)
+	println("SetCachedValue "+toString+"  newVal:"+newVal)
 	cachedValue=newVal
 	//println(" newval: "+cachedValue)
 }

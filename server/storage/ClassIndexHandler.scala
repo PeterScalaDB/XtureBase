@@ -57,6 +57,8 @@ class ClassIndexHandler(val theClass:ServerObjectClass)
 		resetLastReadID
 		bufferStream.reset()
 		outStream.writeInt(inst)
+		outStream.writeLong(0)
+		outStream.writeInt(0)
 		theFile.write(bufferStream.buffer,0,recordSize)
 		numRecords+=1
 		lastID=inst		

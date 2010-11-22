@@ -10,7 +10,6 @@ import definition.expression._
 import org.junit.Test
 import org.junit.Before
 import server.config._
-import transaction.parser._
 
 /** Tests constants and constant conversion
  * 

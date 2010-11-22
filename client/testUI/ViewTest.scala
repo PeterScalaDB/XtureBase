@@ -191,6 +191,7 @@ object ViewTest extends SimpleSwingApplication {
 	
 	def shutDown() = {
 		println("shutdown")
+		mainBox.storeSettings()
 		sock.quitApplication()
 	}
 	

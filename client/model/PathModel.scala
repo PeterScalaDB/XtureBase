@@ -26,8 +26,12 @@ class PathModel extends AbstractListModel {
 					//println("Path notification:"+ntype+" subsID:"+subsID+" data:"+data.map(_.ref).mkString(","))
 					val oldSize=dataList match { case Some(list) => list.size;case None => 0 }
 					ntype match {
-						case NotificationType.sendData  => dataList=Some(data) 
+						case NotificationType.sendData  =>{
+							println("path send data "+data.mkString)
+							dataList=Some(data) 
+						}
 						case NotificationType.FieldChanged  => {
+							println("path field changed "+data(0))
 							val searchRef=data(0).ref
 							for (list <- dataList)
 								for(i <- list.indices)								

@@ -89,11 +89,14 @@ class PathController (val model:PathModel, val view:ListView[InstanceData],val l
 	def selectionChanged(newPos:Int)= {		
 		if (!updating &&  (newPos!=oldIndex) && (newPos < model.getSize) ) {
 			// change Subscription only to the remaining elements
-			val selectRef:Option[Reference] = 
+			val selectRef:Option[Reference] = // what element to select in the table
 			if(newPos<oldIndex) {
-				val ret=Some(model.getInstanceAt(newPos+1).ref) // select last pos below newPos
-				model.jumpUp(newPos)
-				ret
+				if((newPos+1) >=model.getSize) None
+				else {
+					val ret=Some(model.getInstanceAt(newPos+1).ref) // select last pos below newPos
+					model.jumpUp(newPos)
+					ret
+				}
 			} else None
 			oldIndex=newPos
 			// notify listener

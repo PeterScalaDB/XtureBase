@@ -126,7 +126,7 @@ object ClientQueryManager {
 		}
 	}
 	
-	def createPathSubscription(path:Seq[Reference])(updateFunc:UpdateFunc) = {		
+	def createPathSubscription(path:Seq[Reference])(updateFunc:UpdateFunc):Int = {		
 		sock.sendData(ClientCommands.startPathSubscription ) {out =>
 			newSubscriberQueue.add( SimpleSubscriber(updateFunc))
 			out.writeInt(path.size)
@@ -143,7 +143,7 @@ object ClientQueryManager {
 	}
 	
 	/** changes the subscription only to the remaining elements
-	 * @param newPathPos the number of the element that should be the last one
+	 * @param newPathPos the number of the element that should be the last one starting with 0
 	 */
 	def pathSubs_jumpUp(subsID:Int,newPathPos:Int) = {
 		sock.sendData(ClientCommands.pathSubs_jumpUp  ) { out =>
@@ -352,7 +352,7 @@ object ClientQueryManager {
 					case NotificationType.instanceRemoved => {
 						val ref=Reference(in)
 						runInPool(subscriber.func(NotificationType.instanceRemoved,
-							IndexedSeq(new InstanceData(ref,Array(),Array(),false)))) // empty instance
+							IndexedSeq(new InstanceData(ref,IndexedSeq(),Array(),false)))) // empty instance
 					}
 					case NotificationType.sendData => {
 						val list=readList(in)
@@ -407,14 +407,10 @@ object ClientQueryManager {
 						//println(" send Data:"+list)
 						runInPool(factSubs.func(NotificationType.sendData,list))
 					}
-			}
+				}
 			}	
-		}
-				
-	}
-	
-	
-	
+		}				
+	}	
 	
 	private def handleCommandResponse(in:DataInputStream ) = {
 		

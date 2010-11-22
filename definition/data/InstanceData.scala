@@ -11,10 +11,10 @@ import definition.typ._
  * 
  * 
  */
-class InstanceData (override val ref:Reference,	val fieldData:Array[Expression],	 									
+class InstanceData (override val ref:Reference,	val fieldData:IndexedSeq[Expression],	 									
 	val owners:Array[OwnerReference]=Array(),val hasChildren:Boolean) extends Referencable
 	{	
-	lazy val fieldValue=regenFieldCache
+	lazy val fieldValue:Seq[Constant]=regenFieldCache
 	
 	lazy val theClass=getObjectClass()
 	lazy val shortFormArray=getFormatArray(theClass.shortFormat.fields)
@@ -22,11 +22,21 @@ class InstanceData (override val ref:Reference,	val fieldData:Array[Expression],
 	
 	override def toString() = {
 		if(theClass.shortFormat!=NOFORMAT&&fieldData.length!=0)
+			try {
 			theClass.shortFormat.formStr.format(shortFormArray:_*)
+			}
+			catch {
+				case e:Exception=> e.toString
+			}
 		else theClass.name+" "+ref.sToString		
 	}
 	
-	def getFormatArray(fieldIndexes:Array[Int]) = {
+	/** creates an Array of the current values of the fields that make up an format
+	 * 
+	 * @param fieldIndexes array of the field numbers that are part of the format
+	 * @return an array of the current native values of the given fields
+	 */
+	def getFormatArray(fieldIndexes:Array[Int]):Array[Any] = {
 		for(i<-fieldIndexes) 
 			yield if(i> -1){
 				val theVal=fieldValue(i)
@@ -41,7 +51,12 @@ class InstanceData (override val ref:Reference,	val fieldData:Array[Expression],
 		if(theClass.resultFormat!=NOFORMAT) {
 			//println("resultArray:"+resultFormArray.mkString)
 			//println(fieldValue(0).getType)
+			try {
 			theClass.resultFormat.formStr.format(resultFormArray:_*)
+			}
+			catch {
+				case e:Exception=> e.toString
+			}
 			//"RESULT"
 		}
 			
@@ -75,8 +90,8 @@ class InstanceData (override val ref:Reference,	val fieldData:Array[Expression],
 	 * @return a new instance object with the new value
 	 */
 	def setField(fieldNr:Byte,newValue:Expression):InstanceData = 	{
-		val newArray:Array[Expression]=(for (i <- 0 until fieldData.length) 
-			yield (if (i==fieldNr) newValue else fieldData(i))).toArray
+		val newArray:IndexedSeq[Expression]=(for (i <- 0 until fieldData.length) 
+			yield (if (i==fieldNr) newValue else fieldData(i)))
 			new InstanceData(ref,newArray,owners,hasChildren)
 	}
 
@@ -99,7 +114,7 @@ class InstanceData (override val ref:Reference,	val fieldData:Array[Expression],
 	 * @return
 	 */
 	def clone(newRef:Reference,newOwners:Array[OwnerReference]):InstanceData =	{
-		new InstanceData(newRef,fieldData,newOwners,hasChildren)
+		new InstanceData(newRef,fieldData.map(_.createCopy),newOwners,hasChildren)
 	}
 
 	/** replaces an ownerReferene with another ref and returns a new Instance with the new values
@@ -126,10 +141,14 @@ class InstanceData (override val ref:Reference,	val fieldData:Array[Expression],
 		fieldValuesCache(index)
 	}*/
 
-	def regenFieldCache = for(index<-0 until fieldData.size)yield {					  
+	def regenFieldCache:Seq[Constant] = for(index<-0 until fieldData.size)yield {					  
 			val fieldType = theClass.fields(index).typ
 			val result=fieldData(index).getValue
 			//println("inst "+ref+" getfield "+index+" fieldType:"+fieldType+" result:" +result)
+			if(result==null) { 
+				println("result== null "+ref+" field:"+index+" "+fieldData(index))
+				EMPTY_EX
+			} else
 			if(result.getType==fieldType|| result.getType==DataType.undefined )
 				result // return the value
 				else  // return converted value
@@ -143,13 +162,14 @@ object InstanceData
 	val transMan:ATransactionManager=null
 	// reads an instance from a DataInput
 
-	def readFields(file:DataInput)= {
-	val nfields=file.readByte
-	val fArray=new Array[Expression](nfields)
-	for (n<- 0 until nfields)
-		fArray(n)=Expression.read(file)
-		fArray		
-}
+	def readFields(file:DataInput):IndexedSeq[Expression]= {
+		val nfields=file.readByte
+		for(i <-0 until nfields) yield Expression.read(file)
+		/*val fArray=new Array[Expression](nfields)
+		for (n<- 0 until nfields)
+			fArray(n)=Expression.read(file)
+			fArray	*/	
+	}
 
 def readOwners(file:DataInput) = {
 	val nOwners=file.readByte

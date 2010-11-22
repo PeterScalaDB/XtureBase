@@ -1,9 +1,9 @@
 /**
  * Author: Peter Started:23.07.2010
  */
-package transaction.parser
+package definition.expression
 
-import scala.util.parsing.combinator.JavaTokenParsers
+import scala.util.parsing.combinator._
 import definition.expression._
 
 
@@ -32,7 +32,7 @@ class StringParser extends JavaTokenParsers {
         (factor ~ "·" ~ term) ^^ { case lhs~times~rhs => BinaryOperation( lhs,BinOperator.getOp('*'), rhs) } |
         (factor ~ "/" ~ term) ^^ { case lhs~div~rhs => BinaryOperation( lhs,BinOperator.getOp('/'), rhs) } |
         stringLiteral ^^ { x => { val s=x.toString; new StringConstant(s.substring(1,s.length-1)) }} |
-        factor
+        factor | failure("Unknown Term-Element")
         
   def fieldRef:Parser[Expression] =
   	   ("[#][Tt]".r ~> intNumber ~ ("[iI]".r ~>intNumber) ~ ("[fF]".r~> intNumber) ) ^^ {
@@ -43,12 +43,12 @@ class StringParser extends JavaTokenParsers {
         } |
         ("[#][fF]".r~> intNumber ) ^^ {
         	case field => new FieldReference(None,None,field.toByte) 
-        }
+        } |failure("wrong Fieldref")
 
   def factor : Parser[Expression] =  	   
   	   doubleNumber ^^ {y => DoubleConstant(y.replace(',','.').toDouble) } |
        intNumber ^^ {x => IntConstant(x.toInt)} |       
-        "(" ~> expr <~ ")" | fieldRef | function | collFunction | vector | failure("Unknown Element")
+        "(" ~> expr <~ ")" | fieldRef | function | collFunction | vector | failure("Unknown Factor-Element")
        
 	def paramList:Parser[List[Expression]] =
 		 ((expr ~ ";" ~ expr) ^^ {  case ex~ semi~ list => List(ex,list) }) |
@@ -69,5 +69,18 @@ class StringParser extends JavaTokenParsers {
 
 object StringParser extends StringParser
 {
-	def parse(text : String):Expression = parseAll(expr, text).get
+	def parse(text : String):Expression = {
+		if(text.length==0) return EMPTY_EX 
+		val result=parseAll(expr, text)
+		result match {
+            case Success(x, _) => return x
+            case NoSuccess(err, next) => {
+            		throw new IllegalArgumentException("Failure when parsing "+                
+                    "(line " + next.pos.line + ", column " + next.pos.column + "):\n" +
+                    err + "\n" + next.pos.longString)
+            }
+        }
+		
+		
+	}
 }

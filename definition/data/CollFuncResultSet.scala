@@ -44,7 +44,7 @@ class SingleCollFuncResult(override val funcName:String,override val childType:I
 		super.write(file)
 		resultValue.write(file)
 	}
-	override def toString=" SingleResult "+funcName+" childType:"+childType+ " childField:"+childField+" parField:"+parentField+" parPropField"+
+	override def toString=" SingleResult "+funcName+" childType:"+childType+ " childField:"+childField+" parField:"+parentField+" parPropField:"+
 	     parentPropField+" result:"+resultValue
 }
 
@@ -62,7 +62,7 @@ class ListCollFuncResult(override val funcName:String,override val childType:Int
 			r._2.write(file)
 		}		
 	}
-	override def toString=" ListResult "+funcName+" childType:"+childType+ " childField:"+childField+" parField:"+parentField+" parPropField"+
+	override def toString=" ListResult "+funcName+" childType:"+childType+ " childField:"+childField+" parField:"+parentField+" parPropField:"+
 	     parentPropField+" resultList:"+resultList
 }
 
@@ -81,6 +81,13 @@ class CollFuncResultSet(override val ref:Reference,
 		 for(f <-callResultList)
 			 f.write(file)
 	 }
+	 
+	 /** creates a copy of the ResultSet with the given Reference
+	  * 
+	  * @param newRef the new Reference
+	  * @return a copy of the ResultSet
+	  */
+	  def changeReference(newRef:Reference)= new CollFuncResultSet(newRef,callResultList)
 	 
 	 /** removes the given Function Call from the List and returns a new version of this set
 	  * 
@@ -131,7 +138,7 @@ class CollFuncResultSet(override val ref:Reference,
 				for(cRef <- prop.propertyFields(propField ).propertyList ) // run through all children
 					{print(" checking "+cRef)
 					if ( AllClasses.get.getClassByID(cRef.typ).inheritsFrom(cType) ) // when they fit
-					{ //TODO: check the class Version to find out inheritance of children !
+					{ 
 						val instData=ActionList.getInstanceData(cRef)
 						println(" fits "+instData)
 						if(instData!=null) // null == instance should be deleted
@@ -218,7 +225,7 @@ class CollFuncResultSet(override val ref:Reference,
 		}
 	}	
 	
-	override def toString="CollSet " + ref + ":"+(for(r <- callResultList) yield r.toString+"\n")
+	override def toString="(CollSet " + ref + ":"+(callResultList.mkString(", ")+") ")
 	
 }
 

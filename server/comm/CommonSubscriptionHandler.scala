@@ -44,6 +44,7 @@ object CommonSubscriptionHandler {
 	 * 
 	 */
 	def changeSubscription(user:UserEntry,subsID:Int,parentRef:Reference,propertyField:Byte) =  {
+		
 	  	removeSubscription(subsID)
 	  	listLock.synchronized {
 	  		val newS= ( if(propertyField== -1) new SingleSubscription(user,subsID,parentRef)			
@@ -75,6 +76,7 @@ object CommonSubscriptionHandler {
 	  listLock.synchronized {
 		 subscriptionList(subsID) match {
 			 case subs:PathSubscription => {
+				 //println("open child "+newRef)
 				 val newList=subs.path :+ newRef
 				 val newSubs=subs.updatePath(newList)
 				 subscriptionList(subsID)= newSubs
@@ -91,14 +93,16 @@ object CommonSubscriptionHandler {
 	/** a path element wants to reduce the path until to a certain element
 	 * @param newPos the number of the element in the path that should be the last element
 	 */
-	def jumpUp(subsID:Int,newPos:Int) = listLock.synchronized {
+	def jumpUp(subsID:Int,newPos:Int) = listLock.synchronized {		
 		subscriptionList(subsID) match {
 			 case subs:PathSubscription => {
-				 if(subs.path.size<=newPos) println("Wrong jump Pos "+newPos+" when jumping up "+subs.path .mkString("/"))
+				 //println("jumpup " + newPos+" oldpath:"+subs.path)
+				 if(subs.path.size<=newPos) println("Wrong jump Pos "+newPos+" when jumping up "+subs.path .mkString("/"))				 
 				 else {
 					 for (i <-(newPos+1) until subs.path.size) { // remove unneeded entries
 						 val pRef=subs.path(i)
-						 classHandlerMap(pRef.typ).removePathS(subs)
+						 classHandlerMap(pRef.typ).removeSinglePathSubs(subs,pRef)
+						// println("remove "+pRef)
 					 }
 					 subscriptionList(subsID)= subs.updatePath(subs.path.take(newPos+1) ) 
 				 }				 
@@ -174,7 +178,8 @@ object CommonSubscriptionHandler {
 		true
 	}
 	
-	def instanceChanged(newState:InstanceData) = {				
+	def instanceChanged(newState:InstanceData) = {	
+		//println("comsubsman inst changed"+newState.ref+" "+newState)
 		classHandlerMap(newState.ref.typ ).singleInstanceChanged(newState)			 
 		for(owner <-newState.owners )
 			classHandlerMap(owner.ownerRef.typ).childInstanceChanged(owner.ownerRef,owner.ownerField,newState)		
@@ -200,7 +205,7 @@ object CommonSubscriptionHandler {
 	
 	
 	def userLogsOff(userID:Int) = listLock.synchronized {		
-		println("subsMan user log off "+userID)
+		//println("subsMan user log off "+userID)
 		for(subs <- subscriptionList; if (subs!=null))			
 			if(subs.user.info.id==userID) {				
 				removeSubscription(subs.id)				 

@@ -34,7 +34,7 @@ class StorageTests extends JUnitSuite
 	}
 
 	@Test def createTest() =  {  	
-		val inst=StorageManager.createInstance(3,Array())
+		val inst=StorageManager.createInstance(3,Array(),true)
 		println(inst)  	
 		var newInst=inst.setField(0,new StringConstant("Object "+inst.ref.instance )).
 		setField(1,new DoubleConstant(math.random*100 ))

@@ -124,8 +124,20 @@ object UserSettings {
 	}
 	
 	def parse(s: String) = {
-    groupList=if(s.length==0) HashMap[String,PropertyGroup]() 
-    	else SettingsParser.parseAll(SettingsParser.allSettings, s).get
+		lazy val emptyMap=HashMap[String,PropertyGroup]()
+    groupList=if(s.length==0) emptyMap  
+    	else {
+    		val result=SettingsParser.parseAll(SettingsParser.allSettings, s)
+    		result match {
+            case SettingsParser.Success(x, _) => x
+            case SettingsParser.NoSuccess(err, next) => {
+            		print("Failure when parsing "+                
+                    "(line " + next.pos.line + ", column " + next.pos.column + "):\n" +
+                    err + "\n" + next.pos.longString)
+                emptyMap
+            }
+        }
+    	}
   }
 
 	private object SettingsParser extends JavaTokenParsers {

@@ -15,9 +15,6 @@ import java.awt.{Color, Dimension, Font}
 import java.awt.event.MouseAdapter
 import scala.swing._
 import scala.swing.event._
-import transaction.parser._
-
-
 
 /** table model for a table showing instances of a certain type
  * 
@@ -38,7 +35,7 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 
 	val listLock=new Object
 
-	val table=new Table(){		
+	val table:Table=new Table(){		
 		autoResizeMode=Table.AutoResizeMode.Off
 		//selection.intervalMode=Table.IntervalMode.Single
 		selection.elementMode=Table.ElementMode.Row 
@@ -97,7 +94,7 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 	def getParentRef=propMod.mainController.ref
 	def getPropField= propMod.propertyField
 
-	val scroller=new ScrollPane() {
+	val scroller:ScrollPane=new ScrollPane() {
 		
 		viewportView=table
 		preferredSize=new Dimension(100,100)		
@@ -130,12 +127,15 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 		
 		val tabPrefHeight=table.preferredSize.height+defaultRowHeight*2+6
 		val mainPanelHeight=propMod.mainController.panel.size.height
-		scroller.preferredSize=new Dimension(100,if(tabPrefHeight>(mainPanelHeight-defaultRowHeight)&&mainPanelHeight>defaultRowHeight)
+	  if(tabPrefHeight>(mainPanelHeight-defaultRowHeight)) 
+	  	println("tabprefHeight:"+tabPrefHeight+" > mainpanelHeight"+mainPanelHeight)
+		scroller.preferredSize=new Dimension(100,if(tabPrefHeight>(mainPanelHeight-defaultRowHeight)&&mainPanelHeight>defaultRowHeight*2)
 			(mainPanelHeight-defaultRowHeight) else tabPrefHeight )
 		//scroller.preferredSize=new Dimension(100,(if (dataList==null || dataList.isEmpty)2 else dataList.size+2)*22)
 		scroller.maximumSize=new Dimension(2000,scroller.preferredSize.height)
+		propMod.mainController.updateHeight()
 		//println("typTable calcsize "+scroller.preferredSize+ " tabPrefHeight "+tabPrefHeight+" mainpan: "+mainPanelHeight)
-		scroller.revalidate
+		//scroller.revalidate
 	}
 
 	def changeInstance(newInst:InstanceData):Unit = listLock.synchronized {
@@ -208,7 +208,7 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 			else {
 				val expr=dataList(row).fieldData(col-1)
 				if(expr.isConstant) expr
-				else expr+":"+expr.getValue
+				else expr.getTerm+": "+expr.getValue
 			}
 		}
 		else null
@@ -246,8 +246,7 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 					StringParser.parse( value.toString) 
 				} 
 		catch {
-			case e:Exception =>  				
-			new StringConstant(value.toString)				
+			case _ => new StringConstant(value.toString)				
 		}
 		else StringParser.parse( value.toString) // throw exception when fail
 	}

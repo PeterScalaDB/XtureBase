@@ -6,8 +6,8 @@ package management.databrowser
 import javax.swing.table.AbstractTableModel
 import definition.typ._
 import definition.data._
+import definition.expression.StringParser
 import server.storage._
-import transaction.parser.StringParser
 import transaction.handling._
 import definition.comm._
 

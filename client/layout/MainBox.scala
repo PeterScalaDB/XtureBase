@@ -29,6 +29,13 @@ class MainBox extends Panel with ViewboxHolder {
 	opaque=true
 	background=Color.lightGray
 	
+	def close():Unit = {
+		if(_centerBox!=null) centerBox.foreach(_.close)
+	}
+	
+	def storeSettings():Unit = {
+		if(_centerBox!=null) centerBox.foreach(_.storeSettings)
+	}
 	
 	override lazy val peer = new MainboxPeer 
 		

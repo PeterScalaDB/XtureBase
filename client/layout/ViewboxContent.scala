@@ -13,9 +13,11 @@ trait ViewboxContent {
 	type CompType=ViewboxContent with Component
 	def open()
 	def close()
+	def storeSettings()
 	//def getType:ViewboxContentType
 	//def title:String
 	def setViewbox(box:Viewbox)
+	def typeID:String
 }
 
 

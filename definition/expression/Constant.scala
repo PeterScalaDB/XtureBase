@@ -43,7 +43,7 @@ object Constant
 	 * @return A new Constant with the value, converted to another type
 	 */
 	def createConversion(value:Constant,toType: DataType.Value) = {
-		println("create conversion "+value+" toType:"+toType)
+		//println("create conversion "+value+" toType:"+toType)
 		toType match {		
 		case DataType.IntTyp => new IntConstant(value.toInt)
 		case DataType.LongTyp => new LongConstant(value.toLong)
@@ -81,7 +81,7 @@ object EMPTY_EX extends Constant
   
   def toBoolean:Boolean=false 
 	
-	def getTerm:String ="(Empty)"
+	def getTerm:String =""
 	
 	def write(file:DataOutput)= { 
   	file.writeByte(DataType.undefined.id)  	
@@ -90,5 +90,7 @@ object EMPTY_EX extends Constant
 	def getNative=""
 	
 	override def toString = ""
+		
+  override def isEmpty=true
 	
 }

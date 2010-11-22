@@ -87,20 +87,45 @@ object TransactionManager {
 	 * @param notifyRefandColl should referencing links and collFuncs be notified about the new instance
 	 * @param notifySubs notify subscribers of the parent inst that the new instance was added
 	 */
-	def tryCreateInstance(typ:Int,owners:Array[OwnerReference],notifyRefandColl:Boolean,pos:Int= -1,notifySubs:Boolean=true) =	{	
+	def tryCreateInstance(typ:Int,owners:Array[OwnerReference],notifyRefandColl:Boolean,pos:Int= -1,notifySubs:Boolean=true,withStartValues:Boolean=true) =	{	
 		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
 		//TODO: Check if the child type is allowed in the owner property fields
 		
-		val newInst=StorageManager.createInstance(typ,owners)	
-		val copyInfo:Option[CopyMoveInfo]=if(!notifySubs) AddDontNotifyOwners.some  else None 
-		ActionList.addTransactionData(newInst.ref,new CreateAction(newInst.ref,Some(newInst),None,None,copyInfo))		
+		var newInst=StorageManager.createInstance(typ,owners,withStartValues)	
+		var collData:Option[CollFuncResultSet]=None
+		var newLinkData:ReferencingLinks=null
+		val copyInfo:Option[CopyMoveInfo]=if(!notifySubs) AddDontNotifyOwners.some  else None
+		for(i<-newInst.fieldData.indices;val expr=newInst.fieldData(i);if(!expr.isEmpty)){
+			// check new collcalls
+			val newCollCalls=expr.getElementList[CollectingFuncCall](DataType.CollFunctionCall,Nil)
+  		  if(!newCollCalls.isEmpty) {
+			   val (acollData,anExpression)=TransactionManager.addCollCalls(null, newInst.ref, newCollCalls, i.toByte,expr)
+			   newInst=newInst.setField(i.toByte,anExpression)
+			   collData=Some(acollData)	
+  		 }
+			// check new links
+			val newRefList:Seq[FieldReference]=expr.getElementList[FieldReference](DataType.FieldRefTyp,Nil)
+			for(nr<-newRefList)	{
+				val sourceInstRef = resolveLinkRef(newInst.ref,nr)
+				val sourceValue=(
+						if(sourceInstRef==newInst.ref) newInst 
+						else  ActionList.getInstanceData(sourceInstRef)	).fieldValue(nr.remField )
+						nr.cachedValue =sourceValue	//side effect !!! should be changed !
+				//addLinkRef(newInst.ref,i.toByte,nr)
+				if(newLinkData==null)newLinkData=		new ReferencingLinks(sourceInstRef,Map())
+				newLinkData=newLinkData.addTargetLink(ExtFieldRef(newInst.ref.typ,newInst.ref.instance ,i.toByte),nr.remField)
+			}
+		}		  
+		  
+		ActionList.addTransactionData(newInst.ref,new CreateAction(newInst.ref,Some(newInst),None,
+			if(newLinkData==null)None else Some(newLinkData),collData,copyInfo))		
 		// notify owners
 		for(owner <-owners)
 		{
 			internAddPropertyToOwner(newInst,owner,pos,!notifySubs)
-		}
+		}		
 		if(notifyRefandColl)
-			for(i <- 0 until newInst.fieldData.size;if (newInst.fieldData(i)!=EMPTY_EX))
+			for(i <- 0 until newInst.fieldData.size;if (!newInst.fieldData(i).isEmpty))
 				passOnChangedValue(newInst,i.toByte,EMPTY_EX,newInst.fieldData(i).getValue)
 		//SimpleProfiler.measure("notif owner")
 		newInst
@@ -150,16 +175,15 @@ object TransactionManager {
 		//SimpleProfiler.measure("load")
 		// check for FieldReferences
 		val oldRefList=instD.fieldData(fieldNr).getElementList[FieldReference](DataType.FieldRefTyp,Nil)
-		val newRefList=newExpression.getElementList[FieldReference](DataType.FieldRefTyp,Nil)	
+		val newRefList:Seq[FieldReference]=newExpression.getElementList[FieldReference](DataType.FieldRefTyp,Nil)	
 		// set the cache value of the FieldReference expressions in the new Expression
 		for(nr<-newRefList)
 		{
-			val sourceInst = resolveLinkRef(ref,nr)
-		  val sourceValue=ActionList.getInstanceData(sourceInst).fieldValue(nr.remField )
+			val sourceInstRef = resolveLinkRef(ref,nr)
+		  val sourceValue=ActionList.getInstanceData(sourceInstRef).fieldValue(nr.remField )
 		  nr.cachedValue =sourceValue	//side effect !!! should be changed !
-		}		
-		
-				// remove all ReferencingLinks data off the removed refs
+		}				
+		// remove all ReferencingLinks data off the removed refs
 		val removedRefs=findMissingElements[FieldReference](oldRefList,newRefList)
 		
 		for( r <- removedRefs)
@@ -184,14 +208,12 @@ object TransactionManager {
 		val newCalls=findMissingElements[CollectingFuncCall](newCollCalls,oldCollCalls)
 		val newCollData = if(!newCalls.isEmpty) {
 			  val (acollData,anExpression)=addCollCalls(remCollData, ref, newCalls, fieldNr,newExpression)
-			  theExpression=anExpression // update the Expression
-			  //println("addCollData "+acollData)
-			  //println("newExpression "+theExpression)
+			  theExpression=anExpression // update the Expression			  
 			  acollData
 		} else remCollData
 			    
 		if (newCollData!=null) ActionList.addTransactionData(ref,new DataChangeAction(None,None,None,Some(newCollData))) 
-		//SimpleProfiler.measure("collcheck")	  
+		  
 		//safe the old field value  
 		val oldValue=instD.fieldData(fieldNr).getValue   				  
 		// set field in instance to new expression
@@ -331,10 +353,12 @@ object TransactionManager {
 	 * @param targetField in what field in the target instance is the new FieldReference
 	 * @param sourceRef the FieldReference pointing to the source instance 
 	 */
-	private def addLinkRef(targetRef:Reference,targetField:Byte,sourceRef:FieldReference):Unit = {
+	private def addLinkRef(targetRef:Reference,targetField:Byte,sourceRef:FieldReference):Unit = {		
 		val sourceInst = resolveLinkRef(targetRef,sourceRef) // resolve missing type and instance information
+		println("addLinkRef targetRef:"+targetRef+" targetField:"+targetField+" sourceRef:"+
+			sourceRef+ " sourceInst:"+sourceInst)
 		val newLinkData= ( ActionList.getReferencingLinks(sourceInst) match {
-			case Some(linkData) => linkData
+			case Some(linkData) =>{println("Linkdata already there:"+linkData); linkData}
 			case _ => new ReferencingLinks(sourceInst,Map())				
 		} ).addTargetLink(ExtFieldRef(targetRef.typ,targetRef.instance ,targetField),sourceRef.remField)
 		ActionList.addTransactionData(sourceInst,DataChangeAction(None,None,Some(newLinkData)))
@@ -369,7 +393,7 @@ object TransactionManager {
 	 *  @param pfieldNr in what field were the calls added
 	 *  @return tuple: (the new result set, the updated expression)
 	 */
-	private def addCollCalls(collData:CollFuncResultSet,ref:Reference,newCollCalls:List[CollectingFuncCall],
+	def addCollCalls(collData:CollFuncResultSet,ref:Reference,newCollCalls:List[CollectingFuncCall],
 	                         pFieldNr:Byte, newTerm:Expression):(CollFuncResultSet,Expression) ={				
 		// get the collData
 		var theTerm=newTerm
@@ -399,7 +423,7 @@ object TransactionManager {
 		newTerm.replaceExpression((ex:Expression) => {
 		  	 ex match {
 		  		 case fc:CollectingFuncCall => {
-		  			   //println("setFuncResults fc:"+fc + "call:"+call+" =="+(fc==call)+" newValue:"+newValue)
+		  			   println("setFuncResults fc:"+fc + "call:"+call+" =="+(fc==call)+" newValue:"+newValue)
 		  			   if(fc==call) return fc.setValue(newValue)
 		  			   else return fc
 		  			 }
@@ -470,13 +494,18 @@ object TransactionManager {
 	                                       oldValue:Constant,newValue:Constant)= {
 		val myClass=AllClasses.get.getClassByID(childRef.typ)
 		
-		var fieldMatchSet:Set[Int]=Set()
+		var fieldMatchSet:Set[Int]=Set.empty
 		// check if the child matches to any of the collFuncResults 
-		for(res <-collData.callResultList )
-		   if(res.childField ==childField && res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
-		  		 myClass.inheritsFrom(res.childType)) fieldMatchSet=fieldMatchSet+ res.parentField
 		
-		if(!fieldMatchSet.isEmpty) {  // if yes, update the changes			 
+		for(res <-collData.callResultList ){
+			//println("myclass "+ myClass+ " res.childType:"+res.childType+ " " +myClass.inheritsFrom(res.childType))
+			if(res.childField ==childField && res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
+		  		 myClass.inheritsFrom(res.childType)) fieldMatchSet=fieldMatchSet+ res.parentField
+		}
+		   
+		
+		if(!fieldMatchSet.isEmpty) {  // if yes, update the changes			
+			//println("fieldMatchSet: "+fieldMatchSet)
 			var parentInstData=ActionList.getInstanceData(owner.ownerRef)
 			val oldParentValues:Array[Constant]= new Array[Constant](parentInstData.fieldData .size)
 				for(i <-fieldMatchSet) oldParentValues(i)= parentInstData.fieldValue(i)
@@ -535,7 +564,7 @@ object TransactionManager {
 	
 	
 	// Checks the  lists of the new value and the old value, what elements were removed in the new one	
-	private def findMissingElements[T <: Expression](oldList:List[T],newList:List[T]) =
+	private def findMissingElements[T <: Expression](oldList:Seq[T],newList:Seq[T]) =
 	{		
 		var resultList:List[T]=Nil
 		for(r <-oldList)
@@ -674,8 +703,8 @@ object TransactionManager {
 		// get the other owners of that instance, apart from "fromOwner", and add the new owner toOwner
 		if(!instD.owners.contains(fromOwner)) throw new IllegalArgumentException("Copy: instance "+instRef+" is not owned by "+ fromOwner)
 		//if(instD.owners.contains(toOwner)) throw new IllegalArgumentException("Copy: instance "+instRef+" is already owned by "+ toOwner)
-		val newOwners:Array[OwnerReference]= instD.owners.filter(x => x!=fromOwner) :+ toOwner
-		var createInst=tryCreateInstance(instRef.typ ,newOwners,false,atPos,false) // new instance created by DB
+		val newOwners:Array[OwnerReference]= instD.owners.filter(_ !=fromOwner) :+ toOwner
+		var createInst=tryCreateInstance(instRef.typ ,newOwners,false,atPos,false,false) // new instance created by DB
 		
 		createInst=instD.clone(createInst.ref,newOwners)
 		
@@ -683,12 +712,17 @@ object TransactionManager {
 		for(i <- 0 until instD.fieldData.size;if (instD.fieldData(i)!=EMPTY_EX))
 		{
 			val refList=instD.fieldData(i).getElementList[FieldReference](DataType.FieldRefTyp,Nil)
+			println("try copy inst:"+instRef+" newInst:"+createInst.ref+" "+refList)
+			println("old referencing Links "+ActionList.getReferencingLinks(instRef))
 			for(rf <-refList)
 				 addLinkRef(createInst.ref,i.toByte,rf)
 		}
 		
 		// store data and copy collData to new Instance
-		ActionList.addTransactionData(createInst.ref,new DataChangeAction(Some(createInst),None,None,ActionList.getCollData(instRef)))		
+		var collData=ActionList.getCollData(instRef)
+		for(c <-collData)
+			collData=Some(c.changeReference(createInst.ref))
+		ActionList.addTransactionData(createInst.ref,new DataChangeAction(Some(createInst),None,None,collData))		
 		// notify owners
 		if(collNotifyOwners)
 		passOnNewInstanceToCollFuncParents(createInst,createInst.owners)

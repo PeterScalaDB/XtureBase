@@ -39,10 +39,12 @@ extends SubscriptionInfo (user,id,parentRef)
 /** a subscription for path views
  * 
  */
-case class PathSubscription(override val user:UserEntry,override  val id:Int,val path:IndexedSeq[Reference]) 
+case class PathSubscription(override val user:UserEntry,override  val id:Int,var path:IndexedSeq[Reference]) 
 extends SingleSubscription(user,id,null) {
 	def updatePath(newPath:IndexedSeq[Reference]) = {
-		new PathSubscription(user,id,newPath)
+		//new PathSubscription(user,id,newPath)
+		path=newPath
+		this
 	}
-	override def toString = "PathSubs("+id+ " path: "+path.mkString+")"
+	override def toString = "PathSubs(id:"+id+ " path: "+path.mkString+")"
 }

@@ -25,7 +25,7 @@ class PropAreaTransferHandler(propMod:PropertyModel) extends TransferHandler{
   			 val data = support.getTransferable.getTransferData(InstanceSelection.flavor).asInstanceOf[InstanceSelection]
   			 if(data.selection.size==0) return false
   			 if(propField.single) return false
-  			 println("allowedClass: "+propField.allowedClass +" data class:"+data.selection .first.typ)
+  			 //println("allowedClass: "+propField.allowedClass +" data class:"+data.selection .first.typ)
   			 if(propField.allowedClass>0 && !AllClasses.get.getClassByID(data.selection.first.typ).inheritsFrom(  propField.allowedClass)) return false
   			 if(data.parentRefs .first equals propMod.mainController.ref) return false
   			 support.getDropAction match {

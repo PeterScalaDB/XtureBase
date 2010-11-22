@@ -7,7 +7,6 @@ import javax.swing.table.AbstractTableModel
 import definition.typ._
 import definition.data._
 import server.storage._
-import transaction.parser.StringParser
 import transaction.handling._
 
 /**

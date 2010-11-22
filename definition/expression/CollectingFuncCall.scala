@@ -7,10 +7,11 @@ import definition.typ._
 import java.io._
 /** a Function call that collects data from all child objects
  * of the instance where this expression is stored
- * 
+ * @param name name of the function
+ * @param propertyField what property Field should be summed up 
  * @param childType the type id of the  children where data should be collected
  * @param childField from what fild of the children should data be collected
- * @param childValues optional List of all values of all children fields 
+ * @param cacheValue optional List of all values of all children fields 
  */
 case class CollectingFuncCall(name:String,propertyField:Byte,childType:Int,childField:Byte,
 	cacheValue:Constant=null) extends Expression {

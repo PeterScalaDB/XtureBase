@@ -12,6 +12,7 @@ import scala.collection.immutable.IndexedSeq
  *  description of a Class
  */
 class ClientObjectClass (val name:String,val id:Int,val description:String,protected val ownFields:Seq[FieldDefinition],
+	protected val ownFieldSettings:Seq[FieldSetting],
 	 protected val ownPropFields:Seq[PropertyFieldDefinition],protected val theActions:Seq[ActionDescription], 
 	 protected val theCreateActions:Seq[ActionDescription],protected val superClasses:Seq[String],
 	 val shortFormat:InstFormat,val longFormat:InstFormat,val resultFormat:InstFormat)
@@ -43,6 +44,7 @@ object ClientObjectClass
 		var shortForm:InstFormat=null
 		new ClientObjectClass(name,id ,  (node \"@desc").text,
 			for(afield <-(node \\"FieldDef")) yield FieldDefinition.fromXML(afield),
+			for(afield <-(node \\"FieldSetting")) yield FieldSetting.fromXML(afield),
 		  for(bfield <-(node \\"PropertyFieldDef")) yield PropertyFieldDefinition.fromXML(bfield),
 		  for(efield <-(actionsNode \\"Action"))yield ActionDescription.fromXML(efield),
 		  for(efield <-(createActionsNode \\"Action"))yield ActionDescription.fromXML(efield),

@@ -81,7 +81,7 @@ object StorageManager {
   		val (transType,npos,nlength)=TransLogHandler.getLastLivingData(ref.typ,ref.instance,
   			TransLogHandler.insertPos-1,List(TransType.created.id,TransType.dataChanged.id))
   		//println("Last Living "+ref+" is: pos:"+npos+" size:"+nlength)
-  		if(transType== -1) return new InstanceData(ref,Array(),Array(),false)
+  		if(transType== -1) return new InstanceData(ref,IndexedSeq(),Array(),false)
   		pos=npos;length=nlength
   		
   	}
@@ -113,11 +113,11 @@ object StorageManager {
   /** creates a new empty instance
    * 
    */
-  def createInstance(typ:Int,owners:Array[OwnerReference]):InstanceData =
+  def createInstance(typ:Int,owners:Array[OwnerReference],withStartValues:Boolean):InstanceData =
   {
   	val hand =getHandler(typ)
   	val inst=hand.theClass.createInstance(
-  		new Reference(typ,hand.createInstance()),owners)  	
+  		new Reference(typ,hand.createInstance()),owners,withStartValues)  	
   	//writeInstance(inst)
   	inst  
   }

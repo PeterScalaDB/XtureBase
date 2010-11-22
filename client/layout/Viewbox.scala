@@ -52,6 +52,12 @@ class Viewbox(val mainbox:MainBox,val showCloseButton:Boolean,var holder:Viewbox
 		repaint
 	}
 	
+	def foreach(func:(Viewbox)=>Unit):Unit = {
+		func(this)
+		if(rightEdge.isExpanded) rightEdge.getConnectedBox.foreach(func)
+		if(bottomEdge.isExpanded) bottomEdge.getConnectedBox.foreach(func)
+	}
+	
 	
 	override def preferredSize = {
 		val superSize=super.preferredSize		
@@ -124,12 +130,17 @@ class Viewbox(val mainbox:MainBox,val showCloseButton:Boolean,var holder:Viewbox
 			}
 		  
 		} else if(!holder.deleteMe(this)) return
-		content.close()
-		add(null,BorderPanel.Position.Center)
+		content.storeSettings()
+		content.close()		
+		//add(null,BorderPanel.Position.Center)
 		content=null
 		mainbox.remove(this)
 		mainbox.revalidate		
 		mainbox.repaint
+	}
+	
+	def storeSettings() = {
+		content.storeSettings()
 	}
 	
 	def isDoubleConnected=rightEdge.isExpanded&&bottomEdge.isExpanded
@@ -246,8 +257,12 @@ object Viewbox extends SimpleSwingApplication  {
 			def close() = {
 				println("close ")
 			}
+			def storeSettings() = {
+				println("store settings")
+			}
 			def getType=contBoxType			
 			def setViewbox(box:Viewbox) = {box.setTitle("Test-Box "+getCounter)}
+			def typeID:String = "Test"
 		}
 	
 	val contBoxType=new ViewboxContentType(1,"testType","T",()=>{

@@ -79,6 +79,9 @@ class GraphicsViewbox extends BorderPanel with ViewboxContent {
   def close(): Unit = { 
   	shutDown()
   }
+  def storeSettings() = {
+  	
+  }
 
   def getType(): ViewboxContentType = { null }
 
@@ -102,5 +105,5 @@ class GraphicsViewbox extends BorderPanel with ViewboxContent {
   	}
   	boxOpen= !boxOpen
   }
-
+  def typeID:String = "Graphics"
 }

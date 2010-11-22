@@ -18,6 +18,7 @@ trait Stripe {
 object Stripe {
 	type StripeType=Panel with Stripe
 	val butFont=new Font("Arial",0,10)
+	val prefSize=new Dimension(15,15)
 }
 
 class ExpandStripe(val isHorizontal:Boolean,var baseBox:Viewbox) extends 
@@ -67,11 +68,13 @@ class ConnectorStripe(val isHorizontal:Boolean,val baseBox:Viewbox,var connected
 	syncLeftBut.font=Stripe.butFont
 	syncRightBut.focusable=false
 	syncLeftBut.focusable=false
+	preferredSize=Stripe.prefSize
 	/*scaleEdit.maximumSize=new Dimension(40,30)
 	//scaleEdit.preferredSize=maximumSize
 	scaleEdit.preferredSize=new Dimension(30,30)
 	scaleEdit.font=new Font("Arial",0,8)*/
-	contents+=(if(isHorizontal)Swing.HStrut(10) else Swing.VStrut(10))+=syncRightBut+=syncLeftBut+=dragArea	
+	contents+=dragArea
+	//contents+=(if(isHorizontal)Swing.HStrut(10) else Swing.VStrut(10))+=syncRightBut+=syncLeftBut+=dragArea	
 		//(if (isHorizontal)Swing.HGlue else Swing.VGlue)
 	
 	/*listenTo(scaleEdit)

@@ -28,7 +28,8 @@ class PropertyModel(val mainController:DataViewController) {
 	val vGlue=new ClickComp(this)
 	val titleLabel=new Label("Prop")
 	titleLabel.font=mainController.smallFont
-	val tableArea=new BoxPanel (scala.swing.Orientation.Vertical ) {		
+	val tableArea=new BoxPanel (scala.swing.Orientation.Vertical ) {	
+		contents+=vGlue
 		//opaque=true
 		//background=Color.green
 	}
@@ -72,7 +73,7 @@ class PropertyModel(val mainController:DataViewController) {
 		//println()				
 		notType match {
 			case NotificationType.sendData => {
-				println("send data "+data)
+				//println("send data "+data)
 				val grouped=data.view.groupBy(_.ref.typ)
 				for((i,data) <-grouped.iterator) {
 					val mod=if(tableModMap.contains(i)) tableModMap(i) else createTableModel(i)
@@ -80,20 +81,21 @@ class PropertyModel(val mainController:DataViewController) {
 				}					
 			}
 			case NotificationType.childAdded => {
-				println("child added:"+data)
+				//println("child added:"+data)
 				val typ=data(0).ref.typ
 				val mod = if(tableModMap.contains(typ)) tableModMap(typ)
 					else createTableModel(typ)					
 				mod.addInstance(data(0))
 			}
 			case NotificationType.FieldChanged => {
-				println("field added:"+data)
+				//println("field added:"+data)
 				val typ=data(0).ref.typ
 				tableModMap(typ).changeInstance(data(0))
 			}
 
 			case NotificationType.instanceRemoved => {
 				val typ=data(0).ref.typ
+				if(tableModMap.contains(typ))
 				tableModMap(typ).removeInstance(data(0).ref)							
 			}		
 		}}
@@ -129,6 +131,7 @@ class PropertyModel(val mainController:DataViewController) {
 	def shutDown() = listLock.synchronized{
 		ClientQueryManager.pauseSubscription(subscriptionID)
 		tableArea.contents.clear
+		tableArea.contents+=vGlue
 		tableModMap.clear
 		loaded=false
 	}
