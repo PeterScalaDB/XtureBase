@@ -111,7 +111,8 @@ object TransactionManager {
 						if(sourceInstRef==newInst.ref) newInst 
 						else  ActionList.getInstanceData(sourceInstRef)	).fieldValue(nr.remField )
 						nr.cachedValue =sourceValue	//side effect !!! should be changed !
-				//addLinkRef(newInst.ref,i.toByte,nr)
+				//addLinkRef(newInst.ref,i.toByte,nr)				
+				checkCircularRef(newInst.ref,i.toByte,List(nr qualifyWith newInst.ref))		
 				if(newLinkData==null)newLinkData=		new ReferencingLinks(sourceInstRef,Map())
 				newLinkData=newLinkData.addTargetLink(ExtFieldRef(newInst.ref.typ,newInst.ref.instance ,i.toByte),nr.remField)
 			}
@@ -172,7 +173,7 @@ object TransactionManager {
 		//SimpleProfiler.startMeasure("Change inst")
 		var theExpression=newExpression
 		val instD=ActionList.getInstanceData(ref)
-		//SimpleProfiler.measure("load")
+		
 		// check for FieldReferences
 		val oldRefList=instD.fieldData(fieldNr).getElementList[FieldReference](DataType.FieldRefTyp,Nil)
 		val newRefList:Seq[FieldReference]=newExpression.getElementList[FieldReference](DataType.FieldRefTyp,Nil)	
@@ -191,9 +192,12 @@ object TransactionManager {
 	  // add new ReferencinLinks data for added refs
 		val addedRefs=findMissingElements[FieldReference](newRefList,oldRefList)
 		
-		for( r <- addedRefs)
-		  addLinkRef(ref,fieldNr,r)
-		//SimpleProfiler.measure("refCheck")
+		for( r <- addedRefs){
+			checkCircularRef(ref,fieldNr,List(r qualifyWith ref))			
+			addLinkRef(ref,fieldNr,r)
+		}
+		  
+		
 		 // Check for CollFunctionCalls 
 		val oldCollCalls= instD.fieldData(fieldNr).getElementList[CollectingFuncCall](DataType.CollFunctionCall,Nil)
 		if( !oldCollCalls.isEmpty) println("oldCollCalls "+oldCollCalls)
@@ -226,6 +230,36 @@ object TransactionManager {
 		if(newValue!=oldValue) passOnChangedValue(newInst,fieldNr,oldValue,newValue)
 		//SimpleProfiler.measure("passOn")
 		true
+	}
+	
+	def checkCircularRef(targetRef:Reference,targetField:Byte,dependingRefs:List[FieldReference]):Unit={
+		println("checking target:"+targetRef+" field:"+targetField+" list:"+dependingRefs.mkString(","))
+		//val qualifiedSourceRef=link qualifyWith targetRef
+		val targetFieldReference=new FieldReference(Some(targetRef.typ),Some(targetRef.instance),targetField)
+		if(dependingRefs.contains(targetFieldReference)) 
+			throw new IllegalArgumentException("Circular Reference from "+targetRef+" field:"+targetField+
+				" including:\n"+dependingRefs.mkString(","))
+		val newDepList=targetFieldReference::dependingRefs
+		// check external refs that point to target field		
+		for(mrl <- ActionList.getReferencingLinks(targetRef);if(mrl.links .contains(targetField));val extList=mrl.links(targetField))  
+			for(extLinkRef<-extList)
+				checkCircularRef(Reference(extLinkRef.typ,extLinkRef.inst),extLinkRef.field, newDepList)
+		// check collFuncs of parents	 
+		var instData:InstanceData=null			
+		try {
+		   instData=ActionList.getInstanceData(targetRef)
+		} catch {case e:Exception => {println(e);return}}
+		for(owner <-instData.owners) {
+			val collData=ActionList.getCollData(owner.ownerRef )
+			println("owner:"+owner+" colldata:"+collData)
+			for(cData<-collData)
+				for(cFResult <-cData.callResultList;
+				  if (cFResult.parentPropField==owner.ownerField &&
+				  		AllClasses.get.getClassByID( targetRef.typ).inheritsFrom(cFResult.childType) &&
+				  		cFResult.childField ==targetField))
+					checkCircularRef(owner.ownerRef,cFResult.parentField,newDepList)
+		}
+		
 	}
 	
 	
@@ -354,14 +388,14 @@ object TransactionManager {
 	 * @param sourceRef the FieldReference pointing to the source instance 
 	 */
 	private def addLinkRef(targetRef:Reference,targetField:Byte,sourceRef:FieldReference):Unit = {		
-		val sourceInst = resolveLinkRef(targetRef,sourceRef) // resolve missing type and instance information
+		val qualifiedSourceRef = resolveLinkRef(targetRef,sourceRef) // resolve missing type and instance information
 		println("addLinkRef targetRef:"+targetRef+" targetField:"+targetField+" sourceRef:"+
-			sourceRef+ " sourceInst:"+sourceInst)
-		val newLinkData= ( ActionList.getReferencingLinks(sourceInst) match {
+			sourceRef+ " qualSourceRef:"+qualifiedSourceRef)
+		val newLinkData= ( ActionList.getReferencingLinks(qualifiedSourceRef) match {
 			case Some(linkData) =>{println("Linkdata already there:"+linkData); linkData}
-			case _ => new ReferencingLinks(sourceInst,Map())				
+			case _ => new ReferencingLinks(qualifiedSourceRef,Map())				
 		} ).addTargetLink(ExtFieldRef(targetRef.typ,targetRef.instance ,targetField),sourceRef.remField)
-		ActionList.addTransactionData(sourceInst,DataChangeAction(None,None,Some(newLinkData)))
+		ActionList.addTransactionData(qualifiedSourceRef,DataChangeAction(None,None,Some(newLinkData)))
 		
 		//TODO check against circular references !!!
 	}
@@ -566,6 +600,7 @@ object TransactionManager {
 	// Checks the  lists of the new value and the old value, what elements were removed in the new one	
 	private def findMissingElements[T <: Expression](oldList:Seq[T],newList:Seq[T]) =
 	{		
+		val retList=newList.diff(oldList)
 		var resultList:List[T]=Nil
 		for(r <-oldList)
 			if(!newList.contains(r)) resultList= r :: resultList
@@ -667,6 +702,7 @@ object TransactionManager {
 	 */
 	def tryMoveInstance(subRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference,pos:Int):Unit = {
 		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
+		if(checkIsChildOf(toOwner,subRef))throw new IllegalArgumentException("Move not possible. ToOwner "+toOwner+" is child of moving Instance "+fromOwner)
 		// change the property information		
 		val instData=ActionList.getInstanceData(subRef)
 		val differentOwners= fromOwner!=toOwner
@@ -683,9 +719,17 @@ object TransactionManager {
 		}
 	}
 	
+	private def checkIsChildOf(toOwner:OwnerReference,source:Reference):Boolean= {
+		println("check Child toOwner:"+toOwner+" source:"+source)
+		if(toOwner.ownerRef==source)return true
+		val instData=ActionList.getInstanceData(toOwner.ownerRef )
+		for(owner <-instData.owners)
+			if(checkIsChildOf(owner,source)) return true		
+		return false		
+	}
 	
 	def tryCopyMultiInstances(instList:Seq[Reference],fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int) = {
-		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
+		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")		
 		var pos=atPos
 		var lastInst:Int=0
 		//println("copy Multi :"+instList.mkString(",")+" from:"+fromOwner+" to:"+toOwner+" pos:"+atPos)
@@ -696,9 +740,20 @@ object TransactionManager {
 		lastInst
 	}
 	
+	
+	
 	def tryCopyInstance(instRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int,
 	                    collNotifyOwners:Boolean):Int = {
 		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
+		if(checkIsChildOf(toOwner,instRef))throw new IllegalArgumentException("Copy not possible. ToOwner "+toOwner+" is child of copying Instance "+fromOwner)
+		readLine
+		internTryCopyInstance(instRef,fromOwner,toOwner,atPos,collNotifyOwners)
+	}
+	
+	
+	private def internTryCopyInstance(instRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int,
+	                    collNotifyOwners:Boolean):Int = {
+		
 		val instD=ActionList.getInstanceData(instRef)
 		// get the other owners of that instance, apart from "fromOwner", and add the new owner toOwner
 		if(!instD.owners.contains(fromOwner)) throw new IllegalArgumentException("Copy: instance "+instRef+" is not owned by "+ fromOwner)

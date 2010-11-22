@@ -104,8 +104,8 @@ class TableTransferHandler(tableMod:TypeTableModel) extends TransferHandler {
   			val thatRef=data.selection.first.toReference
   			val thisInst=tableMod.dataList(tabLoc.getRow)
   			val remType=if(thisInst.ref.typ==thatRef.typ)None else Some(thatRef.typ)
-  			val remInst=if(remType.isDefined && thisInst.ref.instance==thatRef.instance)None else Some(thatRef.instance)
-  			if(remType.isDefined && remInst.isDefined&& data.dragColumn == tabLoc.getColumn) {
+  			val remInst=if(!remType.isDefined && thisInst.ref.instance==thatRef.instance)None else Some(thatRef.instance)
+  			if((!remType.isDefined) && (!remInst.isDefined)&& data.dragColumn == tabLoc.getColumn) {
   				println(" cant link to same field "+thatRef+" "+tabLoc.getColumn)
   				return false
   			}
