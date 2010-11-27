@@ -11,6 +11,8 @@ import scala.swing._
 import scala.swing.event._
 import javax.swing.{SwingUtilities,JList}
 import java.awt.Color
+import javax.swing.BorderFactory
+import javax.swing.border._
 
 /** manages all data changes of a property field of a instance
  * the PropertyModels are specialized on a certain allowed class
@@ -24,20 +26,28 @@ class PropertyModel(val mainController:DataViewController) {
 	var subscriptionID= -1
 	var allowedClass:Int= _	
 	var listLock=new Object
+	var isFirstPropField:Boolean=false
+	var isLoading:Boolean=true // is the callBack routine called for the first time (true) or as a refresh after a move(false) 
 	var tableModMap=scala.collection.mutable.HashMap[Int,TypeTableModel]()
 	val vGlue=new ClickComp(this)
 	val titleLabel=new Label("Prop")
 	titleLabel.font=mainController.smallFont
-	val tableArea=new BoxPanel (scala.swing.Orientation.Vertical ) {	
+	val tableArea=new BoxPanel (scala.swing.Orientation.Vertical ) {		
 		contents+=vGlue
-		//opaque=true
-		//background=Color.green
+		
 	}
-	
+	val vGlueMaxSize=new Dimension(0,30)
+	val vGlueMinSize=new Dimension(0,30)
 	
 	val panel=new BorderPanel {
 		add(titleLabel,BorderPanel.Position.North)
 		add(tableArea,BorderPanel.Position.Center)
+		border= BorderFactory.createCompoundBorder(
+			BorderFactory.createEtchedBorder(EtchedBorder.LOWERED),
+			BorderFactory.createLineBorder(background,3))
+		//opaque=true
+		//background=Color.blue
+		//maximumSize=new Dimension(Short.MaxValue,Short.MaxValue)
 	}
 	var selectRef:Option[Reference]=None
 	
@@ -47,14 +57,18 @@ class PropertyModel(val mainController:DataViewController) {
 	 * @param fieldToLoad what property field to load
 	 * @param fieldName name of the property field
 	 * @param selRef reference of an instance that should optionally be selected
+	 * @Param nfirstPropField is this the first property field
+	 * @param onlyPropField is this the only property field
 	 */
-	def load(nallowedClass:Int,fieldToLoad:Byte,fieldName:String,selRef:Option[Reference]) = {
+	def load(nallowedClass:Int,fieldToLoad:Byte,fieldName:String,selRef:Option[Reference],nfirstPropField:Boolean,onlyPropField:Boolean) = {
 		if(loaded) shutDown()
 		selectRef=selRef
 		allowedClass=nallowedClass
 		propertyField=fieldToLoad
+		isFirstPropField=nfirstPropField
 		titleLabel.text=" ("+fieldToLoad+") "+fieldName+(if(allowedClass==0) "" else  " erlaubt:"+ 
 		AllClasses.get.getClassByID(allowedClass).name)
+		titleLabel.visible= !onlyPropField
 		titleLabel.horizontalAlignment=Alignment.Left
 		if(subscriptionID<0)
 			subscriptionID=ClientQueryManager.createSubscription(mainController.ref,propertyField)(callBack) 
@@ -71,34 +85,49 @@ class PropertyModel(val mainController:DataViewController) {
 		//println("Proberty modification :"+notType+ " "+(if(data.isEmpty)" [Empty] "else   data.first.ref)+", ... "+	
 		//		 "subsID:"+subscriptionID+ " ** "+ Thread.currentThread.getName)
 		//println()				
-		notType match {
-			case NotificationType.sendData => {
-				//println("send data "+data)
-				val grouped=data.view.groupBy(_.ref.typ)
-				for((i,data) <-grouped.iterator) {
-					val mod=if(tableModMap.contains(i)) tableModMap(i) else createTableModel(i)
-					mod.setDataList(data,selectRef)
-				}					
-			}
-			case NotificationType.childAdded => {
-				//println("child added:"+data)
-				val typ=data(0).ref.typ
-				val mod = if(tableModMap.contains(typ)) tableModMap(typ)
+			notType match {
+				case NotificationType.sendData => {
+					//println("send data field:"+propertyField+" size:"+data.size)
+					if(data.size==0) {
+						if(isFirstPropField){
+							vGlue.requestFocusInWindow						
+							focusGained
+						}
+						vGlue.preferredSize=vGlueMaxSize
+						vGlue.revalidate
+					}
+					else {
+						vGlue.preferredSize=vGlueMinSize
+						val grouped:Map[Int,Seq[InstanceData]]=data.view.groupBy(_.ref.typ)
+						for((i,data) <-grouped.iterator) {
+							val mod=if(tableModMap.contains(i)) tableModMap(i) else createTableModel(i)
+							mod.setDataList(data,selectRef,!isLoading)
+						}	
+					}
+				}
+				case NotificationType.childAdded => {
+					//println("child added:"+data)
+					val typ=data(0).ref.typ
+					val mod = if(tableModMap.contains(typ)) tableModMap(typ)
 					else createTableModel(typ)					
-				mod.addInstance(data(0))
-			}
-			case NotificationType.FieldChanged => {
-				//println("field added:"+data)
-				val typ=data(0).ref.typ
-				tableModMap(typ).changeInstance(data(0))
-			}
+					mod.addInstance(data(0))
+				}
+				case NotificationType.FieldChanged => {
+					//println("field added:"+data)
+					val typ=data(0).ref.typ
+					if(tableModMap.contains(typ))
+						tableModMap(typ).changeInstance(data(0))
+				}
 
-			case NotificationType.instanceRemoved => {
-				val typ=data(0).ref.typ
-				if(tableModMap.contains(typ))
-				tableModMap(typ).removeInstance(data(0).ref)							
-			}		
-		}}
+				case NotificationType.instanceRemoved => {
+					val typ=data(0).ref.typ
+					if(tableModMap.contains(typ))
+						tableModMap(typ).removeInstance(data(0).ref)							
+				}		
+			}
+			selectRef=None
+			isLoading=false
+		}
 	} 
 	
 	def createTableModel(typ:Int) = {
@@ -112,7 +141,10 @@ class PropertyModel(val mainController:DataViewController) {
 		//print(" "+tableArea.contents.size)
 		if(tableArea.contents.isEmpty)
 			tableArea.contents +=newMod.scroller
-			else tableArea.contents(tableArea.contents.size-1)=newMod.scroller
+			else {				
+				tableArea.contents(tableArea.contents.size-1)=Swing.VStrut(10)
+				tableArea.contents+=	newMod.scroller
+			}
 		tableArea.contents+=vGlue
 		
 		mainController.updateHeight
@@ -136,28 +168,37 @@ class PropertyModel(val mainController:DataViewController) {
 		loaded=false
 	}
 	
+	
+	
 	def deselect(selectedType:Int) = listLock.synchronized {
 		//println("des")
 		for(m <-tableModMap.valuesIterator;if(m.typ!=selectedType)) m.deselect()
 	}
 	
-	def getHeight= listLock.synchronized {
-		tableModMap.values.foldRight(0){(n,result)=> result+n.scroller.preferredSize.height}
+	/*def getHeight= listLock.synchronized {
+		val theHeight=tableModMap.values.foldRight(0){(n,result)=> result+n.scroller.preferredSize.height}
+		if(theHeight<10) 30 else theHeight
 	}
 	
+	def getWidth= listLock.synchronized {
+		tableModMap.values.foldRight(0){(n,result)=> 
+			if(n.scroller.preferredSize.width>result)n.scroller.preferredSize.width else result }
+	}*/
 	
 	class ClickComp(propMod:PropertyModel) extends Component {
-		//val prefSiz=new Dimension(50,2000)		
+		val prefSiz=new Dimension(Short.MaxValue,Short.MaxValue)		
 		opaque=true
-		background=Color.green
+		background=Color.yellow
 		focusable=true	
 		peer.setTransferHandler(new PropAreaTransferHandler(propMod))
+		maximumSize=prefSiz
+		
 		
 		//peer.setDropMode(DropMode.ON_OR_INSERT_ROWS)
 		listenTo(mouse.clicks)
 		reactions+= {			
 			case e:MouseReleased => {				
-				println("mouseclick "+peer.isFocusOwner+" "+size)
+				//println("mouseclick "+peer.isFocusOwner+" "+size)
 				requestFocus
 				focusGained
 			}

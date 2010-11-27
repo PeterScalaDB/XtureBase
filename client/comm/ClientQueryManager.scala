@@ -20,6 +20,10 @@ trait StepListReader{
 	def loadStepList(list:Seq[TransStepData])
 }
 
+trait ErrorListener{
+	def printError(errorText:String)
+}
+
 object ClientQueryManager {
 	//type InstArrayFunc=(Array[InstanceData])=> Unit
 	type UpdateFunc=(NotificationType.Value,IndexedSeq[InstanceData])=>Unit
@@ -27,9 +31,11 @@ object ClientQueryManager {
 	
 	type FactUpdateFunc[T<: Referencable]=(NotificationType.Value,IndexedSeq[T])=>Unit
 	
-	//type PathUpdateFunc=(PathNotificationType.Value,Array[InstanceData])=>Unit
+	val errorListeners=new collection.mutable.HashSet[ErrorListener]()
 	
-	//case class Query(func: InstArrayFunc)
+	
+	
+	
 	trait Subscriber
 	case class SimpleSubscriber(func: UpdateFunc) extends Subscriber
 	//case class PositionSubscriber(func: PosUpdateFunc) extends Subscriber
@@ -235,7 +241,7 @@ object ClientQueryManager {
 			toOwner.write(out)
 			out.writeInt(atPos)
 		}
-		commandResultQueue.take() match {
+		commandResultQueue.take() match {			
 			case Some(const) =>const.toInt
 			case None => throw new IllegalArgumentException("no instance ID returned when copying instances "+refList.mkString)
 		}
@@ -270,7 +276,7 @@ object ClientQueryManager {
 	}
 	
 	def executeCreateAction(parentList:Seq[Referencable],newType:Int,propField:Byte,actionName:String,params:Seq[(String,Constant)])= {
-		println("execute create newType:" + newType)
+		//println("execute create newType:" + newType)
 		sock.sendData(ClientCommands.executeCreateAction) { out =>
 			out.writeInt(parentList.size)
 			parentList foreach(_.ref.write(out))
@@ -418,11 +424,12 @@ object ClientQueryManager {
 		if(hasError) {
 			val error=CommandError.read(in)
 			commandResultQueue.put(None)
-			println( error)
+			printErrorMessage( error.getMessage)
 		}
 		else {
 			val result:Option[Constant]= if(in.readBoolean) Some(Expression.readConstant(in))
 																 else None
+      printErrorMessage(" ")																 
 		  //println("command Response "+result+" "+Thread.currentThread)
 		
 		  commandResultQueue.put(result)
@@ -522,5 +529,8 @@ object ClientQueryManager {
 		}
 	}
 	
+	def registerErrorListener(newListener:ErrorListener) = errorListeners += newListener
+	
+	def printErrorMessage(message:String) = errorListeners foreach (_.printError( message))
 	
 }

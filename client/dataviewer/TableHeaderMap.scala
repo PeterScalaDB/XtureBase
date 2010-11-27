@@ -42,9 +42,10 @@ object TableHeaderMap {
   	val numColumn:Int=theClass.fields.size
   	val firstColumn=new TableColumn(0)
   	firstColumn.setHeaderValue(" ")
-  	firstColumn.setMaxWidth(30)
-		firstColumn.setPreferredWidth(30)
+  	firstColumn.setMaxWidth(25)
+		firstColumn.setPreferredWidth(25)
 		firstColumn.setResizable(false)
+		
 		newModel.addColumn(firstColumn)
 		// is there a stored TableSetup for this type ?
 		val settings=UserSettings.getListProperty[Tuple2[Int,Int]]("TableColumns",typ.toString,Nil)

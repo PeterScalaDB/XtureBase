@@ -19,20 +19,22 @@ import definition.data.{Reference,Referencable}
 
 
 object NewPanelArea extends AbstractActionPanel with ContainerFocusListener {
-  var lastContainer:String=null
-  var lastSuperInstRef:Reference=null
-  var lastPropField:Int=0  
+  private var lastContainer:String=null
+  private var lastSuperInstRef:Reference=null
+  private var lastPropField:Int= -1  
 	
 	
 	def containerFocused(superInst:Referencable, propField:Int,containerName:String=""):Unit = {
-  	//println("Container focused  superInstRef:"+superInst.ref+" propField:"+propField)
+  	//println("Container focused  superInstRef:"+superInst.ref+" propField:"+propField+" lastSuperInst:"+lastSuperInstRef)
+  	if(containerName==lastContainer&&superInst.ref.typ==lastSuperInstRef.typ&&propField==lastPropField) return
+  	
   	if(superInst.ref!=lastSuperInstRef){ 
   		instList= List(superInst)
   		lastSuperInstRef=superInst.ref
-  	}
-		if(containerName==lastContainer&&superInst.ref.typ==lastSuperInstRef.typ&&propField==lastPropField) return
+  	}		
 		// Create Action set changed:		
 		//if(superInst==null )
+		//println("loading")
 		shutDown
 		val theClass=AllClasses.get.getClassByID(superInst.ref.typ)
 		val propF=theClass.propFields(propField)

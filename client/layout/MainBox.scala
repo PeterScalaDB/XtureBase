@@ -5,6 +5,7 @@ package client.layout
 
 import scala.swing._
 import java.awt.Color
+import javax.swing.UIManager
 
 /**
  * 
@@ -52,4 +53,6 @@ class MainBox extends Panel with ViewboxHolder {
 	class MainboxPeer extends javax.swing.JPanel(new ViewboxLayout) with SuperMixin {
 		def mainBox= MainBox.this
 	}
+	
+	
 }

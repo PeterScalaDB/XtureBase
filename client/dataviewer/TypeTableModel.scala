@@ -12,9 +12,12 @@ import javax.swing._
 import javax.swing.event._
 import javax.swing.table._
 import java.awt.{Color, Dimension, Font}
-import java.awt.event.MouseAdapter
+import java.awt.event.{MouseAdapter,MouseWheelListener,MouseWheelEvent,KeyEvent}
 import scala.swing._
 import scala.swing.event._
+import javax.swing.BorderFactory
+import javax.swing.border._
+
 
 /** table model for a table showing instances of a certain type
  * 
@@ -23,32 +26,59 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 	val objClass=AllClasses.get.getClassByID(typ)
 	var dataList:Seq[InstanceData]= _
 	val tableFont=new Font("Arial",0,15)
+	val tableTypeFont=new Font("Arial",Font.ITALIC,11)
+	val buttonBackgroundColor=new Color(220,220,220)	
 	var selfSelectChanged=false
 	var selfAdded=false
 	val selectedInstances=new SelectList(dataList)
 	var dragColumn:Int= -1
 	var dragColumnNewPos:Int=0
 	
+	var wishSelection:Seq[Int]=Seq.empty // what items should be selected after a refresh (for move and copy)
+	
 	val defaultRowHeight=20
 	
 	val transferHandler=new TableTransferHandler(this)
 
 	val listLock=new Object
+	
+	val classLabel=new Label("   "+AllClasses.get.getClassByID(typ).name)
+	
+	
+	
+	var editActionNotDone:java.awt.event.ActionEvent=null
+	var oldEnterAction:javax.swing.Action=null
+	
+	classLabel.horizontalAlignment=Alignment.Left
+	classLabel.xLayoutAlignment=0d
+	classLabel.font=tableTypeFont
+	classLabel.border=BorderFactory.createLineBorder(classLabel.background,2)
+	
+	//classLabel.xAlignment=Alignment.Left
+	//classLabel .opaque=true
+	//classLabel.background=Color.cyan
 
 	val table:Table=new Table(){		
+		//val p=new JTable
+		//val b=new JComboBox
+		//val w=new com.sun.java.swing.plaf.windows.WindowsComboBoxUI
+		//val m=new javax.swing.plaf.basic.BasicTextAreaUI
+		//val w=new DefaultCellEditor		
+		
 		autoResizeMode=Table.AutoResizeMode.Off
 		//selection.intervalMode=Table.IntervalMode.Single
 		selection.elementMode=Table.ElementMode.Row 
 		peer.setAutoCreateColumnsFromModel(false)
-		//peer.setFillsViewportHeight(true)
+		//peer.setFillsViewportWidth(true)
+		//peer.putClientProperty("terminateEditOnFocusLost", true)
 		peer.setTransferHandler(transferHandler)
 		peer.setDragEnabled(true)
-		peer.setDropMode(DropMode.ON_OR_INSERT_ROWS)
+		peer.setDropMode(DropMode.ON)		
 		rowHeight=defaultRowHeight
 		font=tableFont
-		
+
 		listenTo(selection)	
-		listenTo(mouse.clicks,this)
+		listenTo(mouse.clicks,this,keys)
 		reactions += {
 			case TableRowsSelected(table,range,live) => {			
 				if (!live&& ! selfSelectChanged) listLock.synchronized  { 
@@ -65,6 +95,17 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 				if(row>=0 && row<dataList.size) listLock.synchronized { propMod.mainController.openChild(dataList(row).ref)}
 			}
 			case e:FocusGained =>propMod.focusGained
+			case e: KeyPressed => {
+				if(e.peer .getKeyChar==KeyEvent.CHAR_UNDEFINED) {
+					//println("Special Key:"+e.peer.getKeyCode)
+					// if there are no mappings for that key, ignore it
+					if(table.peer.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).
+							get(KeyStroke.getKeyStroke(e.peer.getKeyCode,0,false))==null){
+						//println("ignore")
+						e.peer.consume									
+					}
+				}
+			}
 		}
 		model=TypeTableModel.this
 		peer.setColumnModel(TableHeaderMap.getColumnModel(typ))		
@@ -88,19 +129,129 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 					peer.moveColumn(dragColumnNewPos, dragColumn); 
 				dragColumn = -1;  dragColumnNewPos = -1; 
 			} 
-		}); 
-	}	
+		});
+		
+		
+		/*peer.addMouseMotionListener(new MouseAdapter() {
+				override def mouseDragged(e:java.awt.event.MouseEvent) {
+						e.consume();					
+						transferHandler.exportAsDrag(peer, e, TransferHandler.MOVE);
+				}
+		});*/
+		
+		
+		// setup renderers
+		val firstButRend=new FirstColumnRenderer(TypeTableModel.this)
+		val ftcr = new Table.AbstractRenderer[String, FirstColumnRenderer](firstButRend) {
+			def configure(t: Table, sel: Boolean, foc: Boolean, o: String, row: Int, col: Int) =     
+				component.config(sel,foc,o,row)  
+		}
+		
+		val instRenderer=new InstanceRenderer(AllClasses.get.getClassByID(typ))
+		val itcr = new Table.AbstractRenderer[Expression, InstanceRenderer](instRenderer) {
+			def configure(t: Table, sel: Boolean, foc: Boolean, o: Expression, row: Int, col: Int) =     
+				component.config(t,sel,foc,o,row,col)
+		}
+		
+		override def rendererComponent(sel: Boolean, foc: Boolean, row: Int, col: Int) = {
+			//FIND VALUE
+			val modCol=peer.convertColumnIndexToModel(col)
+			val v=model.getValueAt(row,modCol)
+			//val v = model.getValueAt(	peer.convertRowIndexToModel(row),	modCol)
+			if(col==0) {
+				if(row>=getRowCount-1)super.rendererComponent(sel,foc,row,col)
+				else ftcr.componentFor(this,sel,foc,if(v==null) "" else v.toString, row, col)
+			}
+			else itcr.componentFor(this,sel,foc,v.asInstanceOf[Expression],row,modCol)			
+		}	
+		
+	}
+	
+	//println("Actions:"+oldAction)
+	//table.peer.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).
+	//	put(KeyStroke.getKeyStroke("ENTER"),oldMap)
+	
+	//println(table.peer.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).
+	//	get(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE,0,false)))
+  // fixing Enter Action mapping
+	
+	
+	
+	replaceKeyAction(KeyEvent.VK_ENTER,(oldAction)=>{
+		oldEnterAction=oldAction
+		new javax.swing.AbstractAction() {
+			def actionPerformed(e:java.awt.event.ActionEvent)= {
+				//println("Enter Abgefangen "+table.peer .isEditing)
+				if(!table.peer.isEditing) {
+					oldAction.actionPerformed(e)
+					editActionNotDone=null
+				}
+				else {
+					
+					instEditor.stopCellEditing
+					editActionNotDone=e
+				}			
+			}
+		}
+	})
+	
+	replaceKeyAction(KeyEvent.VK_ESCAPE,(oldAction)=> {
+		new javax.swing.AbstractAction() {
+			def actionPerformed(e:java.awt.event.ActionEvent)= {
+				//println("Escape :"+table.peer .isEditing)
+				if(table.peer.isEditing)
+					oldAction.actionPerformed(e)				
+			}
+		}
+	})
+	
+	val instEditor=new InstanceEditor(table.peer)	
+	table.peer.setDefaultEditor(classOf[Object],instEditor)
+	
+	
+	
+	val scroller= new BoxPanel(Orientation.Vertical) {
+		border=BorderFactory.createLineBorder(Color.gray,1)
+		val viewportWrapper=new  Component with Container {	
+			xLayoutAlignment=0d
+			override lazy val peer=new JViewport with SuperMixin{
+				override def getPreferredSize = getView.getPreferredSize
+				override def getMaximumSize=new Dimension(Short.MaxValue,getView.getPreferredSize.height)
+			}
+			peer.setView(table.peer)
+			def contents=List(table)
+		}
+		val headerWrapper= new Component {
+			override lazy val peer=table.peer.getTableHeader
+			xLayoutAlignment=0d
+		}		
+		xLayoutAlignment=0d
+		contents+=classLabel
+		//contents+=Swing.VStrut(4)
+		contents+=headerWrapper
+		contents+=viewportWrapper				
+		minimumSize=new Dimension(0,0)
+	}
+	
+	def replaceKeyAction(keyCode:Int,func: (javax.swing.Action )=>javax.swing.Action)= {
+		val aName=table.peer.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).
+			get(KeyStroke.getKeyStroke(keyCode,0,false))
+		val oldAction=	table.peer.getActionMap().get(aName)
+		//println("tablemod replace name:"+aName+" oldAction:"+oldAction)
+		val newAction= func(oldAction)
+		table.peer .getActionMap().put(aName,newAction)
+	}
 	
 	def getParentRef=propMod.mainController.ref
 	def getPropField= propMod.propertyField
-
-	val scroller:ScrollPane=new ScrollPane() {
-		
-		viewportView=table
-		preferredSize=new Dimension(100,100)		
-	}
-
-	def setDataList(data:Seq[InstanceData],selectInstance:Option[Reference]) =  {
+	    
+  /** load the current values in the table model
+   * 
+   * @param data the new data
+   * @param selectInstance what instance should be selected (when moving up the path)
+   * @param onlyRefresh // true= this is only a refresh call after a move, false: it is first time called for loading
+   */
+	def setDataList(data:Seq[InstanceData],selectInstance:Option[Reference],onlyRefresh:Boolean) =  {
 		listLock.synchronized {
 			//println("tableMod set Data "+data.mkString)
 			dataList=data			
@@ -108,48 +259,49 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 			selfAdded=false
 			selectedInstances.buf=data
 			selectedInstances.setFilter(Array())
-		}		 
-			fireTableStructureChanged()
-			calcSize()
+			if(wishSelection.isEmpty)
+				wishSelection=table.selection.rows.iterator.toSeq
+			fireTableDataChanged()			
 			selectInstance match {
 				case Some(ref) =>if(ref.typ == typ){
 					val ix= dataList.findIndexOf(_.ref==ref)
-					if(ix>=0)  table.selection.rows+=ix				
+					if(ix>=0){
+						table.selection.rows+=ix
+						//println("catch Focus "+typ)
+						table.requestFocus
+					}
 				}
-				case _ =>
+				case None => if(onlyRefresh) {
+					wishSelection.foreach(a => if(a<data.size) table.selection.rows+= a)
+				}
 			}
+			wishSelection=Seq.empty
+		}
 		//setupColumns()		
 	}
 	
 	
 	
-	def calcSize() = {
-		
-		val tabPrefHeight=table.preferredSize.height+defaultRowHeight*2+6
-		val mainPanelHeight=propMod.mainController.panel.size.height
-	  if(tabPrefHeight>(mainPanelHeight-defaultRowHeight)) 
-	  	println("tabprefHeight:"+tabPrefHeight+" > mainpanelHeight"+mainPanelHeight)
-		scroller.preferredSize=new Dimension(100,if(tabPrefHeight>(mainPanelHeight-defaultRowHeight)&&mainPanelHeight>defaultRowHeight*2)
-			(mainPanelHeight-defaultRowHeight) else tabPrefHeight )
-		//scroller.preferredSize=new Dimension(100,(if (dataList==null || dataList.isEmpty)2 else dataList.size+2)*22)
-		scroller.maximumSize=new Dimension(2000,scroller.preferredSize.height)
-		propMod.mainController.updateHeight()
-		//println("typTable calcsize "+scroller.preferredSize+ " tabPrefHeight "+tabPrefHeight+" mainpan: "+mainPanelHeight)
-		//scroller.revalidate
+	def calcSize() = {				
 	}
 
 	def changeInstance(newInst:InstanceData):Unit = listLock.synchronized {
 		//println("tablemod change inst: "+newInst.ref)
 		val pos = { var ret= -1
-			for(i <-0 until dataList.size;if(dataList(i).ref==newInst.ref)) {ret=i} 
+			for(i <-dataList.indices;if(dataList(i).ref==newInst.ref)) {ret=i} 
 			ret
 		}
 		//println("change "+newInst.ref+ " size:"+dataList.size+ " pos:"+pos+ " list:"+dataList.mkString+ "  "+ Thread.currentThread)
 		if(pos<0) println("prop "+propMod.propertyField+" Table typ: "+typ+" Change Instance "+newInst.ref+" not found ! " + dataList.size+" "+Thread.currentThread)
 		else  { 
+			//println("change selfadded:"+selfAdded+" EditActionNotDone:"+editActionNotDone)
 			dataList=dataList.updated(pos,newInst)
 			selectedInstances.buf=dataList
 			/*propMod.runSw*/fireTableRowsUpdated(pos,pos)
+			if(editActionNotDone!=null)	{
+				oldEnterAction.actionPerformed(editActionNotDone)
+				editActionNotDone=null
+			}
 				
 		}	
 	}
@@ -169,13 +321,18 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 		//println("added "+dataList.size+" "+Thread.currentThread+ " "+table.selection.rows)
 		val newSize=dataList.size
 		
-		/*propMod.runSw*/{fireTableRowsInserted(newSize,newSize)
-			calcSize()
-			if(selfAdded){ 
-				propMod.mainController.selectionChanged(TypeTableModel.this,propMod,Array(newInst))
-				selfAdded=false
+		fireTableRowsInserted(newSize,newSize)
+		calcSize()
+		//println(" add selfadded:"+selfAdded+" EditActionNotDone:"+editActionNotDone)
+		if(selfAdded){ 
+			propMod.mainController.selectionChanged(TypeTableModel.this,propMod,Array(newInst))
+			selfAdded=false
+			if(editActionNotDone!=null)	{
+				oldEnterAction.actionPerformed(editActionNotDone)
+				editActionNotDone=null
 			}
 		}
+		
 			//table.peer.setRowSelectionInterval(newSize-1,newSize-1)}
 	}
 
@@ -205,10 +362,8 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 	def getValueAt(row:Int,col:Int):Object = listLock.synchronized{
 		if(dataList!=null&& row<dataList.size) {
 			if(col==0) { if (dataList(row).hasChildren) "+" else " " } // childInfo in column 0
-			else {
-				val expr=dataList(row).fieldData(col-1)
-				if(expr.isConstant) expr
-				else expr.getTerm+": "+expr.getValue
+			else {				
+				dataList(row).fieldData(col-1)				
 			}
 		}
 		else null
@@ -237,6 +392,8 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 	override def getColumnName(col:Int) = listLock.synchronized {
 		if(col==0) "ch" else objClass.fields(col-1).name
 	}
+	
+	override def getColumnClass(col:Int) =  if(col==0) classOf[String] else classOf[Expression]
 
 
 	def parseValue(columnIndex:Int,value:Object):Expression = {
@@ -255,12 +412,12 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 	def deselect() = listLock.synchronized{
 		//println("deselect " +typ+ " rows:"+table.selection.rows)
 		if(dataList!=null && (! table.selection.rows.isEmpty)) {
+			if(table.peer .isEditing) instEditor.cancelCellEditing
 			selfSelectChanged=true
 			table.peer.clearSelection
 			selfSelectChanged=false
 			selectedInstances.setFilter(Array())
 		}
-
 	}
 
 	
@@ -280,6 +437,18 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 		} else filterSet=newFilter
 	 }
 
-  
+  class FirstColumnRenderer(mod:TypeTableModel) extends Label {  	
+  	border=BorderFactory.createRaisedBevelBorder();
+  	super.background=buttonBackgroundColor
+  	super.foreground=Color.black
+  	override def background_=(c: Color) = {				
+		}
+  	override def foreground_=(c: Color) = {				
+		}
+  	
+		def config( isSelected: Boolean, focused: Boolean, a: String, row: Int) {  		
+  	  text=a	  
+		}
+	}
 
 }

@@ -17,14 +17,16 @@ import definition.expression.FieldReference
 class TableTransferHandler(tableMod:TypeTableModel) extends TransferHandler {
 	
    override def getSourceActions(c:JComponent):Int = {  	    
-  	   println("getSourceActions ")
+  	   //println("getSourceActions ")
   	   if(tableMod.selectedInstances .size==1) TransferHandler.COPY_OR_MOVE +TransferHandler.LINK
   	   else  TransferHandler.COPY_OR_MOVE 
     }
-   override def createTransferable(c:JComponent ):InstanceSelection = {  	 
-  	  new InstanceSelection(Array(tableMod.getParentRef),tableMod.getPropField,tableMod.selectedInstances,
+   override def createTransferable(c:JComponent ):InstanceSelection = {
+  	 val ni=  new InstanceSelection(Array(tableMod.getParentRef),tableMod.getPropField,tableMod.selectedInstances,
   		 tableMod.selectedInstances .map (_.toString).toArray,tableMod.table.peer.getSelectedColumn(),
-  		 tableMod.table .peer.getSelectedRows())  	 
+  		 tableMod.table .peer.getSelectedRows())
+  	 println(ni)
+  	 ni
    }
    
    override def exportDone(source:JComponent,data: Transferable,action:Int):Unit = {
@@ -88,15 +90,22 @@ class TableTransferHandler(tableMod:TypeTableModel) extends TransferHandler {
     action match {
     	case TransferHandler.COPY =>{
     		println("Copied")
-    		ClientQueryManager.copyInstances(data.deserializedSelection,
-    			new OwnerReference(data.propField.toByte,data.deserializedParents.first),
-    			new OwnerReference(tableMod.getPropField,tableMod.getParentRef),row)
+    		//val wishRow=if(row>=tableMod.dataList.size) tableMod.dataList.size-1 else row
+    		tableMod.wishSelection=(row until row+data.selection .size)
+    		ClientQueryManager.runInPool {
+    			ClientQueryManager.copyInstances(data.deserializedSelection,
+    				new OwnerReference(data.propField.toByte,data.deserializedParents.first),
+    				new OwnerReference(tableMod.getPropField,tableMod.getParentRef),row)
+    		}
     	}
   		case TransferHandler.MOVE => {
   			println("Moved")
-  			ClientQueryManager.moveInstances(data.deserializedSelection,
-    			new OwnerReference(data.propField.toByte,data.deserializedParents.first),
-    			new OwnerReference(tableMod.getPropField,tableMod.getParentRef),row)
+  			val fromOwner=new OwnerReference(data.propField.toByte,data.deserializedParents.first)
+  			val toOwner=new OwnerReference(tableMod.getPropField,tableMod.getParentRef)
+  			val wishRow=if(fromOwner==toOwner && row>=tableMod.dataList.size) tableMod.dataList.size-1 else row
+    		tableMod.wishSelection=(wishRow until (wishRow+data.selection .size))
+    		ClientQueryManager.runInPool {
+  			ClientQueryManager.moveInstances(data.deserializedSelection,fromOwner,toOwner,row)}
   		}
   		case TransferHandler.LINK => {
   			if( tabLoc.getRow>=tableMod.dataList.size) return false
@@ -167,7 +176,8 @@ class InstanceSelection extends Transferable with Serializable {
 		return false
 	}
 	
-	override def toString= textArray mkString "\n"
+	override def toString="InstSel parents:"+parentRefs.mkString+"selection:"+selection.mkString+"\ntextArray:"+(  textArray mkString "\n")+
+	 " dragColumn:"+dragColumn+" dragrows:"+dragRows.mkString(",")+" propField:"+propField
 }
 
 

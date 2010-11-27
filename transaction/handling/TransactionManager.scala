@@ -720,7 +720,7 @@ object TransactionManager {
 	}
 	
 	private def checkIsChildOf(toOwner:OwnerReference,source:Reference):Boolean= {
-		println("check Child toOwner:"+toOwner+" source:"+source)
+		//println("check Child toOwner:"+toOwner+" source:"+source)
 		if(toOwner.ownerRef==source)return true
 		val instData=ActionList.getInstanceData(toOwner.ownerRef )
 		for(owner <-instData.owners)
@@ -744,16 +744,17 @@ object TransactionManager {
 	
 	def tryCopyInstance(instRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int,
 	                    collNotifyOwners:Boolean):Int = {
+		//println("try copy instance:"+instRef+" "+atPos+" "+collNotifyOwners)
 		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
 		if(checkIsChildOf(toOwner,instRef))throw new IllegalArgumentException("Copy not possible. ToOwner "+toOwner+" is child of copying Instance "+fromOwner)
-		readLine
+		//readLine
 		internTryCopyInstance(instRef,fromOwner,toOwner,atPos,collNotifyOwners)
 	}
 	
 	
 	private def internTryCopyInstance(instRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int,
 	                    collNotifyOwners:Boolean):Int = {
-		
+		//println("intern tryp Copy Instance:"+instRef)
 		val instD=ActionList.getInstanceData(instRef)
 		// get the other owners of that instance, apart from "fromOwner", and add the new owner toOwner
 		if(!instD.owners.contains(fromOwner)) throw new IllegalArgumentException("Copy: instance "+instRef+" is not owned by "+ fromOwner)
@@ -764,11 +765,12 @@ object TransactionManager {
 		createInst=instD.clone(createInst.ref,newOwners)
 		
 		// Register FieldReferences to other instances
+		
 		for(i <- 0 until instD.fieldData.size;if (instD.fieldData(i)!=EMPTY_EX))
 		{
 			val refList=instD.fieldData(i).getElementList[FieldReference](DataType.FieldRefTyp,Nil)
-			println("try copy inst:"+instRef+" newInst:"+createInst.ref+" "+refList)
-			println("old referencing Links "+ActionList.getReferencingLinks(instRef))
+			//println("try copy inst:"+instRef+" newInst:"+createInst.ref+" "+refList)
+			//println("old referencing Links "+ActionList.getReferencingLinks(instRef))
 			for(rf <-refList)
 				 addLinkRef(createInst.ref,i.toByte,rf)
 		}

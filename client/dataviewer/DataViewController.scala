@@ -10,6 +10,7 @@ import client.dialog._
 
 import scala.swing._
 import java.awt.Color
+import java.awt.event.{MouseAdapter,MouseWheelListener,MouseWheelEvent}
 
 /** controls the DataViewer
  *  manages the general loading of data
@@ -27,7 +28,42 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	val propertyModels =scala.collection.mutable.ArrayBuffer[PropertyModel]()
 	var numUsedModels=0
 	
-	val panel=new BoxPanel(Orientation.Vertical) 
+	private var superScrollPane:ScrollPane=null
+	
+	val panel=new BoxPanel(Orientation.Vertical)  {		
+		override lazy val peer = new javax.swing.JPanel with SuperMixin with javax.swing.Scrollable {       
+    val l = new javax.swing.BoxLayout(this, Orientation.Vertical.id)
+    setLayout(l)
+    val mSize=new Dimension(Short.MaxValue,Short.MaxValue)
+    def getPreferredScrollableViewportSize: Dimension=getPreferredSize 
+    override def getPreferredSize = { 
+    	val ps=super.getPreferredSize
+    	
+    	if(superScrollPane!=null) {
+    		val scSize:Dimension=(superScrollPane.peer).getVerticalScrollBar.getSize
+    		val scrollbarWidth=scSize.width+8
+    		val hAmount=(if(superScrollPane.peer.getVerticalScrollBar.isVisible)scrollbarWidth else 8)
+    		val vAmount=(if(superScrollPane.peer.getHorizontalScrollBar.isVisible)scrollbarWidth else 8)
+    		//println("dataView prefSize:"+ps+ " super:"+superScrollPane.size+" scrollWidth:"+scrollbarWidth)
+    		new Dimension(
+    		if( ps.width<superScrollPane.size.width-hAmount) superScrollPane.size.width-hAmount else ps.width ,
+    		if( ps.height<superScrollPane.size.height-vAmount) superScrollPane.size.height-vAmount else ps.height )	
+    	}
+    		
+    	else ps
+    }
+    
+    override def getMaximumSize=mSize
+    
+  
+    def getScrollableTracksViewportHeight: Boolean =false
+    def getScrollableTracksViewportWidth: Boolean=false
+  
+    def getScrollableBlockIncrement(visibleRect: Rectangle, orientation: Int, direction: Int): Int = 200  
+    def getScrollableUnitIncrement(visibleRect: Rectangle, orientation: Int, direction: Int): Int= 10    
+  }
+		
+	}
 	
 	var selectedInstance: InstanceData= _ // to be deleted
 	
@@ -36,8 +72,10 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	
 	var containerFocusListener= collection.mutable.HashSet[ContainerFocusListener]()
 	
+	//var scrollEventListener:ScrollEventListener=null
 	
-	val vGlue=Swing.VGlue
+	
+	//val vGlue=Swing.VGlue
 	/** is called by PathModel when another instance should be loaded
 	 *  @param parentRef the new Instance to be loaded
 	 *  @param selectRef reference of an instance that should be selected
@@ -52,14 +90,16 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	  	val propFieldInfo=mainClass.propFields(i)
 	  	val mod=getPropModel
 	  	panel.contents+=mod.panel	  	
-	  	mod.load(propFieldInfo.allowedClass,i.toByte,propFieldInfo.name,selectRef)	  	
+	  	mod.load(propFieldInfo.allowedClass,i.toByte,propFieldInfo.name,selectRef,i==0,mainClass.propFields.size==1)	  	
 	  		  	
 	  }
-	  panel.contents+=vGlue
+	  //panel.contents+=vGlue
 	  updateHeight()
 	  if(!selectRef.isDefined) selectListener foreach(_.selectionChanged(this,null))
 	  loaded =true
 	}
+	
+	def setSuperScrollPane(sc:ScrollPane)= superScrollPane=sc
 	
 	def registerOpenChildCallBack(callBack: (Reference)=> Unit) = {
 		openChildCallBack=callBack
@@ -77,14 +117,16 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	def updateHeight() = {
 		javax.swing.SwingUtilities.invokeLater(new Runnable(){
 			def run= {
-			  panel.preferredSize=new Dimension(10,getHeight)		
+			  //panel.preferredSize=new Dimension(getWidth,getHeight)		
 			  panel.revalidate
 			  panel.repaint	
 			}
 		})	
 	}
 	
-	def getHeight=propertyModels.take(numUsedModels).foldRight(0){(n,result)=> result+n.getHeight}
+	/*def getHeight=propertyModels.take(numUsedModels).foldRight(0){(n,result)=> result+n.getHeight}
+	
+	def getWidth=propertyModels.take(numUsedModels).foldRight(0){(n,result)=> if(n.getWidth>result) n.getWidth else result}*/
 	
 	
 	def getPropModel = {
@@ -110,7 +152,7 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	def selectionChanged(tabMod:TypeTableModel,proMod:PropertyModel,instList:Seq[InstanceData]):Unit = {
 		//println("sel: propfield:"+proMod.propertyField+" typ:"+tabMod.typ +" \n"+instList.mkString)
 		for(i <- 0 until numUsedModels;val mod=propertyModels(i))
-			mod.deselect(tabMod.typ)
+			mod.deselect(if(proMod==mod) tabMod.typ else -1)
 		 selectListener foreach(_.selectionChanged(this,instList))	
 		//selectedInstance=inst
 	}
@@ -132,7 +174,14 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	 */
 	def openChild(ref:Reference) = {
 		if(openChildCallBack!=null) openChildCallBack(ref)
-	}
+	}	
 	
+	/*def handleScrollEvent(e:MouseWheelEvent )= {
+		if(scrollEventListener!=null) scrollEventListener.handleScrollEvent(e)
+	}*/
 
 }
+
+/*trait ScrollEventListener {
+	def handleScrollEvent(e:MouseWheelEvent)
+}*/

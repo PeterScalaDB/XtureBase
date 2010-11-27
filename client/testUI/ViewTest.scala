@@ -114,6 +114,8 @@ object ViewTest extends SimpleSwingApplication {
 		}
 		title="TableTest"
 		contents = mainPanel
+		//UIManager.put("Table.alternateRowColor", new Color(250,250,240));
+	  //SwingUtilities.updateComponentTreeUI(this.peer);
 		bounds=new Rectangle(20,20,1500,900)
 	}	
 	

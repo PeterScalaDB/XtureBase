@@ -37,7 +37,7 @@ def reset() = {theList.clear}
 def commitAllData() = {
 	var hasMoveOrCopy:Boolean=false
 	try {		
-		println("actions:\n"+theList.mkString("\n"))
+		//println("actions:\n"+theList.mkString("\n"))
 		for(trans <- theList.valuesIterator)
 			trans match {
 				case CreateAction(ref,instData,propData,linkData,collData,cmi) => { // Instances get created during the Try-Phase of the transaction

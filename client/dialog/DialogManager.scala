@@ -8,7 +8,7 @@ import definition.typ._
 import definition.data._
 import client.dataviewer._
 import definition.expression.Constant
-import client.comm.ClientQueryManager
+import client.comm.{ClientQueryManager,ErrorListener}
 import javax.swing.{BorderFactory}
 import javax.swing.border._ 
 import scala.swing.event._
@@ -22,7 +22,14 @@ case class ResultElement(val question:ParamQuestion,val answer:ParamAnswerDefini
 object DialogManager extends SelectListener with ActionPanListener{
 	
 	val questionField=new Label()	
-	val errorField=new Label()	
+	val errorField=new TextArea()
+	errorField.lineWrap=true
+	errorField.wordWrap=true
+	errorField.editable=false
+	errorField.preferredSize=new Dimension(10,60)
+	ClientQueryManager.registerErrorListener(new ErrorListener () {
+		def printError(errorText:String)= errorField.text=errorText
+	})
 	val answerArea=new AnswerArea ()
 	val cancelBut=new Button("Abbrechen")
 	cancelBut.visible=false
@@ -40,20 +47,26 @@ object DialogManager extends SelectListener with ActionPanListener{
 	//var newFunc:(Seq[(String,Constant)])=>Unit = null
 	
   val dialogPanel = new BoxPanel(Orientation.Horizontal ) {
+		errorField.background=background
 		border=BorderFactory.createEtchedBorder(EtchedBorder.LOWERED)
-     contents+= new GridPanel(2,1) {
+		val errorScroller=new ScrollPane {
+			viewportView=errorField
+		}
+    contents+= new BoxPanel(Orientation.Vertical) {
     	 contents+= questionField+=new BoxPanel(Orientation.Horizontal) {
-    		contents+=errorField+=cancelBut 
+    		contents+=errorScroller+=cancelBut 
     	 }
+    	 preferredSize=new Dimension(300,70)
+    	 maximumSize=preferredSize
      }
-     contents+=new ScrollPane() {
+    contents+=new ScrollPane() {
     	 viewportView=answerArea
-     }
-     listenTo(cancelBut)
-     reactions+= {
-    	 case ButtonClicked(`cancelBut`) => reset
-     }
-     preferredSize=new Dimension(0,70)
+    }
+    listenTo(cancelBut)
+    reactions+= {
+     case ButtonClicked(`cancelBut`) => reset
+    }
+    preferredSize=new Dimension(600,70)
   }
 	
 	def reset()= {

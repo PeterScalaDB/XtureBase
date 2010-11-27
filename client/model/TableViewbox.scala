@@ -11,13 +11,15 @@ import client.dialog._
 import scala.swing.event.ButtonClicked
 import javax.swing.BorderFactory
 import javax.swing.border._
-
+import java.awt.event.{MouseAdapter,MouseWheelListener,MouseWheelEvent}
+import javax.swing.plaf.basic._
 /**
  * 
  */
-class TableViewbox extends BorderPanel with ViewboxContent {
+class TableViewbox extends BorderPanel with ViewboxContent  {
 	
 	val dataviewController=new DataViewController()
+	
 	val pathMod=new PathModel()
 	val pathView=new ListView[InstanceData]()
 	var viewbox:Viewbox=null
@@ -34,7 +36,8 @@ class TableViewbox extends BorderPanel with ViewboxContent {
 	//val pathLabel=new Label()
 	
 	border=BorderFactory.createEtchedBorder(EtchedBorder.LOWERED);
-  val pathScroller =new ScrollPane() {
+  val pathScroller =new ScrollPane()  {
+  	   peer.setWheelScrollingEnabled(true)
 				viewportView= pathView				
 				preferredSize=new Dimension(200,200)
 				def callback(nsize:Int):Unit= {
@@ -45,6 +48,7 @@ class TableViewbox extends BorderPanel with ViewboxContent {
 					TableViewbox.this.peer.invalidate
 				}
 				pathController.registerSizeChangeListener(callback)
+				
 			}
   val switchPathButton=new Button("\u02c4")
 	
@@ -64,14 +68,30 @@ class TableViewbox extends BorderPanel with ViewboxContent {
 	//pathLabel.horizontalAlignment=Alignment.Left
   switchPathButton.margin=new Insets(0,0,0,0)
 	switchPathButton.focusable=false
-  preferredSize=new Dimension(400,pathController.lineHeight )
+  //preferredSize=new Dimension(400,pathController.lineHeight )
   dataviewController.registerSelectListener(SelectEventDispatcher)
   dataviewController.registerContainerFocusListener(NewPanelArea)
   add (pathBox,BorderPanel.Position.North)
-	add (new ScrollPane() {
+  
+  
+  val tableScroller=new ScrollPane() /*with ScrollEventListener*/ {
+  			//val mwls:Array[MouseWheelListener]=peer.getMouseWheelListeners()   			
 				viewportView=dataviewController.panel
-			},BorderPanel.Position.Center)
-  //preferredSize=new Dimension(100,100)
+				peer.setWheelScrollingEnabled(true)
+				//println("mwls:"+mwls.mkString(","))
+				/*def handleScrollEvent(e:MouseWheelEvent)= {
+					if(mwls.size>0){
+						println(mwls(0).getClass)
+						mwls(0).mouseWheelMoved( e)
+					}
+					
+				}*/
+			}
+  
+	add (tableScroller,BorderPanel.Position.Center)
+	//dataviewController.scrollEventListener =tableScroller	
+	dataviewController.setSuperScrollPane(tableScroller)
+  preferredSize=new Dimension(100,100)
 			
 	def open(): Unit = {  	
   	val entry=PathFactory.getNextPathEntry
