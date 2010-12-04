@@ -10,7 +10,7 @@ import java.io.{DataInput,DataOutput}
  * 
  */
 case class BinaryOperation(left:Expression,operator:BinOperator,right:Expression) extends Expression {
-
+  //println("create BinOp "+left+":"+left.getType+" and "+right+":"+right.getType+" "+operator)
   def getType(): DataType.Value = { DataType.BinOp  }
   
   
@@ -72,6 +72,8 @@ case class BinaryOperation(left:Expression,operator:BinOperator,right:Expression
     }
     else newMe // return replacement of me
   }
+  
+  
 }
 
 object BinaryOperation

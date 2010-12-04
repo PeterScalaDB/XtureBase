@@ -43,7 +43,7 @@ def getTerm(): String = term
 
 def getNative=toString
 
-override def toString():String = "Ref["+remType+","+remInst+","+remField+(if(cachedValue.isEmpty)"" else (",cv:"+cachedValue))+"]"
+override def toString():String = "Ref["+remType+","+remInst+","+remField+(if(cachedValue.isNullConstant)"" else (",cv:"+cachedValue))+"]"
 
 
 // overrides equals to allowing compare 2 FieldReference objects with different cache values
@@ -95,6 +95,7 @@ def setCachedValue(newVal:Constant) = {
   	}
   	else new FieldReference(Some(targetRef.typ),Some(targetRef.instance),remField)  	
   }
+  
 
 }
 

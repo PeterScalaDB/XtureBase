@@ -5,6 +5,7 @@ package definition.expression
 
 import scala.util.parsing.combinator._
 import definition.expression._
+import definition.typ.DataType
 
 
 /** parses a String into an expression
@@ -18,6 +19,8 @@ class StringParser extends JavaTokenParsers {
     """-?((\d+)?[\.,]\d*|-?\d*[\.,]\d+)""".r
     
   def numberParam: Parser[String] = """\d+""".r
+  
+  def currencySymbols: Parser[String]= """[\u00A3\u20AC]+""".r
     
   /*def fieldReference: Parser[String] =
   	"""[#]([tT]\d+)?([iI]\d+)?[fF]\d+""".r*/
@@ -32,7 +35,11 @@ class StringParser extends JavaTokenParsers {
         (factor ~ "·" ~ term) ^^ { case lhs~times~rhs => BinaryOperation( lhs,BinOperator.getOp('*'), rhs) } |
         (factor ~ "/" ~ term) ^^ { case lhs~div~rhs => BinaryOperation( lhs,BinOperator.getOp('/'), rhs) } |
         stringLiteral ^^ { x => { val s=x.toString; new StringConstant(s.substring(1,s.length-1)) }} |
-        factor | failure("Unknown Term-Element")
+        factor 
+        
+  def factor:Parser[Expression] = 
+  	    (elem ~ "^" ~ factor) ^^ { case lhs~pow ~rhs => BinaryOperation(lhs,BinOperator.getOp('^'),rhs) } |
+  	    elem | failure("Unknown Term-Element")
         
   def fieldRef:Parser[Expression] =
   	   ("[#][Tt]".r ~> intNumber ~ ("[iI]".r ~>intNumber) ~ ("[fF]".r~> intNumber) ) ^^ {
@@ -45,14 +52,17 @@ class StringParser extends JavaTokenParsers {
         	case field => new FieldReference(None,None,field.toByte) 
         } |failure("wrong Fieldref")
 
-  def factor : Parser[Expression] =  	   
+  def elem : Parser[Expression] =  	   
   	   doubleNumber ^^ {y => DoubleConstant(y.replace(',','.').toDouble) } |
-       intNumber ^^ {x => IntConstant(x.toInt)} |       
-        "(" ~> expr <~ ")" | fieldRef | function | collFunction | vector | failure("Unknown Factor-Element")
+       intNumber ^^ {x => IntConstant(x.toInt)}      |
+        "(" ~> expr <~ ")" | currValue| fieldRef | function | collFunction | vector | failure("Unknown Factor-Element")
        
 	def paramList:Parser[List[Expression]] =
 		 ((expr ~ ";" ~ expr) ^^ {  case ex~ semi~ list => List(ex,list) }) |
-		 (expr ^^ {case ex => List(ex)}) 
+		 (expr ^^ {case ex => List(ex)})
+		 
+	def currValue: Parser[Expression] = 
+		(doubleNumber ~ currencySymbols) ^^ {case a ~ c=> CurrencyConstant(Math.round(a.replace(',','.').toDouble*100L))}	 
 		
 	def function: Parser[Expression] = 
 		(ident ~ "(" ~ paramList ~ ")") ^^ {case name ~ b ~ list ~c => FunctionCall(None,name,list)} 
@@ -69,8 +79,8 @@ class StringParser extends JavaTokenParsers {
 
 object StringParser extends StringParser
 {
-	def parse(text : String):Expression = {
-		if(text.length==0) return EMPTY_EX 
+	def parse(text : String,expectedType:DataType.Value=DataType.undefined):Expression = {
+		if(text.length==0) return Expression.generateNullConstant(expectedType) 
 		val result=parseAll(expr, text)
 		result match {
             case Success(x, _) => return x

@@ -15,7 +15,7 @@ import definition.typ.AllClasses
  * 
  */
 object SessionManager {
-
+  var scl:ServerClassList=null
   def main(args: Array[String]): Unit = { 
   	init()
   }
@@ -36,10 +36,11 @@ object SessionManager {
   }
   
   def init() = {
-  	val sc=new ServerClassList( xml.XML.loadFile(FSPaths.configDir+"types.xml" ))
-  	AllClasses.set(sc)  	
+  	println("Sessionmanager init")
+  	scl=new ServerClassList( xml.XML.loadFile(FSPaths.configDir+"types.xml" ))
+  	AllClasses.set(scl)  	
   	UserList.fromXML(xml.XML.loadFile(FSPaths.configDir+"users.xml" ))
-  	StorageManager.init(sc.classList)
+  	StorageManager.init(scl.classList)
   	ActionNameMap.read
   	println(ActionNameMap)
   	//println("transDetail:")

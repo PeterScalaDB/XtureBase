@@ -90,9 +90,11 @@ object StorageManager {
   	instObj
   }
   
-  def pushInstanceData(ref:Reference,out:DataOutput) = {
+  def pushInstanceData(ref:Reference,out:DataOutput) = {  	
   	val handler=getHandler(ref.typ)
+  	//println("push before "+ref)
   	val rec=handler.getInstanceRecord(ref.instance )
+  	//println("push "+ref+" "+rec)
   	ref.write(out)
   	dataFileHandler.pushData(rec.dataPos,rec.dataLength,out )
   	out.writeBoolean((rec.propPos !=0)&&(rec.propLength !=0))

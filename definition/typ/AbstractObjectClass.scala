@@ -12,17 +12,15 @@ import collection.mutable.{HashMap,ArrayBuffer,LinkedHashMap,LinkedHashSet}
  */
 trait AbstractObjectClass {
 	
-	def name:String
-	
-	def description:String
-	
+	def name:String	
+	def description:String	
 	def id:Int
 	
 	protected def ownFields:Seq[FieldDefinition]
 	protected def ownPropFields:Seq[PropertyFieldDefinition] 
 	protected def ownActions:Iterator[AbstractAction]
 	protected def ownCreateActions:Iterator[AbstractAction]
-	protected def superClasses:Seq[String]	
+	protected def superClasses:Seq[Int]	
 	protected def ownFieldSettings:Seq[FieldSetting]
 	
 	private var hasResolved=false	
@@ -32,7 +30,7 @@ trait AbstractObjectClass {
 	val actions=LinkedHashMap[String,AbstractAction]()
 	val createActions=LinkedHashMap[String,AbstractAction]()
 	val fieldEditors=LinkedHashSet[String]()
-	private val fieldSettingSet=LinkedHashMap[Int,FieldSetting]()
+	protected val fieldSettingSet=LinkedHashMap[Int,FieldSetting]()
 	def shortFormat:InstFormat
 	def longFormat:InstFormat
 	def resultFormat:InstFormat
@@ -48,10 +46,7 @@ trait AbstractObjectClass {
 		{	
 			for(cl <-superClasses)
 			{
-				val superClass:AbstractObjectClass= AllClasses.get.getClassByName(cl) match {
-					case Some(a) => a
-					case None=> throw new IllegalArgumentException("Superclass "+cl+" is not defined, in class "+name)
-				}
+				val superClass:AbstractObjectClass= AllClasses.get.getClassByID(cl) 
 				superClass.resolveSuperFields()				
 				superClassIDs ++=superClass.superClassIDs							
 				copySuperClassFields(superClass)				
@@ -80,7 +75,8 @@ trait AbstractObjectClass {
 		  hasResolved=true
 		}
 		//Console.println("Resolve "+versNr+" "+superClasses+" "+vsuperFields)  
-	}
+	}	
+	
 	
 	def copySuperClassFields(superClass:AbstractObjectClass) = {
 		var fieldNum = fields.size
@@ -90,14 +86,16 @@ trait AbstractObjectClass {
 		  	fieldSettingSet(fieldNum+i)= superClass.fieldSettingSet(i)
 	}
 	
-	def fieldSetting(fieldNr:Int)= {
+	def fieldSetting(fieldNr:Int):FieldSetting= {
 	if(fieldSettingSet.contains(fieldNr) ) fieldSettingSet(fieldNr)
-	else EmptySetting
-}
+	else EmptySetting	
+	}
+	
+	def getFieldSettingsList:Seq[FieldSetting]= for(i<-0 until fields.size) yield fieldSetting(i)
 	
 	
 	override def toString = "Class "+id+" Fields:\n"+fields.mkString(",")+"\nPropFields:\n"+propFields.mkString("\n")+
-	"\nSuperclasses:"+ superClassIDs.mkString(",");
+	"\nSuperclasses:"+ superClassIDs.mkString(",");	
 }
 
 
@@ -110,17 +108,16 @@ object NOFORMAT extends InstFormat("",Array.empty) {
 }
 
 object InstFormat {
-	def read(node: scala.xml.NodeSeq) = {
-		val tx=node.text
+	def fromString(tx:String)= {
 		if(tx=="") NOFORMAT
-		else {
-			//println("instForm:"+tx)
+		else {			
 			val parts=tx.split('|')
-			//println(parts(1))
-			//println(parts(1).split(',').mkString(" "))
+			
 			if(parts.size!=2) NOFORMAT
 			else 
 				new InstFormat(parts(0),parts(1).split(',').map(_.toInt).toArray)			
 		}
 	}	
+	def read(node: scala.xml.NodeSeq) = fromString(node.text)
+		
 }

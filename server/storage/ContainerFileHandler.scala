@@ -91,6 +91,7 @@ class BoolContFileHandler [T <: Referencable] (override val fileName:String,with
 		}		
 		def pushData(pos:Long,size:Int,out:DataOutput) = {
 			readInBuffer(pos,size)
+			//println("pushData "+fileName)
 			out.write(readBuffer,0,size)			
 		}
 	}

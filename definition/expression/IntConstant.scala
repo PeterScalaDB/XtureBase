@@ -40,4 +40,6 @@ case class IntConstant(val n:Int) extends Constant {
   	file.writeInt(n)
   }
   def getNative=n
+  
+  override def isNumberConstant=true
 }

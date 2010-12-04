@@ -37,7 +37,7 @@ class InstanceRenderer(theClass:AbstractObjectClass) extends Label {
   	  			else Color.white
 		
 		//print("ex:"+expression+" row:"+row+" col:"+col)
-  	if(expression== null || expression==EMPTY_EX) {
+  	if(expression== null || expression.isNullConstant) {
   		text=""  		
   	}
   	else {

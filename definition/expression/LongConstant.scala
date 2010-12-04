@@ -39,4 +39,6 @@ case class LongConstant(val n:Long) extends Constant {
   	file.writeLong(n)
   }
   def getNative=n
+  
+  override def isNumberConstant=true
 }

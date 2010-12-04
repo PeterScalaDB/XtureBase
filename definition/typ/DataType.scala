@@ -52,6 +52,14 @@ object DataType extends Enumeration
 			case _ => false
 		}		
 	}
+	def getValueClass=Value.getClass
+	
+	lazy val wrapMap:Map[DataType.Value,DTWrap]=values.map(a=>(a -> DTWrap(a.toString,a))).toMap
+	lazy val wrappedValues=values.map(a=> DTWrap(a.toString,a)).toSeq
+}
+
+case class DTWrap(name:String,typ:DataType.Value) {
+	override def toString=name
 }
 
 

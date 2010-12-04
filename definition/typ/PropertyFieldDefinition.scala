@@ -7,7 +7,7 @@ package definition.typ
 /** defines a property field in a class
  * 
  */
-case class PropertyFieldDefinition(name:String,single:Boolean,allowedClass:Int,
+case class PropertyFieldDefinition(name:String,single:Boolean=false,allowedClass:Int=0,
 	createChildDefs:Seq[CreateChildDefinition]=Seq.empty) {
 	
 	def toXML() = 	{
@@ -15,36 +15,37 @@ case class PropertyFieldDefinition(name:String,single:Boolean,allowedClass:Int,
    {createChildDefs.map(_.toXML)} 
 		</PropertyFieldDef>
 	}
+	
+	def setName(newName:String)=new PropertyFieldDefinition(newName,single,allowedClass,createChildDefs)
+	def setSingle(newValue:Boolean)=new PropertyFieldDefinition(name,newValue,allowedClass,createChildDefs)
+	def setAllowedClass(newValue:Int)=new PropertyFieldDefinition(name,single,newValue,createChildDefs)
+	def setChildDefs(newList:Seq[CreateChildDefinition])= new PropertyFieldDefinition(name,single,allowedClass,newList)
 }
 
 /** defines a createAction to create a certain child type in that propertyField
  * @actionName name of an createAction in the child classes' Module, or "" for simply creating an empty child instance 
  * 
  */
-case class CreateChildDefinition(editorName:String,childClassName:String,actionName:String) {
+case class CreateChildDefinition(editorName:String="",childClassID:Int=0,actionName:String="") {
 	def toXML() = {
-		<CreateChild childClass={childClassName} action={actionName} editor={editorName} />
+		<CreateChild childClassID={childClassID.toString} action={actionName} editor={editorName} />
 	}
-	private var childTypID=0
-	private var action:AbstractAction=null
+	lazy val childName=AllClasses.get.getClassByID(childClassID).name
+	lazy val action = {
+		val aclass=AllClasses.get.getClassByID(childClassID)
+	  if(aclass.createActions.contains(actionName)) aclass.createActions(actionName)
+	  else throw new IllegalArgumentException("cant find Action ["+ actionName+"] in Class " +childClassID  )		  
+	}
+	def setEditorName(newValue:String) = new CreateChildDefinition(newValue,childClassID,actionName)
+	def setChildClass(newValue:Int) = new CreateChildDefinition(editorName,newValue,actionName)
+	def setActionName(newValue:String) = new CreateChildDefinition(editorName,childClassID,newValue)
 	
-	def getChildTyp= {
-		if(childTypID== 0) childTypID=AllClasses.get.getClassIDByName(childClassName)
-		childTypID	
-	}
-	def getAction = {
-		if(action==null) {
-			val aclass=AllClasses.get.getClassByID(getChildTyp)
-		  action=  if(aclass.createActions.contains(actionName)) aclass.createActions(actionName)
-		  else throw new IllegalArgumentException("cant find Action ["+ actionName+"] in Class " +childClassName  )		  
-		} 
-		action
-	}
+	
 }
 
 object CreateChildDefinition {
 	def fromXML(node: scala.xml.Node) = {
-		CreateChildDefinition((node \ "@editor").text,(node \ "@childClass").text,(node \ "@action").text)
+		CreateChildDefinition((node \ "@editor").text,(node \ "@childClassID").text.toInt,(node \ "@action").text)
 	}
 }
 

@@ -66,6 +66,7 @@ case class FunctionCall(module:Option[String],name:String,params:List[Expression
   	 new FunctionCall(module,name, for(p<-params) 
   		                              yield p.replaceExpression(checker) )
   }
+    
 }
 
 object FunctionCall {

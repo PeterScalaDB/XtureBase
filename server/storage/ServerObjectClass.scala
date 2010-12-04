@@ -12,30 +12,44 @@ import transaction.handling.TransactionManager
 /**
  * 
  */
-class ServerObjectClass (val name:String,val id:Int,val description:String,protected val ownFields:Seq[FieldDefinition],
-	 protected val ownFieldSettings:Seq[FieldSetting],
-	 protected val ownPropFields:Seq[PropertyFieldDefinition],protected val theActions:Seq[AbstractAction], 
-	 protected val theCreateActions:Seq[AbstractAction],protected val superClasses:Seq[String],
-	 moduleName:String,val shortFormat:InstFormat,val longFormat:InstFormat,val resultFormat:InstFormat)
+class ServerObjectClass (var name:String,var id:Int,var description:String="",var ownFields:Seq[FieldDefinition]=Seq.empty,
+	  var ownFieldSettings:Seq[FieldSetting]=Seq.empty,
+	  var ownPropFields:Seq[PropertyFieldDefinition]=Seq.empty,protected val theActions:Seq[AbstractAction]=Seq.empty, 
+	 protected val theCreateActions:Seq[AbstractAction]=Seq.empty,var superClasses:Seq[Int]=Seq.empty,
+	 var moduleName:String="",var shortFormat:InstFormat=NOFORMAT,var longFormat:InstFormat=NOFORMAT,var resultFormat:InstFormat=NOFORMAT)
 	 extends AbstractObjectClass {
 	
 	def ownActions = theActions.iterator
 	def ownCreateActions = theCreateActions.iterator
 	
-	def toXML() =
-	{
-		//if(theCreateActions.size>0) println("class "+name+" DUMP createActions:"+theCreateActions.map(a =>a.toXML))
-		val sc=superClasses.map { a =>  <sc name= { a }  />  }		
-		<ObjectClass name={name} id={id.toString} desc={description} shortForm={shortFormat.toString}
-		longForm={longFormat.toString} resForm={resultFormat.toString}>
+	def toXML() = 	{						
+		<ObjectClass name={name} id={id.toString} desc={description} superC={superClasses.mkString(",")} 
+     shortForm={shortFormat.toString} longForm={longFormat.toString} resForm={resultFormat.toString} >
 		<Fields> 		{			ownFields.map(_.toXML)	}</Fields>
     <FieldSettings>{ownFieldSettings.map(_.toXML)}</FieldSettings>
-		<PropFields> 		{			ownPropFields.map(_.toXML)	}</PropFields>
-		<SuperClasses> {  sc }</SuperClasses>
+		<PropFields> 		{			ownPropFields.map(_.toXML)	}</PropFields>		
 		<Actions> {theActions.map(_.toXML)} </Actions>
     <CreateActions> {theCreateActions.map(_.toXML)} </CreateActions>
 		</ObjectClass>
 	}	
+	
+	def saveToXML() = {
+		<ObjectClass name={name} id={id.toString} desc={description} superC={superClasses.mkString(",")} 
+     shortForm={shortFormat.toString} longForm={longFormat.toString} resForm={resultFormat.toString} moduleName={moduleName}>
+		<Fields> 		{			ownFields.map(_.toXML)	}</Fields>
+    <FieldSettings>{ownFieldSettings.map(_.toXML)}</FieldSettings>
+		<PropFields> 		{			ownPropFields.map(_.toXML)	}</PropFields>		
+		<Actions> {theActions.map(_.toXML)} </Actions>
+    <CreateActions> {theCreateActions.map(_.toXML)} </CreateActions>
+		</ObjectClass>
+	}
+	
+	def makeClone= {
+		val theClone=new ServerObjectClass(name,id,description,ownFields,ownFieldSettings,ownPropFields,theActions,theCreateActions,
+		superClasses,moduleName,shortFormat,longFormat,resultFormat)
+		theClone.resolveSuperFields
+		theClone
+	}
 	
 	
 	/** creates an emty Instance of this class
@@ -44,10 +58,14 @@ class ServerObjectClass (val name:String,val id:Int,val description:String,prote
    */
   def createInstance(ref: Reference,owner:Array[OwnerReference],withStartValues:Boolean):InstanceData =
   {
-  	val fieldExpressions:collection.IndexedSeq[Expression]=if(withStartValues)
-  		for(i <-fields.indices) yield {
-  			fieldSetting(i).startValue.generate  		
-  		} else IndexedSeq.fill(fields.size)(getEmpty)
+  	val fieldExpressions:collection.IndexedSeq[Expression]=
+  		for(i <-fields.indices) yield 
+  			if(withStartValues) {
+  				val sv=fieldSetting(i).startValue
+  				if (sv.isNullConstant) Expression.generateNullConstant(fields(i).typ )
+  				else fieldSetting(i).startValue.generate  		
+  			}
+  			else Expression.generateNullConstant(fields(i).typ ) 
   	new InstanceData(ref,fieldExpressions,owner,false)
   }
   
@@ -64,8 +82,16 @@ class ServerObjectClass (val name:String,val id:Int,val description:String,prote
   }
   
   def getEmpty=EMPTY_EX
+  
+  def getNumOwnFields=ownFields.size
+  
+  def getNumOwnPropFields=ownPropFields.size
 
 }
+
+
+
+object EmptyServerClass  extends ServerObjectClass ("",0)
 
 
 object ServerObjectClass 
@@ -78,7 +104,7 @@ object ServerObjectClass
 		val moduleName=(node \"@moduleName").text
 		var actionList:Seq[AbstractAction]= null
 		var createActionList:Seq[AbstractAction]= null
-		
+		val superClasses=ClientObjectClass.stringToIntList((node \"@superC").text)
 		if(moduleName==""){
 		  actionList=IndexedSeq.empty
 		  createActionList=IndexedSeq.empty
@@ -93,7 +119,7 @@ object ServerObjectClass
 			for(afield <-(node \\"FieldSetting")) yield FieldSetting.fromXML(afield),
 		  for(bfield <-(node \\"PropertyFieldDef")) yield PropertyFieldDefinition.fromXML(bfield),
 		  actionList,createActionList,
-		  for(cfield <-(node \\ "sc"))  yield (cfield \ "@name").text,
+		  superClasses,
 		  moduleName,InstFormat.read(node \"@shortForm"),InstFormat.read(node \"@longForm"),
 		  InstFormat.read(node \"@resForm"))
 	}

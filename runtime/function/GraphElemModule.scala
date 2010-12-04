@@ -16,9 +16,6 @@ import transaction.handling.{TransactionManager,SessionManager}
 class GraphElemModule extends ActionModule {
   
 	def actionList=List(moveAction,copyAction)	
-	
-	
-	
   def getActionsIterator() = { actionList.iterator }
   
 	val secondPointQuestion= Some(new ParamQuestion("nach Punkt",
@@ -35,8 +32,7 @@ class GraphElemModule extends ActionModule {
 	val copyAction=new ActionIterator("Kopieren",Some(new ParamQuestion("Kopieren von Punkt / Delta",
 		Seq(new ParamAnswerDefinition("Startpunkt ",DataType.VectorTyp,secondPointQuestion),
 			  new ParamAnswerDefinition("oder: Delta X:",DataType.DoubleTyp,dyQuestion)
-			))),doCopy)
-	
+			))),doCopy)	
   //val moveAction=new ActionImpl("Verschieben",None,nope)
   
   def nope( data:InstanceData,param:Seq[(String,Constant)]) =  {true}
@@ -63,8 +59,7 @@ class GraphElemModule extends ActionModule {
 					if(d.ref .typ==TypeInfos.arcTyp) {
 						TransactionManager.tryWriteInstanceField(d.ref,3,d.fieldValue(3).toVector+delta)
 					}
-				}
-			  
+				}			  
 		  true	
 		}
 		else false
@@ -90,8 +85,7 @@ class GraphElemModule extends ActionModule {
 							d.fieldValue(4).toVector+delta)												
 					}
 					else if(d.ref.typ==TypeInfos.lineTyp) {						
-						newInst=newInst.setField(3,d.fieldValue(3).toVector+delta)
-												
+						newInst=newInst.setField(3,d.fieldValue(3).toVector+delta)												
 					}
 					TransactionManager.tryWriteInstanceData(newInst)
 				}			

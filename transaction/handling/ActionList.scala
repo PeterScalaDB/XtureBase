@@ -119,8 +119,8 @@ def addTransactionData (ref:Reference,newRec:TransactionData) = {
 				case  DataChangeAction(in,pr,li,co,cmi ) => {
 					if (in!=None) a.newInstData = in // add the new data to the createAction
 					if (pr!=None) a.newPropData = pr
-					if (li!=None) if(a.newLinksData!=None) throw new IllegalArgumentException("Cant add external links to created Instance "+ref+" "+li+" oldlinks:"+a.newLinksData )
-					else a.newLinksData =li
+					if (li!=None)/* if(a.newLinksData!=None) throw new IllegalArgumentException("Cant add external links to created Instance "+ref+" "+li+" oldlinks:"+a.newLinksData )
+					else*/ a.newLinksData =li
 					if (co!=None) a.newCollData= co	
 					if(cmi.isDefined) a.cmi=if(a.cmi.isDefined) Some(a.cmi.get.replaceWith(cmi.get)) else cmi
 					//if(pos != -1) a.atPosition=pos

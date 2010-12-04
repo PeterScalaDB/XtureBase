@@ -26,7 +26,7 @@ class TypTest extends JUnitSuite {
 	
 	val hugoClass=new ServerObjectClass("Hugo",7,"hugos klasse",IndexedSeq(FieldDefinition("Hugofeld",DataType.StringTyp ),FieldDefinition("HugoWert",
   		DataType.DoubleTyp )),IndexedSeq.empty,IndexedSeq(PropertyFieldDefinition("Subelements",false,0)),IndexedSeq.empty,IndexedSeq.empty,
-  		IndexedSeq("Rudolf" ),"",NOFORMAT,NOFORMAT,NOFORMAT)
+  		IndexedSeq(3 ),"",NOFORMAT,NOFORMAT,NOFORMAT)
 	  
   
   @Test def FieldDefinitionTest()

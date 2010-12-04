@@ -7,8 +7,8 @@ import definition.expression._
 /**
  * 
  */
-case class FieldSetting (fieldNr:Int,readOnly:Boolean=false,
-	visible:Boolean=true,showFormula:Boolean=false,editor:String="",startValue:Expression,formString:String="") { 
+case class FieldSetting (fieldNr:Int,var readOnly:Boolean=false,
+	var visible:Boolean=true,var showFormula:Boolean=false,var editor:String="",var startValue:Expression=EMPTY_EX,var formString:String="") { 
   
 	override def toString = 
    { 
@@ -30,7 +30,7 @@ case class FieldSetting (fieldNr:Int,readOnly:Boolean=false,
 	
 }
 
-object EmptySetting extends FieldSetting(0,false,true,false,"",EMPTY_EX)
+object EmptySetting extends FieldSetting(-1,false,true,false,"",EMPTY_EX)
 
 object FieldSetting
 {

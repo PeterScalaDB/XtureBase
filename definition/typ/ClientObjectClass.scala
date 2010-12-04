@@ -4,7 +4,6 @@
 package definition.typ
 
 import definition.data._
-import definition.expression.EMPTY_EX
 import scala.collection.immutable.IndexedSeq
 
 
@@ -14,7 +13,7 @@ import scala.collection.immutable.IndexedSeq
 class ClientObjectClass (val name:String,val id:Int,val description:String,protected val ownFields:Seq[FieldDefinition],
 	protected val ownFieldSettings:Seq[FieldSetting],
 	 protected val ownPropFields:Seq[PropertyFieldDefinition],protected val theActions:Seq[ActionDescription], 
-	 protected val theCreateActions:Seq[ActionDescription],protected val superClasses:Seq[String],
+	 protected val theCreateActions:Seq[ActionDescription],protected val superClasses:Seq[Int],
 	 val shortFormat:InstFormat,val longFormat:InstFormat,val resultFormat:InstFormat)
 	 extends AbstractObjectClass
 {  
@@ -34,6 +33,10 @@ class ClientObjectClass (val name:String,val id:Int,val description:String,prote
 
 object ClientObjectClass 
 {	
+	def stringToIntList(text:String):Seq[Int]= 
+		if(text==null || text.length==0) return Seq.empty
+		else return text.split(",").map(_.toInt)
+	
 	// creates an ObjectClass object from XML
 	def fromXML(node: scala.xml.Node) =
 	{		
@@ -41,6 +44,7 @@ object ClientObjectClass
 		val id=(node \"@id").text.toInt
 		val actionsNode=node \"Actions"
 		val createActionsNode=node \"CreateActions"
+		val superClasses=stringToIntList ((node \"@superC").text)
 		var shortForm:InstFormat=null
 		new ClientObjectClass(name,id ,  (node \"@desc").text,
 			for(afield <-(node \\"FieldDef")) yield FieldDefinition.fromXML(afield),
@@ -48,7 +52,7 @@ object ClientObjectClass
 		  for(bfield <-(node \\"PropertyFieldDef")) yield PropertyFieldDefinition.fromXML(bfield),
 		  for(efield <-(actionsNode \\"Action"))yield ActionDescription.fromXML(efield),
 		  for(efield <-(createActionsNode \\"Action"))yield ActionDescription.fromXML(efield),
-		  for(cfield <-(node \\ "sc"))  yield (cfield \ "@name").text,{
+		  superClasses,{
 		  	shortForm=InstFormat.read(node \"@shortForm")
 		  	shortForm
 		  }

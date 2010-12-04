@@ -191,12 +191,14 @@ class UserQueryHandler(userSocket: UserSocket) {
 	
 	
 	private def sendQueryData(out:DataOutputStream,parentRef:Reference,propertyField:Byte) = {
+		//println("sendQueryData:"+parentRef)
 		if (propertyField<0) // only get the parent Instance				
 			sendInstance(out,parentRef)
 		else
 		{ // get the child instances of the property field
 			sendChildren(out,parentRef,propertyField)
 		}	
+		//println("sendQueryData finish")
 	}
 	
 	private def sendInstance(out:DataOutputStream,ref:Reference) = 
@@ -208,7 +210,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 				inst.writeWithChildInfo(out)				
 			}
 			catch {
-				case e: Exception => println(e); out.writeInt(0)
+				case e: Exception =>println("Error sending Instance "+ref); e.printStackTrace(); out.writeInt(0)
 			}
 	}
 	
@@ -223,8 +225,9 @@ class UserQueryHandler(userSocket: UserSocket) {
 						// get all Data before starting to write
 						out.writeInt(childRefs.size)
 						if(childRefs.size<10)
-						{
-						  val instList= getInstances(childRefs)						
+						{							
+						  val instList= getInstances(childRefs)
+						  //println("readlist "+instList)
 						  for(i <-childRefs.indices)
 						  {
 						  	childRefs(i).write(out)
@@ -263,7 +266,7 @@ class UserQueryHandler(userSocket: UserSocket) {
   		}
   		else
   			 StorageManager.bulkPushInstanceData(childRefs(bulkStart),oldRef,out)
-  			  			
+  	 //println("push ready")		  			
   		
 	}
 	

@@ -25,6 +25,8 @@ trait Constant extends Expression {
   
   def toDouble:Double
   
+  def toCurrency= new CurrencyConstant(Math.round(toDouble*100))
+  
   def toBoolean:Boolean 
   
   def toVector=new VectorConstant(0,0,0)
@@ -32,6 +34,8 @@ trait Constant extends Expression {
   def convertTo(toType:DataType.Value):Constant = Constant.createConversion(this,toType)
   
   def getNative:Any
+  
+  def isNumberConstant=false  
 }
 
 object Constant
@@ -43,16 +47,18 @@ object Constant
 	 * @return A new Constant with the value, converted to another type
 	 */
 	def createConversion(value:Constant,toType: DataType.Value) = {
-		//println("create conversion "+value+" toType:"+toType)
-		toType match {		
+		val res=toType match {		
 		case DataType.IntTyp => new IntConstant(value.toInt)
 		case DataType.LongTyp => new LongConstant(value.toLong)
 		case DataType.DoubleTyp => new DoubleConstant(value.toDouble)   
 		case DataType.StringTyp => new StringConstant(value.toString)
 		case DataType.BoolTyp => new BoolConstant(value.toBoolean)
+		case DataType.CurrencyTyp => value.toCurrency
 		case DataType.VectorTyp =>val nv=value.toVector;new VectorConstant(nv.x,nv.y,nv.z)
 		case _ => throw new IllegalArgumentException("Conversion to type "+toType+" is not supported yet")
 		}
+		println("create conversion "+value+":"+value.getType+" toType:"+toType+" "+res)
+		res
 	}
 	
 	def getNativeNull(typ:DataType.Value)= typ match {
@@ -62,6 +68,7 @@ object Constant
 		case DataType.StringTyp => ""
 		case DataType.BoolTyp => false
 		case DataType.VectorTyp =>NULLVECTOR
+		case DataType.CurrencyTyp =>ImBroke
 		case _=> ""
 	}
 			
@@ -80,6 +87,8 @@ object EMPTY_EX extends Constant
   def toDouble:Double=0
   
   def toBoolean:Boolean=false 
+  
+  override def toCurrency=ImBroke
 	
 	def getTerm:String =""
 	
@@ -91,6 +100,6 @@ object EMPTY_EX extends Constant
 	
 	override def toString = ""
 		
-  override def isEmpty=true
+  override def isNullConstant=true
 	
 }

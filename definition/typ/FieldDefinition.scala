@@ -7,7 +7,7 @@ package definition.typ
 /**
  * Description of a single Datafield in a DataObject
  */
-case class FieldDefinition (name:String,typ: DataType.Value) 
+case class FieldDefinition (val name:String,val typ: DataType.Value) 
 {
    override def toString = 
    { 
@@ -23,6 +23,9 @@ case class FieldDefinition (name:String,typ: DataType.Value)
   	 typ={typ.id.toString}  	 
   	 /> 
    }  
+   
+   def setName(newName:String)=new FieldDefinition(newName,typ)
+   def setType(newType:DataType.Value)=new FieldDefinition(name,newType)
     
 }
 

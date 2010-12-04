@@ -14,12 +14,13 @@ object StorageFuncMan extends FunctionManager {
 	//val p=new FunctionDescription("sin",null,null){
 	//		override def getValue(param:List[Constant]):Constant = {	null} }	
 	
-	def checkParameters(param:List[Constant],paramDesc:List[ParDes]):Boolean =   {
+	def checkParameters(param:List[Constant],paramDesc:List[ParDes]):String =   {
 		println("check params "+param+" "+paramDesc)
-  	if(paramDesc.size!=param.size) return false
+  	if(paramDesc.size!=param.size) return "Wrong numbers of parameters "+param.size+", expected:"+paramDesc.size
   	 for(i <- 0 until param.size)
-  		 if(! DataType.isCompatible(param(i).getType ,paramDesc(i).typ)) return false
-  	 true
+  		 if(! DataType.isCompatible(param(i).getType ,paramDesc(i).typ)) 
+  			 ("Wrong function parameter type "+param(i)+", expected Type:"+paramDesc(i)  )
+  	 null
   }
 	
 	val funcList= Map[String,FEntry] (
@@ -44,10 +45,9 @@ object StorageFuncMan extends FunctionManager {
 		if(funcList.contains(uname))
 		{
 			val entry =funcList(uname)
-			if(checkParameters(paramValues,entry.params))
-				entry.func(paramValues)
-			else EMPTY_EX 
-			//TODO notify when wrong function parameters passed
+			val error=checkParameters(paramValues,entry.params)
+			if(error!=null)throw new IllegalArgumentException(error+" in function "+funcName)
+			entry.func(paramValues)			
 		}		  
 		else throw new IllegalArgumentException("Function "+uname+" not found")		
 	}

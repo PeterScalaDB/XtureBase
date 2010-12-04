@@ -40,9 +40,7 @@ class InstanceData (override val ref:Reference,	val fieldData:IndexedSeq[Express
 		for(i<-fieldIndexes) 
 			yield if(i> -1){
 				val theVal=fieldValue(i)
-				if(theVal.getType==DataType.undefined )
-					Constant.getNativeNull(theClass.fields(i).typ)
-				else theVal.getNative 
+				 theVal.getNative 
 			}
 			else ref.instance
 	}
@@ -148,8 +146,8 @@ class InstanceData (override val ref:Reference,	val fieldData:IndexedSeq[Express
 			if(result==null) { 
 				println("result== null "+ref+" field:"+index+" "+fieldData(index))
 				EMPTY_EX
-			} else
-			if(result.getType==fieldType|| result.getType==DataType.undefined )
+			} else			 			
+			if(result.getType==fieldType )
 				result // return the value
 				else  // return converted value
 					Constant.createConversion(result,fieldType)						  

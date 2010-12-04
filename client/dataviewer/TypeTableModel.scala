@@ -205,7 +205,16 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 		}
 	})
 	
-	val instEditor=new InstanceEditor(table.peer)	
+	val instEditor=new MultilineEditor(table.peer)	{
+		def setEditorValue(value:Object) = {
+			if (value.isInstanceOf[Expression]){
+				val expr=value.asInstanceOf[Expression]
+				if(expr.getType==DataType.StringTyp) expr.toString
+				else expr.getTerm
+			}
+			else if(value==null)"" else value.toString
+		}
+	}
 	table.peer.setDefaultEditor(classOf[Object],instEditor)
 	
 	
@@ -397,7 +406,7 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 
 
 	def parseValue(columnIndex:Int,value:Object):Expression = {
-		if(value==null)EMPTY_EX else
+		if(value==null)Expression.generateNullConstant(objClass.fields(columnIndex-1).typ) else
 			if (objClass.fields(columnIndex-1).typ==DataType.StringTyp)
 				try {
 					StringParser.parse( value.toString) 

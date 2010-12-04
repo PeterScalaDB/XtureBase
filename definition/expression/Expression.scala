@@ -22,13 +22,11 @@ trait Expression
 	
 	def getTerm:String
 	
-	def isConstant:Boolean
-	
-	def isEmpty=false
+	def isConstant:Boolean	
 	
 	def write(file:DataOutput):Unit
 	
-	
+	def isNullConstant:Boolean=false
 	
 	/** is called when generating an instance 
 	 * will be overridden by generatorConstants like $Now and $Today
@@ -47,9 +45,7 @@ trait Expression
 	def getElementList[T <: Expression](whatType:DataType.Value,resultList:List[T]):List[T]={
 		if(this.getType==whatType) this.asInstanceOf[T]::resultList
 		else resultList
-	}
-	
-		
+	}		
 	
 	/** replaces certain elements of this term
 	 * 
@@ -59,6 +55,13 @@ trait Expression
 	def replaceExpression(checker:(Expression) => Expression): Expression = 
 		checker(this)
 }
+
+trait NullConstant extends Expression  {
+		override def isNullConstant=true
+		override def write(file:DataOutput)= { 
+  	file.writeByte(DataType.undefined.id)  	
+  }
+	}
 
 object Expression
 {
@@ -75,6 +78,7 @@ object Expression
 			case DataType.CollFunctionCall => CollectingFuncCall(file)
 			case DataType.BoolTyp => new BoolConstant(file.readBoolean)
 			case DataType.VectorTyp => new VectorConstant(file.readDouble,file.readDouble,file.readDouble)
+			case DataType.CurrencyTyp => new CurrencyConstant(file.readLong)
 			case _ => EMPTY_EX
 		}		
 	}
@@ -88,8 +92,30 @@ object Expression
 			case DataType.StringTyp => new StringConstant(file.readUTF)
 	    case DataType.BoolTyp => new BoolConstant(file.readBoolean)
 	    case DataType.VectorTyp => new VectorConstant(file.readDouble,file.readDouble,file.readDouble)
+	    case DataType.CurrencyTyp => new CurrencyConstant(file.readLong)
 			case _ => EMPTY_EX
 		}		
+	}
+	
+	lazy val NullINT=new IntConstant(0) with NullConstant
+	lazy val NullLONG=new LongConstant(0) with NullConstant
+	lazy val NullDOUBLE=new DoubleConstant(0d) with NullConstant
+	lazy val NullSTRING=new StringConstant("") with NullConstant
+	lazy val NullBOOL=new BoolConstant(false) with NullConstant
+	lazy val NullVECTOR=new VectorConstant(0,0,0) with NullConstant
+	lazy val NullCURRENCY=new CurrencyConstant(0) with NullConstant
+	
+	def generateNullConstant(typ:DataType.Value)= {
+		typ match {
+			case DataType.IntTyp => NullINT
+			case DataType.LongTyp => NullLONG
+			case DataType.DoubleTyp => NullBOOL
+			case DataType.StringTyp => NullSTRING
+	    case DataType.BoolTyp => NullBOOL
+	    case DataType.VectorTyp => NullVECTOR
+	    case DataType.CurrencyTyp => NullCURRENCY
+	    case DataType.undefined => EMPTY_EX
+		}
 	}
 }
 

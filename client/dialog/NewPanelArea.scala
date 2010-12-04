@@ -40,9 +40,9 @@ object NewPanelArea extends AbstractActionPanel with ContainerFocusListener {
 		val propF=theClass.propFields(propField)
 		if(!propF.createChildDefs.isEmpty) {			
 		  for(childDef <-propF.createChildDefs;if (childDef.editorName==containerName)) {
-		  	val b = if(childDef.actionName =="*") getButton(dummyAction,childDef.childClassName)
-		  	else getButton(childDef.getAction,"")
-		  	b.newTypeID=childDef.getChildTyp
+		  	val b = if(childDef.actionName =="*") getButton(dummyAction,childDef.childName)//childDef.childClassName
+		  	else getButton(childDef.action,"")
+		  	b.newTypeID=childDef.childClassID
 		  	b.propField=propField.toByte
 		  	contents+=b
 		  }

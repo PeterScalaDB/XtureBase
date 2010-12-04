@@ -10,7 +10,6 @@ import java.io.{DataInput,DataOutput}
  * 
  */
 case class DoubleConstant(n:Double) extends Constant {
-
   
   def getType(): DataType.Value = { DataType.DoubleTyp }
 
@@ -44,6 +43,7 @@ case class DoubleConstant(n:Double) extends Constant {
   
   def getNative= n
   
+  override def isNumberConstant=true
 }
 
 

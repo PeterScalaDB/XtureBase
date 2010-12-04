@@ -15,7 +15,7 @@ import java.util.EventObject
 /**
  * 
  */
-class InstanceEditor(theTable:JTable) extends AbstractCellEditor with TableCellEditor {
+abstract class MultilineEditor(theTable:JTable) extends AbstractCellEditor with TableCellEditor {
 	val editColor=new Color(255,255,230)
 	val document=new PlainDocument
 	var oldPos:Point=null
@@ -69,16 +69,11 @@ class InstanceEditor(theTable:JTable) extends AbstractCellEditor with TableCellE
     	 def focusLost(e:FocusEvent)= {}
     })
     
-	}	
-	
+	}		
 	
 	val popupContent=new PopupContent
 	var rootPane:JRootPane=null
-	var layeredPane:JLayeredPane=null
-	//val nofocusBorder=UIManager.getBorder("Table.cellNoFocusBorder")
-	//component.putClientProperty("JComponent.sizeVariant", "mini");
-	//component.setMargin(new Insets(0,0,0,0))
-	//component.setFont(theTable.getFont)
+	var layeredPane:JLayeredPane=null	
 	
 	textArea.addKeyListener(new KeyAdapter () {
 		override def keyPressed(e:KeyEvent) = {			
@@ -116,8 +111,7 @@ class InstanceEditor(theTable:JTable) extends AbstractCellEditor with TableCellE
 	})
 	
 	usedActionKeyStrokes.foreach(registerAction(_))
-	
-	
+		
 	
 	override def shouldSelectCell( e:EventObject  )= 	{		
 		true
@@ -153,25 +147,16 @@ class InstanceEditor(theTable:JTable) extends AbstractCellEditor with TableCellE
 	
 	def getTableCellEditorComponent(table:JTable,value: Object, isSelected:Boolean,rowIndex: Int, vColIndex:Int) ={	  
 	  //component.setBorder(nofocusBorder)		 
-	  val text=if (value.isInstanceOf[Expression]){
-	  	val expr=value.asInstanceOf[Expression]
-	  	if(expr.getType==DataType.StringTyp) expr.toString
-	  	else expr.getTerm
-	  }
-	  else if(value==null)"" else value.toString		  
-	  
-	  val bounds=table.getCellRect(rowIndex,vColIndex,true)
-	  
-	  popupContent.setSize(bounds.getSize) // calculate the text height
-	  //updateEditorHeight
+	  		  
+	  val bounds=table.getCellRect(rowIndex,vColIndex,true)	  
+	  popupContent.setSize(bounds.getSize) // calculate the text height	  
 	  oldPos=bounds.getLocation
-	  component.setText(text) // changes the size also	  
+	  component.setText(setEditorValue(value)) // changes the size also	  
 	  if(layeredPane==null) {
 	  	rootPane=table.getRootPane
 	  	layeredPane=rootPane.getLayeredPane	  	
 	  	layeredPane.add(popupContent,(JLayeredPane.POPUP_LAYER) )
-	  }	  
-	  //println("show "+oldPos)
+	  }		  
 	  setPopupLocation(oldPos)
 	  popupContent.show
 	  popupContent.revalidate
@@ -179,16 +164,16 @@ class InstanceEditor(theTable:JTable) extends AbstractCellEditor with TableCellE
 	  component
 	}
 	
+	def setEditorValue(value:Object):String
+	
 	def updateEditorHeight= {
 		val size:Dimension=popupContent.getSize
 		var wishHeight=textArea.getPreferredSize.height+4
 		//print("WishHeight "+wishHeight)
 	  if(wishHeight>maxEditorHeight) wishHeight=maxEditorHeight
 	  if(wishHeight!=size.height) {
-	  	size.height=wishHeight
-	  	//println("Set size:"+size)
-	    popupContent.setSize(size)	
-	    //popupContent.revalidate
+	  	size.height=wishHeight	  	
+	    popupContent.setSize(size)	    
 	    textArea.revalidate
 	  }	  
 	}
@@ -197,8 +182,7 @@ class InstanceEditor(theTable:JTable) extends AbstractCellEditor with TableCellE
 		return component.getText()  
 	} 
 	
-	override def removeCellEditorListener(l:CellEditorListener) = {
-		//println("remove listener "+popupContent.isVisible)
+	override def removeCellEditorListener(l:CellEditorListener) = {		
 		if(popupContent.isVisible) hidePopup
 		super.removeCellEditorListener(l)
 	}
@@ -210,11 +194,7 @@ class InstanceEditor(theTable:JTable) extends AbstractCellEditor with TableCellE
 		else true		
 	}
 	
-	/*def addKeyAction(keyStroke:KeyStroke,aName:String,action:Action) = {
-		textArea.getInputMap(JComponent.WHEN_FOCUSED).put(keyStroke, aName)
-		textArea.getActionMap().put(aName,action)		
-	}*/
-	
+		
 	private def registerAction(keyStroke:KeyStroke) = {		
 		val actionName=theTable.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).
 			get(keyStroke)
@@ -225,6 +205,7 @@ class InstanceEditor(theTable:JTable) extends AbstractCellEditor with TableCellE
 		  if(action!=null) textArea.getActionMap().put(actionName,new ActionWrapper(action))
 		}	
 	}
+	
 	class ActionWrapper(oldAction:Action) extends AbstractAction {	  
 		def actionPerformed(e:ActionEvent) = {
 			//println("wrapper actionPerformed "+e+" oldaction:"+oldAction)

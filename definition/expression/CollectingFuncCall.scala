@@ -64,6 +64,8 @@ case class CollectingFuncCall(name:String,propertyField:Byte,childType:Int,child
 	}
 
 	override def hashCode: Int = 41 * ( 41 + name.hashCode)  + 1013*(3+propertyField.hashCode)+childType.hashCode + 45000*(2+childField.hashCode)
+	
+	
 }  
 
 object CollectingFuncCall

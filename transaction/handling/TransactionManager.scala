@@ -95,28 +95,29 @@ object TransactionManager {
 		var collData:Option[CollFuncResultSet]=None
 		var newLinkData:ReferencingLinks=null
 		val copyInfo:Option[CopyMoveInfo]=if(!notifySubs) AddDontNotifyOwners.some  else None
-		for(i<-newInst.fieldData.indices;val expr=newInst.fieldData(i);if(!expr.isEmpty)){
-			// check new collcalls
-			val newCollCalls=expr.getElementList[CollectingFuncCall](DataType.CollFunctionCall,Nil)
-  		  if(!newCollCalls.isEmpty) {
-			   val (acollData,anExpression)=TransactionManager.addCollCalls(null, newInst.ref, newCollCalls, i.toByte,expr)
-			   newInst=newInst.setField(i.toByte,anExpression)
-			   collData=Some(acollData)	
-  		 }
-			// check new links
-			val newRefList:Seq[FieldReference]=expr.getElementList[FieldReference](DataType.FieldRefTyp,Nil)
-			for(nr<-newRefList)	{
-				val sourceInstRef = resolveLinkRef(newInst.ref,nr)
-				val sourceValue=(
-						if(sourceInstRef==newInst.ref) newInst 
-						else  ActionList.getInstanceData(sourceInstRef)	).fieldValue(nr.remField )
-						nr.cachedValue =sourceValue	//side effect !!! should be changed !
-				//addLinkRef(newInst.ref,i.toByte,nr)				
-				checkCircularRef(newInst.ref,i.toByte,List(nr qualifyWith newInst.ref))		
-				if(newLinkData==null)newLinkData=		new ReferencingLinks(sourceInstRef,Map())
-				newLinkData=newLinkData.addTargetLink(ExtFieldRef(newInst.ref.typ,newInst.ref.instance ,i.toByte),nr.remField)
-			}
-		}		  
+		if(withStartValues)
+			for(i<-newInst.fieldData.indices;val expr=newInst.fieldData(i);if(!expr.isNullConstant)){
+				// check new collcalls
+				val newCollCalls=expr.getElementList[CollectingFuncCall](DataType.CollFunctionCall,Nil)
+				if(!newCollCalls.isEmpty) {
+					val (acollData,anExpression)=TransactionManager.addCollCalls(null, newInst.ref, newCollCalls, i.toByte,expr)
+					newInst=newInst.setField(i.toByte,anExpression)
+					collData=Some(acollData)	
+				}
+				// check new links
+				val newRefList:Seq[FieldReference]=expr.getElementList[FieldReference](DataType.FieldRefTyp,Nil)
+				for(nr<-newRefList)	{
+					val sourceInstRef = resolveLinkRef(newInst.ref,nr)
+					val sourceValue=(
+							if(sourceInstRef==newInst.ref) newInst 
+							else  ActionList.getInstanceData(sourceInstRef)	).fieldValue(nr.remField )
+							nr.cachedValue =sourceValue	//side effect !!! should be changed !
+							//addLinkRef(newInst.ref,i.toByte,nr)				
+							checkCircularRef(newInst.ref,i.toByte,List(nr qualifyWith newInst.ref))		
+					if(newLinkData==null)newLinkData=		new ReferencingLinks(sourceInstRef,Map())
+					newLinkData=newLinkData.addTargetLink(ExtFieldRef(newInst.ref.typ,newInst.ref.instance ,i.toByte),nr.remField)
+				}
+			}		  
 		  
 		ActionList.addTransactionData(newInst.ref,new CreateAction(newInst.ref,Some(newInst),None,
 			if(newLinkData==null)None else Some(newLinkData),collData,copyInfo))		
@@ -126,7 +127,7 @@ object TransactionManager {
 			internAddPropertyToOwner(newInst,owner,pos,!notifySubs)
 		}		
 		if(notifyRefandColl)
-			for(i <- 0 until newInst.fieldData.size;if (!newInst.fieldData(i).isEmpty))
+			for(i <- 0 until newInst.fieldData.size;if (!newInst.fieldData(i).isNullConstant))
 				passOnChangedValue(newInst,i.toByte,EMPTY_EX,newInst.fieldData(i).getValue)
 		//SimpleProfiler.measure("notif owner")
 		newInst
@@ -270,13 +271,14 @@ object TransactionManager {
 	 *  @param newValue the new value of the field 
 	 */
 	private def passOnChangedValue(newInst:InstanceData,fieldNr:Byte,oldValue:Constant,newValue:Constant):Unit ={
-		
+		val wishType=newInst.theClass.fields(fieldNr).typ
+		val nValue=if(newValue.getType!=wishType) Constant.createConversion(newValue,wishType) else newValue
 		// Check for other instances referencing to this instance
 		ActionList.getReferencingLinks(newInst.ref) match {			
 			case Some(refLinks) => {		
 				if (refLinks.links.contains(fieldNr))
 				for (r <- refLinks.links(fieldNr)) // get all reflinks for the changed field
-				   notifyDataChangeToReferencingInst(r,newInst.ref,fieldNr,newValue) // notify them
+				   notifyDataChangeToReferencingInst(r,newInst.ref,fieldNr,nValue) // notify them
 			}
 			case _ => // go drink a beer
 		}
@@ -284,7 +286,7 @@ object TransactionManager {
 		for(owner <-newInst.owners ) {
 			ActionList.getCollData(owner.ownerRef) match {
 				case Some(collData) => {
-					notifyCollFunc_ChildChanged(owner ,collData,newInst.ref,fieldNr,oldValue,newValue)
+					notifyCollFunc_ChildChanged(owner ,collData,newInst.ref,fieldNr,oldValue,nValue)
 				}
 				case _ => // another beer
 			}
@@ -298,7 +300,7 @@ object TransactionManager {
 		for(owner <-ownerList ) {
 			ActionList.getCollData(owner.ownerRef) match {
 				case Some(collData) => {
-					for(i <- 0 until newInst.fieldData.size;if (newInst.fieldData (i)!=EMPTY_EX))
+					for(i <- 0 until newInst.fieldData.size;if (!newInst.fieldData(i).isNullConstant))
 					notifyCollFunc_ChildChanged(owner ,collData,newInst.ref,i.toByte,EMPTY_EX,newInst.fieldData(i).getValue)
 				}
 				case _ => // another beer
@@ -678,7 +680,11 @@ object TransactionManager {
   		{
   			val myRef=Some(ref)
   		  for (pfield <-propdat.propertyFields; child <-pfield.propertyList )
+  		  try {	
   		  	tryDeleteInstance(child,myRef)
+  		  } catch {
+  		  	case e:Exception => println("Error when deleting child "+child);e.printStackTrace
+  		  }
   		}
   		case None => 
   	}
@@ -766,7 +772,7 @@ object TransactionManager {
 		
 		// Register FieldReferences to other instances
 		
-		for(i <- 0 until instD.fieldData.size;if (instD.fieldData(i)!=EMPTY_EX))
+		for(i <- 0 until instD.fieldData.size;if (!instD.fieldData(i).isNullConstant))
 		{
 			val refList=instD.fieldData(i).getElementList[FieldReference](DataType.FieldRefTyp,Nil)
 			//println("try copy inst:"+instRef+" newInst:"+createInst.ref+" "+refList)
