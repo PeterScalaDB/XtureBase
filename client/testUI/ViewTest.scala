@@ -30,22 +30,13 @@ object ViewTest extends SimpleSwingApplication {
 	var sock:ClientSocket=null	
 	
 	
-	//val typEdit=new TextField("10")
-	//val instEdit=new TextField("1")
-	//val propEdit=new TextField("0")	
-	
-	//val viewController=new DataViewController()
-	
-	//val pathMod=new PathModel()
-	//val pathView=new ListView[InstanceData]()
-//	val pathContr=new PathController(pathMod,pathView,viewController)
-	
 	val actionPan= new ActionPanel
 	
 	val fieldEditPan=new FieldEditorsPanel
 	//val newPanelArea=new NewPanelArea
 	
 	val undoBut = new Button("Undo")
+	val hideBut=new ToggleButton("Hide")
 	val undoDialog=new UndoDialog(top)
 	
 	val mainBox=new MainBox
@@ -59,16 +50,7 @@ object ViewTest extends SimpleSwingApplication {
 		new GraphicsViewbox
 	})
 	
-	//val testGraphList=new ListView[GraphElem]()
-	
-	//var lastSelected:Seq[Referencable]=Seq.empty
-	
-	
-	
-	
-	
-	
-	
+
 	val mainPanel:BorderPanel=	new BorderPanel()  // main panel
 	{			
 		 
@@ -86,7 +68,7 @@ object ViewTest extends SimpleSwingApplication {
 				
 			},BorderPanel.Position.North)			
 			add(new BorderPanel() {
-				preferredSize=new Dimension(120,100)
+				preferredSize=new Dimension(140,100)
 				add(new Label("Funktionen:"){preferredSize=new Dimension(40,30)},BorderPanel.Position.North)
 				add (new ScrollPane() {
 					viewportView= actionPan				
@@ -94,20 +76,23 @@ object ViewTest extends SimpleSwingApplication {
 			},BorderPanel.Position.Center)
 		},BorderPanel.Position.West)
 		add( new BoxPanel(Orientation.Horizontal) {
-			contents+= undoBut+=Swing.HStrut(50)+=DialogManager.dialogPanel
+			contents+= (new BoxPanel(Orientation.Vertical) { 
+				contents+=undoBut+=hideBut
+				}) +=Swing.HStrut(60)+=DialogManager.dialogPanel
 		},BorderPanel.Position.South)
 		
-		listenTo(undoBut)
+		listenTo(undoBut,hideBut)
 		reactions += {					
-					case ButtonClicked(`undoBut`) => requestUndoData					
+					case ButtonClicked(`undoBut`) => requestUndoData
+					case ButtonClicked(`hideBut`) => setHide(hideBut.selected)
 		}
 	}
 	
-	val top = new MainFrame ()
+	val top:MainFrame = new MainFrame ()
 	{
 		override def closeOperation() 
 		{
-			println("Close " )			
+			System.out.println("Close " )			
 			shutDown()
 			super.closeOperation()			
 			
@@ -117,12 +102,13 @@ object ViewTest extends SimpleSwingApplication {
 		//UIManager.put("Table.alternateRowColor", new Color(250,250,240));
 	  //SwingUtilities.updateComponentTreeUI(this.peer);
 		bounds=new Rectangle(20,20,1500,900)
+		
 	}	
 	
 	
 	
 	override def startup(args: Array[String]) = {		
-		if(args.length<4 ) { println("Usage: TableTest host portnr name password"); quit() }		
+		if(args.length<4 ) { System.out.println("Usage: ViewTest host portnr name password"); quit() }		
 		top.title= "Table Test ["+args(2)+"]"
 		// connect components
 		
@@ -144,55 +130,23 @@ object ViewTest extends SimpleSwingApplication {
 		
 		DialogManager.answerArea.registerCustomPanel[PointAnswerPanel](DataType.VectorTyp)
 		ClientQueryManager.registerStepListReader(undoDialog)
-		//println(top.title)
-		sock=new ClientSocket(InetAddress.getByName(args(0)),args(1).toInt,args(2),args(3))
+		//System.out.println(top.title)
+		val serverName=	if(args(0).toLowerCase=="[own]"){
+			SessionManager.init()
+			Thread.`yield`()
+			Thread.sleep(100)
+			"localhost"			
+		} else args(0)
+		sock=new ClientSocket(InetAddress.getByName(serverName),args(1).toInt,args(2),args(3))
   	sock.start()
   	ClientQueryManager.setClientSocket(sock)
-  	Thread.`yield`()
-  	
+  	Thread.`yield`()  	
   	super.startup(args)
+  	
 	}
-	
-	
-	
-	
-	
-	/*def createInstance() = {
-		ClientQueryManager.createInstance(typEdit.text.toInt,Array(new OwnerReference(propEdit.text.toByte,viewController.ref)))
-	}*/
-	 
-	
-		
-	/*def deleteInstance():Unit = {
-		if(viewController.selectedInstance ==null) return		
-		val r=ClientQueryManager.deleteInstance(viewController.selectedInstance.ref)
-		println("Delete:"+r  )
-	}*/
-	
-	/*def stressTest() = {
-		val numLoops=100
-		val starttime:Long = System.currentTimeMillis();
-		val owner=Array(new OwnerReference(propEdit.text.toByte,Reference(typEdit.text.toInt,instEdit.text.toInt)))		
-		
-		
-		val endtime = System.currentTimeMillis()
-		println("Stresstest time:"+(endtime-starttime))
-	}
-	
-	def copyData():Unit = {
-		val fromOwner=OwnerReference(propEdit.text.toByte,Reference(typEdit.text.toInt,instEdit.text.toInt))
-		val toOwnerList:Array[String]= JOptionPane.showInputDialog(null, "to owner: typ,instance,field ").split(",");
-		val toOwner=OwnerReference(toOwnerList(2).toByte,Reference(toOwnerList(0).toInt,toOwnerList(1).toInt))
-		if(viewController.selectedInstance==null) return		
-		val starttime:Long = System.currentTimeMillis();
-		val inst=ClientQueryManager.copyInstance(viewController.selectedInstance.ref,fromOwner,toOwner)	
-		val endtime = System.currentTimeMillis()
-		println("copy time:"+(endtime-starttime))
-		println("inst:"+inst)
-	}*/
 	
 	def shutDown() = {
-		println("shutdown")
+		System.out.println("shutdown")
 		mainBox.storeSettings()
 		sock.quitApplication()
 	}
@@ -204,5 +158,11 @@ object ViewTest extends SimpleSwingApplication {
 		//undoDialog.visible=true		
 		ClientQueryManager.requestUndoData()
 	}
+	
+	def setHide(value:Boolean) = {
+		DataViewController.hideProperties=value
+	}
+	
+	
 
 }

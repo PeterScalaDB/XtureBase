@@ -19,13 +19,14 @@ import javax.swing.BorderFactory
 import javax.swing.border._
 
 
+
 /** table model for a table showing instances of a certain type
  * 
  */
-class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableModel {
-	val objClass=AllClasses.get.getClassByID(typ)
-	var dataList:Seq[InstanceData]= _
-	val tableFont=new Font("Arial",0,15)
+class TypeTableModel(val typ:Int,val propMod:PropertyModel) extends AbstractTableModel {
+	val objClass=AllClasses.get.getClassByID(typ).asInstanceOf[ClientObjectClass]
+	var dataList:Seq[InstanceData]= Seq.empty
+	val tableFont=new Font("Arial",0,13)
 	val tableTypeFont=new Font("Arial",Font.ITALIC,11)
 	val buttonBackgroundColor=new Color(220,220,220)	
 	var selfSelectChanged=false
@@ -33,6 +34,8 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 	val selectedInstances=new SelectList(dataList)
 	var dragColumn:Int= -1
 	var dragColumnNewPos:Int=0
+	
+	val enumColumns=if(objClass.enumFields==null) Seq.empty else objClass.enumFields.map(a=>a._1)
 	
 	var wishSelection:Seq[Int]=Seq.empty // what items should be selected after a refresh (for move and copy)
 	
@@ -44,6 +47,8 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 	
 	val classLabel=new Label("   "+AllClasses.get.getClassByID(typ).name)
 	
+	var clickedRow= -1
+	var clickedCol= -1
 	
 	
 	var editActionNotDone:java.awt.event.ActionEvent=null
@@ -53,17 +58,10 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 	classLabel.xLayoutAlignment=0d
 	classLabel.font=tableTypeFont
 	classLabel.border=BorderFactory.createLineBorder(classLabel.background,2)
+  
+	def isEmpty=dataList.isEmpty
 	
-	//classLabel.xAlignment=Alignment.Left
-	//classLabel .opaque=true
-	//classLabel.background=Color.cyan
-
-	val table:Table=new Table(){		
-		//val p=new JTable
-		//val b=new JComboBox
-		//val w=new com.sun.java.swing.plaf.windows.WindowsComboBoxUI
-		//val m=new javax.swing.plaf.basic.BasicTextAreaUI
-		//val w=new DefaultCellEditor		
+	val table:Table=new Table(){				
 		
 		autoResizeMode=Table.AutoResizeMode.Off
 		//selection.intervalMode=Table.IntervalMode.Single
@@ -82,30 +80,45 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 		reactions += {
 			case TableRowsSelected(table,range,live) => {			
 				if (!live&& ! selfSelectChanged) listLock.synchronized  { 
-					//println("range:"+range+" rows:"+selection.rows+" DataList:"+(if(dataList==null) "null" else dataList.size)
+					//System.out.println("range:"+range+" rows:"+selection.rows+" DataList:"+(if(dataList==null) "null" else dataList.size)
 					//	+ " buf:"+(if(selectedInstances.buf!=null)selectedInstances.buf.size else "null"))
 					selectedInstances.setFilter(peer.getSelectedRows)										
 					propMod.mainController.selectionChanged(TypeTableModel.this,propMod,selectedInstances)
 				}
 			}				
-			case e: MouseClicked => 
+			/*case e: MouseClicked => 
 			if(dataList!=null && peer.columnAtPoint(e.point)==0 && e.clicks==1 
 					&& e.triggersPopup == false &&  (e.peer.getButton == java.awt.event.MouseEvent.BUTTON1) )	{
 				val row= peer.rowAtPoint(e.point)
-				if(row>=0 && row<dataList.size) listLock.synchronized { propMod.mainController.openChild(dataList(row).ref)}
+				if(row>=0 && row<dataList.size) 
+			}*/
+			case e: MousePressed => if(e.peer.getButton== java.awt.event.MouseEvent.BUTTON1){
+				clickedCol=peer.columnAtPoint(e.point)
+				clickedRow=peer.rowAtPoint(e.point)
+				table.repaint
 			}
+			
+			case e: MouseReleased => { if(dataList!=null && peer.columnAtPoint(e.point)== 0 && clickedCol==0 && 
+					peer.rowAtPoint(e.point)==clickedRow && clickedRow>=0 && clickedRow < dataList.size&& e.triggersPopup==false &&
+					e.peer.getButton== java.awt.event.MouseEvent.BUTTON1)
+				    listLock.synchronized { propMod.mainController.openChild(dataList(clickedRow).ref)}
+				  clickedRow= -1
+				  clickedCol= -1
+				  table.repaint
+		  	}
+			
 			case e:FocusGained =>propMod.focusGained
 			case e: KeyPressed => {
 				if(e.peer .getKeyChar==KeyEvent.CHAR_UNDEFINED) {
-					//println("Special Key:"+e.peer.getKeyCode)
+					//System.out.println("Special Key:"+e.peer.getKeyCode)
 					// if there are no mappings for that key, ignore it
 					if(table.peer.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).
 							get(KeyStroke.getKeyStroke(e.peer.getKeyCode,0,false))==null){
-						//println("ignore")
+						//System.out.println("ignore")
 						e.peer.consume									
 					}
 				}
-			}
+			}			
 		}
 		model=TypeTableModel.this
 		peer.setColumnModel(TableHeaderMap.getColumnModel(typ))		
@@ -129,15 +142,7 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 					peer.moveColumn(dragColumnNewPos, dragColumn); 
 				dragColumn = -1;  dragColumnNewPos = -1; 
 			} 
-		});
-		
-		
-		/*peer.addMouseMotionListener(new MouseAdapter() {
-				override def mouseDragged(e:java.awt.event.MouseEvent) {
-						e.consume();					
-						transferHandler.exportAsDrag(peer, e, TransferHandler.MOVE);
-				}
-		});*/
+		});	
 		
 		
 		// setup renderers
@@ -152,6 +157,12 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 			def configure(t: Table, sel: Boolean, foc: Boolean, o: Expression, row: Int, col: Int) =     
 				component.config(t,sel,foc,o,row,col)
 		}
+		val etcr = new Table.AbstractRenderer[Tuple2[String,Int], EnumRenderer](new EnumRenderer) {
+			def configure(t: Table, sel: Boolean, foc: Boolean, o:Tuple2[String,Int], row: Int, col: Int) = {    
+				component.prepare(t,sel,o,row)
+  }
+}
+
 		
 		override def rendererComponent(sel: Boolean, foc: Boolean, row: Int, col: Int) = {
 			//FIND VALUE
@@ -162,26 +173,32 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 				if(row>=getRowCount-1)super.rendererComponent(sel,foc,row,col)
 				else ftcr.componentFor(this,sel,foc,if(v==null) "" else v.toString, row, col)
 			}
-			else itcr.componentFor(this,sel,foc,v.asInstanceOf[Expression],row,modCol)			
-		}	
+			else v match {
+				case ve:Expression => itcr.componentFor(this,sel,foc,ve,row,modCol)
+				case vt:Tuple2[_,_] => etcr.componentFor(this,sel,foc,v.asInstanceOf[Tuple2[String,Int]],row,modCol)
+				case _=> super.rendererComponent(sel,foc,row,col)
+			}			 
+		}
+		
+		super.rendererComponent(false,false,0,0).font=tableFont
+		
+		override def editor(row: Int, column: Int)= {
+			if(column==0)null
+			else {
+				val edit=peer.getColumnModel.getColumn(column).getCellEditor
+				if(edit!=null)edit
+				else instEditor
+			}
+		}
 		
 	}
 	
-	//println("Actions:"+oldAction)
-	//table.peer.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).
-	//	put(KeyStroke.getKeyStroke("ENTER"),oldMap)
-	
-	//println(table.peer.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).
-	//	get(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE,0,false)))
-  // fixing Enter Action mapping
-	
-	
-	
+		
 	replaceKeyAction(KeyEvent.VK_ENTER,(oldAction)=>{
 		oldEnterAction=oldAction
 		new javax.swing.AbstractAction() {
 			def actionPerformed(e:java.awt.event.ActionEvent)= {
-				//println("Enter Abgefangen "+table.peer .isEditing)
+				//System.out.println("Enter Abgefangen "+table.peer .isEditing)
 				if(!table.peer.isEditing) {
 					oldAction.actionPerformed(e)
 					editActionNotDone=null
@@ -198,7 +215,7 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 	replaceKeyAction(KeyEvent.VK_ESCAPE,(oldAction)=> {
 		new javax.swing.AbstractAction() {
 			def actionPerformed(e:java.awt.event.ActionEvent)= {
-				//println("Escape :"+table.peer .isEditing)
+				//System.out.println("Escape :"+table.peer .isEditing)
 				if(table.peer.isEditing)
 					oldAction.actionPerformed(e)				
 			}
@@ -215,7 +232,9 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 			else if(value==null)"" else value.toString
 		}
 	}
-	table.peer.setDefaultEditor(classOf[Object],instEditor)
+	table.peer.setDefaultEditor(classOf[definition.expression.Expression],instEditor)
+	//println("CellEditor:" +table.peer .getColumnModel.getColumn(1).getCellEditor)
+	
 	
 	
 	
@@ -246,13 +265,13 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 		val aName=table.peer.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).
 			get(KeyStroke.getKeyStroke(keyCode,0,false))
 		val oldAction=	table.peer.getActionMap().get(aName)
-		//println("tablemod replace name:"+aName+" oldAction:"+oldAction)
+		//System.out.println("tablemod replace name:"+aName+" oldAction:"+oldAction)
 		val newAction= func(oldAction)
 		table.peer .getActionMap().put(aName,newAction)
 	}
 	
 	def getParentRef=propMod.mainController.ref
-	def getPropField= propMod.propertyField
+	def getPropField= propMod.ownerRef.ownerField 
 	    
   /** load the current values in the table model
    * 
@@ -262,7 +281,9 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
    */
 	def setDataList(data:Seq[InstanceData],selectInstance:Option[Reference],onlyRefresh:Boolean) =  {
 		listLock.synchronized {
-			//println("tableMod set Data "+data.mkString)
+			clickedRow= -1
+		  clickedCol= -1
+			//System.out.println("tableMod set Data "+data.mkString)
 			dataList=data			
 			selfSelectChanged=false
 			selfAdded=false
@@ -276,7 +297,7 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 					val ix= dataList.findIndexOf(_.ref==ref)
 					if(ix>=0){
 						table.selection.rows+=ix
-						//println("catch Focus "+typ)
+						//System.out.println("catch Focus "+typ)
 						table.requestFocus
 					}
 				}
@@ -295,15 +316,15 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 	}
 
 	def changeInstance(newInst:InstanceData):Unit = listLock.synchronized {
-		//println("tablemod change inst: "+newInst.ref)
+		//System.out.println("tablemod change inst: "+newInst.ref)
 		val pos = { var ret= -1
 			for(i <-dataList.indices;if(dataList(i).ref==newInst.ref)) {ret=i} 
 			ret
 		}
-		//println("change "+newInst.ref+ " size:"+dataList.size+ " pos:"+pos+ " list:"+dataList.mkString+ "  "+ Thread.currentThread)
-		if(pos<0) println("prop "+propMod.propertyField+" Table typ: "+typ+" Change Instance "+newInst.ref+" not found ! " + dataList.size+" "+Thread.currentThread)
+		//System.out.println("change "+newInst.ref+ " size:"+dataList.size+ " pos:"+pos+ " list:"+dataList.mkString+ "  "+ Thread.currentThread)
+		if(pos<0) System.out.println("prop "+getPropField+" Table typ: "+typ+" Change Instance "+newInst.ref+" not found ! " + dataList.size+" "+Thread.currentThread)
 		else  { 
-			//println("change selfadded:"+selfAdded+" EditActionNotDone:"+editActionNotDone)
+			//System.out.println("change selfadded:"+selfAdded+" EditActionNotDone:"+editActionNotDone)
 			dataList=dataList.updated(pos,newInst)
 			selectedInstances.buf=dataList
 			/*propMod.runSw*/fireTableRowsUpdated(pos,pos)
@@ -316,7 +337,7 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 	}
 
 	def addInstance(newInst:InstanceData) = listLock.synchronized {
-		//println("tablemod add inst: "+newInst.ref)
+		//System.out.println("tablemod add inst: "+newInst.ref)
 		if(dataList==null) {
 			dataList=IndexedSeq(newInst)
 			//setupColumns()
@@ -327,12 +348,12 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 				//else  dataList=(dataList.take(pos):+newInst)++ dataList.drop(pos)
 		}
 		selectedInstances.buf=dataList
-		//println("added "+dataList.size+" "+Thread.currentThread+ " "+table.selection.rows)
+		//System.out.println("added "+dataList.size+" "+Thread.currentThread+ " "+table.selection.rows)
 		val newSize=dataList.size
 		
 		fireTableRowsInserted(newSize,newSize)
 		calcSize()
-		//println(" add selfadded:"+selfAdded+" EditActionNotDone:"+editActionNotDone)
+		//System.out.println(" add selfadded:"+selfAdded+" EditActionNotDone:"+editActionNotDone)
 		if(selfAdded){ 
 			propMod.mainController.selectionChanged(TypeTableModel.this,propMod,Array(newInst))
 			selfAdded=false
@@ -346,9 +367,9 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 	}
 
 	def removeInstance(ref:Reference) = listLock.synchronized{	
-		//println("tablemod remove inst: "+ref)
+		//System.out.println("tablemod remove inst: "+ref)
 		val pos=dataList.indexWhere(_.ref==ref)
-		if(pos<0) println("Remove Instance "+ref+" not found !")
+		if(pos<0) System.out.println("Remove Instance "+ref+" not found !")
 		else {
 			dataList=dataList filterNot(_.ref ==ref)
 			selectedInstances.buf=dataList
@@ -359,7 +380,7 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 
 
 	def getRowCount= listLock.synchronized{
-		 //println("get size "+(dataList.size+1)+ " " +Thread.currentThread)
+		 //System.out.println("get size "+(dataList.size+1)+ " " +Thread.currentThread)
 		if(dataList!=null) dataList.size+1
 		else 0
 	}
@@ -368,19 +389,30 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 		objClass.fields.size+1
 	}
 
-	def getValueAt(row:Int,col:Int):Object = listLock.synchronized{
+	def getValueAt(row:Int,col:Int) = listLock.synchronized{
 		if(dataList!=null&& row<dataList.size) {
-			if(col==0) { if (dataList(row).hasChildren) "+" else " " } // childInfo in column 0
-			else {				
-				dataList(row).fieldData(col-1)				
+			val el=dataList(row)
+			if(col==0) { 
+				var retStr=if (el.hasChildren) "+" else " "
+				if(el.secondUseOwners.size>0) 
+					retStr=retStr+" ·"
+				retStr
+			} // childInfo in column 0
+			else {	
+				val found=if(objClass.enumFields==null) -1 else objClass.enumFields.findIndexOf(_._1==col-1)
+				if(found> -1) objClass.enumFields(found)._2.getElem(el.fieldValue(col-1).toInt)
+				else el.fieldData(col-1)				
 			}
 		}
 		else null
 	}
 
 	override def setValueAt(aValue: Object, rowIndex: Int, columnIndex: Int): Unit =		
-		if(dataList!=null&& columnIndex >0)  listLock.synchronized {  		
-			val expr=parseValue(columnIndex,aValue) 		
+		if(dataList!=null&& columnIndex >0)  listLock.synchronized {  
+			
+			val expr= if(objClass.enumFields.exists(_._1==columnIndex-1)) 
+				IntConstant(aValue.asInstanceOf[(String,Int)]._2) // enumeration 
+				else parseValue(columnIndex,aValue) 		
 			if(rowIndex==dataList.size) { // create new
 				selfAdded=true
 				val id=ClientQueryManager.createInstance(typ,Array(propMod.getOwnerRef))				
@@ -402,7 +434,13 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 		if(col==0) "ch" else objClass.fields(col-1).name
 	}
 	
-	override def getColumnClass(col:Int) =  if(col==0) classOf[String] else classOf[Expression]
+	override def getColumnClass(col:Int):java.lang.Class[_] =  {
+		//println("get Column class for class "+objClass.name+" "+objClass.enumFields.mkString)
+		if(col==0) classOf[String] else {
+			if(objClass.enumFields!=null && objClass.enumFields.exists(_._1==col-1)) classOf[(String,Int)]
+		  else classOf[definition.expression.Expression]
+		}
+	}
 
 
 	def parseValue(columnIndex:Int,value:Object):Expression = {
@@ -419,7 +457,7 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 
 
 	def deselect() = listLock.synchronized{
-		//println("deselect " +typ+ " rows:"+table.selection.rows)
+		//System.out.println("deselect " +typ+ " rows:"+table.selection.rows)
 		if(dataList!=null && (! table.selection.rows.isEmpty)) {
 			if(table.peer .isEditing) instEditor.cancelCellEditing
 			selfSelectChanged=true
@@ -435,7 +473,7 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 	class SelectList[A](var buf: Seq[A],private var filterSet:Array[Int]=Array()) 
 	extends collection.immutable.IndexedSeq[A] {
 		def length = if(buf==null) 0 else filterSet.size
-		def apply(idx: Int) ={ //println ("buf size:"+buf.size+ " "+" idx:"+idx+" filterSet:"+filterSet.mkString+" "+Thread.currentThread)
+		def apply(idx: Int) ={ //System.out.println ("buf size:"+buf.size+ " "+" idx:"+idx+" filterSet:"+filterSet.mkString+" "+Thread.currentThread)
 			val bufIx=filterSet(idx)
 			if(bufIx<buf.size)
 			buf.apply(filterSet(idx))
@@ -446,8 +484,12 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 		} else filterSet=newFilter
 	 }
 
-  class FirstColumnRenderer(mod:TypeTableModel) extends Label {  	
+  class FirstColumnRenderer(mod:TypeTableModel) extends Label {
+  	val raisedBorder=BorderFactory.createRaisedBevelBorder();
+  	val loweredBorder=BorderFactory.createLoweredBevelBorder();
   	border=BorderFactory.createRaisedBevelBorder();
+  	
+  	override def revalidate= {}
   	super.background=buttonBackgroundColor
   	super.foreground=Color.black
   	override def background_=(c: Color) = {				
@@ -456,8 +498,22 @@ class TypeTableModel(val typ:Int, propMod:PropertyModel) extends AbstractTableMo
 		}
   	
 		def config( isSelected: Boolean, focused: Boolean, a: String, row: Int) {  		
-  	  text=a	  
+  	  text=a	
+  	  super.background=if(clickedCol==0&&clickedRow==row)Color.lightGray else buttonBackgroundColor
+  	  border=if(clickedCol==0&&clickedRow==row)loweredBorder else raisedBorder
 		}
 	}
+  
+  class EnumRenderer extends Label {
+  	override def revalidate= {}
+  	def prepare(t:Table,isSelected:Boolean,o: Tuple2[String,Int],row:Int) {
+  		horizontalAlignment=Alignment.Left
+      text = "· "+o._1 //or whatever
+      background=if(isSelected)  t.selectionBackground 
+  	  else  if (row % 2 == 0)InstanceRenderer.alternateColor 
+  	  			else Color.white
+  }
+
+  }
 
 }

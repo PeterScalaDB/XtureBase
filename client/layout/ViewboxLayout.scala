@@ -22,7 +22,7 @@ class ViewboxLayout extends LayoutManager {
   def removeLayoutComponent(comp: Component): Unit = {  }
 
   def preferredLayoutSize(parent: Container): Dimension = {
-  	//println("get pref size "+parent)
+  	//System.out.println("get pref size "+parent)
   	calcSize(parent,_.preferredSize)
   }
   	  
@@ -44,7 +44,7 @@ class ViewboxLayout extends LayoutManager {
   		val xScale:Double=w/(if(wishSize.width==0) 1d else  wishSize.width.toDouble)
   		val yScale:Double=h/(if(wishSize.height==0) 1d else  wishSize.height.toDouble)
 
-  		//println("Layoutcontainer  w:"+w+" h:"+h+" xs:"+xScale+" ys:"+yScale+" wishSize:"+wishSize)
+  		//System.out.println("Layoutcontainer  w:"+w+" h:"+h+" xs:"+xScale+" ys:"+yScale+" wishSize:"+wishSize)
 
   		layoutBox(cBox,insets.left,insets.top,w,h)
   		
@@ -55,8 +55,8 @@ class ViewboxLayout extends LayoutManager {
   			val bwishSize=box.preferredSize
   			var mySize=scaleDim(bwishSize)
   			var newSize= scaleDim(bwishSize)
-  			//println("layBox "+box.header.label.text+" xoff:"+xoff+" yoff:"+yoff+" fullWidth:"+fullWidth+" fullHeight:"+fullHeight)	  			
-  			//println("lay box: wish:"+bwishSize+" nw:"+newSize.width+" nh:"+newSize.height)
+  			//System.out.println("layBox "+box.header.label.text+" xoff:"+xoff+" yoff:"+yoff+" fullWidth:"+fullWidth+" fullHeight:"+fullHeight)	  			
+  			//System.out.println("lay box: wish:"+bwishSize+" nw:"+newSize.width+" nh:"+newSize.height)
   			var rightSize:Dimension=null
   			if(box.rightEdge .isExpanded) {
   				rightSize=scaleDim(box.rightEdge.connectorStripe.get.connectedBox.getFullPrefSize)
@@ -68,7 +68,7 @@ class ViewboxLayout extends LayoutManager {
   			  if(box.rightFirstExpanded && botSize.width>newSize.width) newSize.width=botSize.width
   			  //newSize.height+= botSize.height
   			}
-  			//println("rightSize:"+rightSize+" botSize:"+botSize)
+  			//System.out.println("rightSize:"+rightSize+" botSize:"+botSize)
   			
   			// Reacting on scaleValue
   			if (box.rightEdge.isExpanded) {
@@ -107,7 +107,7 @@ class ViewboxLayout extends LayoutManager {
   			// set up this box
   			if(!box.rightEdge .isExpanded)newSize.width=fullWidth
   			if(!box.bottomEdge .isExpanded)newSize.height=fullHeight
-  			//println("layBox "+box.header.label.text+" Width:"+newSize.width+" Height:"+newSize.height)
+  			//System.out.println("layBox "+box.header.label.text+" Width:"+newSize.width+" Height:"+newSize.height)
   			box.peer.setBounds(xoff,yoff,newSize.width,newSize.height)
   		}
   	}
@@ -124,7 +124,7 @@ class ViewboxLayout extends LayoutManager {
   	  var w:Int =insets.left+insets.right
   	  var h:Int =insets.top+insets.bottom
   	  
-  	  //println("calcSize "+w+" "+h)
+  	  //System.out.println("calcSize "+w+" "+h)
   	  cBox.getFullPrefSize
   	  /*def calcBoxSize(box:Viewbox,xoff:Int,yoff:Int):Unit= {
   			val  bs=gsize(box)

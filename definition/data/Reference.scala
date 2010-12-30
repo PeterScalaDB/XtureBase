@@ -51,7 +51,8 @@ case class SerialReference extends Serializable {
 	def canEqual(other: Any): Boolean = other.isInstanceOf[SerialReference] ||
 			other.isInstanceOf[Reference]
 	
-	override def hashCode: Int =  41 * ( 41 + typ ) + instance
+	override def hashCode: Int =  41 * ( 41 + typ ) + instance	
+	
 }
 
 object Reference
@@ -59,6 +60,11 @@ object Reference
 	def apply(file: DataInput) =
 	{
 	   new Reference(file.readInt,file.readInt)	
+	}
+	
+	def apply(str:String)= {
+		val intSeq=str.replace('(',' ').replace(')',' ').trim.split(',')
+		new Reference(intSeq(0).toInt,intSeq(1).toInt)
 	}
 }
 

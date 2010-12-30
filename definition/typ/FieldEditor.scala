@@ -11,5 +11,5 @@ import definition.data._
  */
 trait FieldEditor {
 	def getPanel:Panel
-	def setData(data:Seq[Referencable])
+	def setData(data:Seq[SelectGroup[_<:Referencable]])
 }

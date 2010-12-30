@@ -43,7 +43,7 @@ case class LineElement(nref:Reference,ncolor:Int,nlineWidth:Int,nlineStyle:Int,s
 	lazy val bounds=new Rectangle2D.Double(Math.min(startPoint.x,endPoint.x),Math.min(startPoint.y,endPoint.y),
 		Math.max(startPoint.x,endPoint.x),Math.max(startPoint.y,endPoint.y))
 	override def getBounds=bounds
-	override def toString= "Line ("+startPoint.shortToString+","+endPoint.shortToString+", Col:"+color+", Style:"+lineStyle+")"
+	override def toString= "Line "+nref.sToString+" ("+startPoint.shortToString+","+endPoint.shortToString+", Col:"+color+", Style:"+lineStyle+")"
 	
 	override def draw(g:Graphics2D,sm:ScaleModel,selectColor:Color=null)={
 		g.setPaint(if(selectColor==null) ColorMap.getColor(color)else selectColor)		
@@ -58,12 +58,12 @@ case class LineElement(nref:Reference,ncolor:Int,nlineWidth:Int,nlineStyle:Int,s
 	
 	override def hits(px:Double,py:Double,dist:Double)= {
 		val calcDist=GraphElemFactory.getLineDistance(startPoint.x,startPoint.y,endPoint.x,endPoint.y,px,py)
-		//println("hittest startp:"+startPoint+" dist:"+calcDist)
+		//System.out.println("hittest startp:"+startPoint+" dist:"+calcDist)
 		calcDist<=dist && px>=(minX - dist) && (px<=(maxX)+dist) &&
 		  py>=(minY-dist) && (py<=(maxY)+dist)
 	}
 	override def hitPoint(px:Double,py:Double,dist:Double)= {		
-		//println("test x:"+(px-startPoint.x)+ " y:"+(py-startPoint.y))
+		//System.out.println("test x:"+(px-startPoint.x)+ " y:"+(py-startPoint.y))
 		val ret1=GraphElemFactory.checkHit(px,py,dist,startPoint)
 		val ret2=GraphElemFactory.checkHit(px,py,dist,endPoint)
 		if(ret1.isEmpty) {
@@ -115,13 +115,13 @@ case class ArcElement(nref:Reference,ncolor:Int,nlineWidth:Int,nlineStyle:Int,ce
 		if(Math.abs(pd-diameter)>dist) return false
 		var angle=Math.atan2(dy,dx)*180/Math.Pi
 		if(angle<0) angle=360+angle
-		//println("Hittest angle:"+angle+" sa:"+startAngle+" ea:"+endAngle)
+		//System.out.println("Hittest angle:"+angle+" sa:"+startAngle+" ea:"+endAngle)
 		if(startAngle<endAngle) return (angle>=startAngle)&&(angle<=endAngle)
 		else return (angle>=startAngle)||(angle<=endAngle)
 	}
 	
 	override def hitPoint(px:Double,py:Double,dist:Double)= {		
-		//println("test x:"+(px-startPoint.x)+ " y:"+(py-startPoint.y))	
+		//System.out.println("test x:"+(px-startPoint.x)+ " y:"+(py-startPoint.y))	
 		points.flatMap(GraphElemFactory.checkHit(px,py,dist,_))		
 	}
 	
@@ -129,16 +129,16 @@ case class ArcElement(nref:Reference,ncolor:Int,nlineWidth:Int,nlineStyle:Int,ce
 		val pointBuffer=collection.mutable.ArrayBuffer[VectorConstant]()+=points.head+=points.tail.head
 		val ea=if(endAngle<startAngle) endAngle+360 else endAngle
 		var nextSegmentAngle=(Math.floor(startAngle/90)+1)*90
-		//println("startAngle "+startAngle+" "+nextSegmentAngle+" ea:"+ea)
+		//System.out.println("startAngle "+startAngle+" "+nextSegmentAngle+" ea:"+ea)
 		while (nextSegmentAngle<ea) {
 			val np=pointFromAngle(nextSegmentAngle)
-			//println("nxa:"+nextSegmentAngle+"Np "+np)
+			//System.out.println("nxa:"+nextSegmentAngle+"Np "+np)
 			pointBuffer+=np
 			nextSegmentAngle+=90
 		}
-		//println("calcArcBounds "+pointBuffer.mkString)
+		//System.out.println("calcArcBounds "+pointBuffer.mkString)
 		val b=GraphElemFactory.getPointsBounds(pointBuffer)
-		//println("bounds: "+b)
+		//System.out.println("bounds: "+b)
 		
 		b
 	}
@@ -167,13 +167,14 @@ object GraphElemFactory extends SubscriptionFactory[GraphElem] {
 	
 	def createLine (ref:Reference,in:DataInput) = {
 		val nfields=in.readByte
-		if(nfields!=5) println("wrong number of fields "+nfields+" "+ref)
+		if(nfields!=5) System.out.println("wrong number of fields "+nfields+" "+ref)
 		val color=Expression.readConstant(in)
 		val lineWidth=Expression.readConstant(in)
 		val lineStyle=Expression.readConstant(in)
 		val startPoint=Expression.readConstant(in).toVector
 		val endPoint=Expression.readConstant(in).toVector
 		val owners=InstanceData.readOwners(in)
+		InstanceData.readSecondUseOwners(in)
 		//print("owners:"+owners.size+" "+owners.mkString)
 		//print(" hasChildren:"+)
 		in.readBoolean
@@ -182,7 +183,7 @@ object GraphElemFactory extends SubscriptionFactory[GraphElem] {
 	
 	def createArc (ref:Reference,in:DataInput) = {
 		val nfields=in.readByte
-		if(nfields!=7) println("wrong number of fields "+nfields+ " "+ref)
+		if(nfields!=7) System.out.println("wrong number of fields "+nfields+ " "+ref)
 		val color=Expression.readConstant(in)
 		val lineWidth=Expression.readConstant(in)
 		val lineStyle=Expression.readConstant(in)
@@ -191,6 +192,7 @@ object GraphElemFactory extends SubscriptionFactory[GraphElem] {
 		val startA=Expression.readConstant(in).toDouble
 		val endA=Expression.readConstant(in).toDouble
 		val owners=InstanceData.readOwners(in)
+		InstanceData.readSecondUseOwners(in)
 		//print("owners:"+owners.size+" "+owners.mkString)
 		//print(" hasChildren:"+)
 		in.readBoolean

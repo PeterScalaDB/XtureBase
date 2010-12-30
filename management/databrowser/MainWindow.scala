@@ -15,6 +15,11 @@ import javax.swing.table._
 import scala.collection.JavaConversions._
 import server.storage._
 import transaction.handling.SessionManager
+import java.awt.{SystemTray,TrayIcon,Toolkit}
+import java.awt.image.BufferedImage
+import java.awt.event.{MouseAdapter,WindowAdapter}
+import client.dialog.{LogOutputStream}
+
 
 //import java.swing.JTable
 
@@ -28,13 +33,18 @@ trait ClassListListener{
 
 object MainWindow extends SimpleSwingApplication 
 {
-	
+	var trayIcon:TrayIcon=_
+  var hidden:Boolean=false
+  var firstopen=true
 	var theModel:DefaultTableModel=null
 	var dataList:Array[Array[java.lang.Object]]=Array()
 	var shortClassList:Seq[(Int,String)]=Seq.empty
 	val usedIDs=collection.mutable.HashSet[Int]()	
 	val classListListener = collection.mutable.HashSet[ClassListListener]()	
 	var newClass:ServerObjectClass=null
+	val consolePanel=new ConsolePanel
+	//
+	LogOutputStream.registerListener(consolePanel)
 	
 	
 	def dataInit()=
@@ -84,6 +94,10 @@ object MainWindow extends SimpleSwingApplication
 		}
 		//size=new Dimension(300,500)
 	}
+	
+	override def startup(args: Array[String]) = {
+		super.startup(args)					
+	}
 
 	
 
@@ -91,15 +105,17 @@ object MainWindow extends SimpleSwingApplication
 		val belowTopBorder = BorderFactory.createTitledBorder("Management");
 		belowTopBorder.setTitlePosition(TitledBorder.BELOW_TOP);
 		border=belowTopBorder
-		val showTransBut = new Button("Show Trans Log")
+		val showTransBut = new Button("Show TransLog")
 		val showCachesBut = new Button( "Show Caches")
-		contents +=   showTransBut+= showCachesBut					 
+		val showConsoleBut=new Button("Show Console")
+		contents +=   showTransBut+= showCachesBut+=showConsoleBut					 
 
-		listenTo(showTransBut,showCachesBut)
+		listenTo(showTransBut,showCachesBut,showConsoleBut)
 		reactions += {					
 			case ButtonClicked(`showTransBut`) => showTransData
 			case ButtonClicked(`showCachesBut`) => StorageManager.printCacheReport
-		}
+			case ButtonClicked(`showConsoleBut`) => showConsole
+		}				
 	}
 
 
@@ -143,7 +159,7 @@ object MainWindow extends SimpleSwingApplication
 		
 	} // main Panel
 	
-	val top = new MainFrame 
+	val top:MainFrame = new MainFrame 
 	{
 		override def closeOperation() 
 		{
@@ -153,11 +169,35 @@ object MainWindow extends SimpleSwingApplication
 		SessionManager.registerSetupListener(() => {
 		  dataInit	
 		})
+		
 		SessionManager.init()
 		//SessionManager.init
 		title = "Database Management"
 		contents = mainPanel
 		bounds=new Rectangle(100,200,1100,900)
+		peer.addWindowListener(new WindowAdapter()	{
+			override def windowClosing(e:java.awt.event.WindowEvent ):Unit= 		{
+									if(hidden)removeTray();
+				   	
+			}
+			override def windowIconified(e:java.awt.event.WindowEvent ) 
+			{
+				//System.out.println("Iconified")
+				hideFenster();
+			}  
+			override def windowOpened(e:java.awt.event.WindowEvent )
+			{				
+				//System.out.println("opened");
+				if(firstopen)
+				{
+					firstopen=false;
+					//hideFenster();
+				}
+			}		
+		});
+		initTray
+		//java.lang.System.setOut(LogOutputStream.ps)
+		
 	}	
 
   def getSelectedType = {
@@ -167,11 +207,11 @@ object MainWindow extends SimpleSwingApplication
 
 	def showData():Unit =
 	{
-		//println("showData" +classTable.selection.rows +" "+classTable.selection.rows.empty)
+		//System.out.println("showData" +classTable.selection.rows +" "+classTable.selection.rows.empty)
 		if(! (classTable.selection.rows.isEmpty))		 
 		{			
 			val typ= getSelectedType 
-			println("showData "+typ)
+			//System.out.println("showData "+typ)
 			IndexTableModel.setTypeHandler(StorageManager.getHandler(typ))
 			rightPanel.addIt(DataViewPanel,BorderPanel.Position.Center)
 			rightPanel.peer.invalidate
@@ -184,7 +224,7 @@ object MainWindow extends SimpleSwingApplication
 		if(! (classTable.selection.rows.isEmpty))		 
 		{			
 			val typ= getSelectedType 
-			//println("editClass "+typ+" "+SessionManager.scl)
+			//System.out.println("editClass "+typ+" "+SessionManager.scl)
 			TypeDefPanel.setClass(SessionManager.scl.getClassByID(typ).asInstanceOf[ServerObjectClass],false)			
 			rightPanel.addIt(TypeDefPanel,BorderPanel.Position.Center)
 			mainPanel.peer.invalidate
@@ -213,6 +253,15 @@ object MainWindow extends SimpleSwingApplication
 		rightPanel.repaint
 	}
 	
+	def showConsole():Unit = {
+		rightPanel.addIt(consolePanel,BorderPanel.Position.Center)
+		rightPanel.peer.invalidate
+		rightPanel.peer.revalidate
+		
+		rightPanel.repaint
+	}
+	
+	
 	def registerClassListListener(li:ClassListListener) = {
 		classListListener+=li
 		if(!shortClassList.isEmpty) li.classListChanged(shortClassList)
@@ -221,6 +270,62 @@ object MainWindow extends SimpleSwingApplication
 	def updateSeq[T](seq:Seq[T],index:Int,newValue:T) = {
 		if(index>=seq.size) seq
 		seq.indices.map(i=> if(i==index)newValue else seq(i))
+	}
+	
+	def initTray():Unit= 	{  	 
+		if (SystemTray.isSupported())	{         
+			// load an image
+			val res=getClass.getResource("tray.jpg");		
+			if(res==null) {
+				java.lang.System.out.println("Kann tray.jpg nicht finden ");
+				trayIcon = new TrayIcon(new BufferedImage(30,30,BufferedImage.TYPE_INT_RGB), "Datenbank");				
+				return
+			}
+			else {
+				val image = Toolkit.getDefaultToolkit().getImage(res);
+				trayIcon = new TrayIcon(image, "new DB");
+			}
+			trayIcon.setImageAutoSize(true);
+			//System.out.println("tray "+trayIcon)
+			trayIcon.addMouseListener(new MouseAdapter(){
+				override def mouseClicked(e1:java.awt.event.MouseEvent ) {
+					//System.out.println("tray click")					
+					if (hidden) showFenster()
+				}
+			});       
+			// add the tray image                  
+		} 
+	}
+
+	def addTray()={
+		val tray = SystemTray.getSystemTray();
+		try {
+			tray.add(trayIcon);
+
+		} catch { 
+			case e: Exception => {
+				System.err.println(e);
+		}	
+		}
+	}
+
+
+	def hideFenster() =	{
+		//System.out.println("hide")
+		top.visible=false		  	
+		addTray()
+		hidden=true
+	}
+
+	def showFenster() =	{
+		top.visible=true
+		top.peer.setExtendedState(java.awt.Frame.NORMAL);
+		removeTray();
+		hidden=false;
+	}
+	
+	def removeTray()=	{
+		SystemTray.getSystemTray().remove(trayIcon);
 	}
 
 }

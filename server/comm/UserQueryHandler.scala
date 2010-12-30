@@ -26,7 +26,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	private def handleQuery(in:DataInputStream) = {
 		val parentRef:Reference=Reference(in)
 		val propertyField:Byte= in.readByte
-		println("Processing Query for "+parentRef+" field:"+propertyField)
+		//System.out.println("Processing Query for "+parentRef+" field:"+propertyField)
 		userSocket.sendData(ServerCommands.sendQueryResponse ) {out=>
 		sendQueryData(out,parentRef,propertyField)
 		}		
@@ -36,7 +36,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 		val parentRef:Reference=Reference(in)
 		val propertyField:Byte= in.readByte		
 		val subsID=CommonSubscriptionHandler.addSubscription(userSocket.userEntry,parentRef,propertyField)
-		println("adding Subscription for "+parentRef+" field:"+propertyField+ " subsID:"+subsID)
+		//System.out.println("adding Subscription for "+parentRef+" field:"+propertyField+ " subsID:"+subsID)
 		userSocket.sendData(ServerCommands.acceptSubscription ) { out=>
 			out.writeInt(subsID)
 			sendQueryData(out,parentRef,propertyField)
@@ -44,7 +44,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	}
 	
 	def refreshSubscription(subs:SubscriptionInfo) = {
-		//println("refreshing subscription "+subs)
+		//System.out.println("refreshing subscription "+subs)
 		subs match {			
 			case e:PropSubscription=> userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 				out.writeInt(subs.id )
@@ -69,7 +69,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 		val subsID=in.readInt
 		val newRef=Reference(in)
 		val newPropField=in.readByte
-		println("changing Subscription for subsID:"+subsID+ " to:"+newRef)
+		//System.out.println("changing Subscription for subsID:"+subsID+ " to:"+newRef)
 		CommonSubscriptionHandler.changeSubscription(userSocket.userEntry,subsID,newRef,newPropField)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 			out.writeInt(subsID )
@@ -83,7 +83,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 		val count=in.readInt
 		val pathList=for(i <-0 until count) yield Reference(in)		
 		val subsID=CommonSubscriptionHandler.addPathSubscription(userSocket.userEntry,pathList)
-		println("adding Path Subscription for "+pathList.mkString("/")+" subsID:"+subsID)
+		//System.out.println("adding Path Subscription for "+pathList.mkString("/")+" subsID:"+subsID)
 		userSocket.sendData(ServerCommands.acceptSubscription ) { out =>
 			out.writeInt(subsID )
 	  	writePathElements(out,subsID,pathList)						
@@ -98,7 +98,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 			userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 			  out.writeInt(subsID )
 			  out.writeInt(NotificationType.sendData .id)
-			  println("pathsubs openchild subsid:"+subsID+" "+list.mkString)
+			  //System.out.println("pathsubs openchild subsid:"+subsID+" "+list.mkString)
 				writePathElements(out,subsID,list)
 		  }
 	}
@@ -138,13 +138,13 @@ class UserQueryHandler(userSocket: UserSocket) {
 	
 	private def stopSubscription(in:DataInputStream) = {		
 		val subsID=in.readInt
-		println("Stop Subscription "+subsID)
+		//System.out.println("Stop Subscription "+subsID)
 		CommonSubscriptionHandler.removeSubscription(subsID)
 	}
 	
 	private def pauseSubscription(in:DataInputStream) = {		
 		val subsID=in.readInt
-		println("pause Subscription "+subsID)
+		//System.out.println("pause Subscription "+subsID)
 		CommonSubscriptionHandler.pauseSubscription(subsID)
 	}
 	
@@ -152,7 +152,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	
 	
 	def notifyInstanceChanged(subs:SubscriptionInfo,data:InstanceData) = {
-		//println("Notify instance changed "+subs+" changedInst:"+data.ref)
+		//System.out.println("Notify instance changed "+subs+" changedInst:"+data.ref)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 			out.writeInt(subs.id )
 			out.writeInt(NotificationType.FieldChanged.id)
@@ -170,7 +170,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	}*/
 	
 	def notifyInstanceAdded(subs:SubscriptionInfo,data:InstanceData) = {
-		//println("Notify added "+subs+" "+data.ref)
+		//System.out.println("Notify added "+subs+" "+data.ref)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 		out.writeInt(subs.id)
 		out.writeInt(NotificationType.childAdded.id )
@@ -181,7 +181,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	}
 	
 	def notifyInstanceDeleted(subs:SubscriptionInfo,ref:Reference) = {
-		//println("Notify deleted "+subs+" "+ref)
+		//System.out.println("Notify deleted "+subs+" "+ref)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 		out.writeInt(subs.id)
 		out.writeInt(NotificationType.instanceRemoved.id )
@@ -191,14 +191,14 @@ class UserQueryHandler(userSocket: UserSocket) {
 	
 	
 	private def sendQueryData(out:DataOutputStream,parentRef:Reference,propertyField:Byte) = {
-		//println("sendQueryData:"+parentRef)
+		//System.out.println("sendQueryData:"+parentRef)
 		if (propertyField<0) // only get the parent Instance				
 			sendInstance(out,parentRef)
 		else
 		{ // get the child instances of the property field
 			sendChildren(out,parentRef,propertyField)
 		}	
-		//println("sendQueryData finish")
+		//System.out.println("sendQueryData finish")
 	}
 	
 	private def sendInstance(out:DataOutputStream,ref:Reference) = 
@@ -210,7 +210,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 				inst.writeWithChildInfo(out)				
 			}
 			catch {
-				case e: Exception =>println("Error sending Instance "+ref); e.printStackTrace(); out.writeInt(0)
+				case e: Exception =>System.err.println("Error sending Instance "+ref); e.printStackTrace(); out.writeInt(0)
 			}
 	}
 	
@@ -221,13 +221,13 @@ class UserQueryHandler(userSocket: UserSocket) {
 				{
 					case Some(props) => { 
 						val childRefs=props.propertyFields(propertyField).propertyList	
-						//println("send Children:"+childRefs.map(_.sToString+","))
+						//System.out.println("send Children:"+childRefs.map(_.sToString+","))
 						// get all Data before starting to write
 						out.writeInt(childRefs.size)
 						if(childRefs.size<10)
 						{							
 						  val instList= getInstances(childRefs)
-						  //println("readlist "+instList)
+						  //System.out.println("readlist "+instList)
 						  for(i <-childRefs.indices)
 						  {
 						  	childRefs(i).write(out)
@@ -240,12 +240,12 @@ class UserQueryHandler(userSocket: UserSocket) {
 				}
 			}
 			catch {
-				case e: Exception => println(e); out.writeInt(0)
+				case e: Exception => System.err.println(e); out.writeInt(0)
 			}
 	}
 	
 	private def pushInstances(childRefs:IndexedSeq[Reference],out:DataOutput) = {
-		println("bulk push" +childRefs.head + " num:"+childRefs.size)
+		System.out.println("bulk push" +childRefs.head + " num:"+childRefs.size)
 		var bulkStart= 0
   	var oldRef=childRefs.head
   	for(i <-1 until childRefs.size) {
@@ -266,7 +266,7 @@ class UserQueryHandler(userSocket: UserSocket) {
   		}
   		else
   			 StorageManager.bulkPushInstanceData(childRefs(bulkStart),oldRef,out)
-  	 //println("push ready")		  			
+  	 //System.out.println("push ready")		  			
   		
 	}
 	
@@ -295,9 +295,9 @@ class UserQueryHandler(userSocket: UserSocket) {
   		}
   		else {
   			val bulkList= StorageManager.bulkGetInstanceData(childRefs(bulkStart),oldRef)
-  			if(childRefs.size==bulkList.size) {println("powerbulk");return  bulkList}
+  			if(childRefs.size==bulkList.size) {System.out.println("powerbulk");return  bulkList}
   			else {
-  				println(" sizediff childrefs:"+childRefs.size+" bulkList:"+ bulkList.size )
+  				//System.out.println(" sizediff childrefs:"+childRefs.size+" bulkList:"+ bulkList.size )
   				retList ++= bulkList
   			}  			
   		}

@@ -33,7 +33,7 @@ class UndoDialog(w:Window) extends Dialog(w) with StepListReader {
 
 	listenTo(this)
 	reactions+= {
-		case e:WindowClosed => println("Window closed "+e) 
+		case e:WindowClosed => System.out.println("Window closed "+e) 
 	}
 	
   val undoTable=new Table(){

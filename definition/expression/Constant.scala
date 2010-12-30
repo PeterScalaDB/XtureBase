@@ -25,6 +25,8 @@ trait Constant extends Expression {
   
   def toDouble:Double
   
+  def toFloat=toDouble.toFloat
+  
   def toCurrency= new CurrencyConstant(Math.round(toDouble*100))
   
   def toBoolean:Boolean 
@@ -46,9 +48,10 @@ object Constant
 	 * @param toType in what type should this value be converted
 	 * @return A new Constant with the value, converted to another type
 	 */
-	def createConversion(value:Constant,toType: DataType.Value) = {
+	def createConversion(value:Constant,toType: DataType.Value):Constant = {
+		if(value.getType==toType) return value
 		val res=toType match {		
-		case DataType.IntTyp => new IntConstant(value.toInt)
+		case DataType.IntTyp|DataType.EnumTyp => new IntConstant(value.toInt)
 		case DataType.LongTyp => new LongConstant(value.toLong)
 		case DataType.DoubleTyp => new DoubleConstant(value.toDouble)   
 		case DataType.StringTyp => new StringConstant(value.toString)
@@ -57,13 +60,13 @@ object Constant
 		case DataType.VectorTyp =>val nv=value.toVector;new VectorConstant(nv.x,nv.y,nv.z)
 		case _ => throw new IllegalArgumentException("Conversion to type "+toType+" is not supported yet")
 		}
-		println("create conversion "+value+":"+value.getType+" toType:"+toType+" "+res)
+		//System.out.println("create conversion "+value+":"+value.getType+" toType:"+toType+" "+res)
 		res
 	}
 	
 	def getNativeNull(typ:DataType.Value)= typ match {
-	  case DataType.IntTyp => 0
-		case DataType.LongTyp => 0
+	  case DataType.IntTyp|DataType.EnumTyp  => 0
+		case DataType.LongTyp => 0L
 		case DataType.DoubleTyp => 0d   
 		case DataType.StringTyp => ""
 		case DataType.BoolTyp => false

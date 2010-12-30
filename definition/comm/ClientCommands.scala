@@ -25,6 +25,7 @@ object ClientCommands extends Enumeration {
   val deleteInstance=Value("delete Instance")
   val copyInstances=Value("copy Instances")
   val moveInstances=Value("move Instances")
+  val secondUseInstances=Value("secondUse Instances")
   val executeAction=Value("execute Action")
   val executeCreateAction=Value("execute Action")
   val logOut=Value("logout")
@@ -34,4 +35,5 @@ object ClientCommands extends Enumeration {
   val requestUndoData=Value("Request undo data")
   val undo=Value("Undo transaction")
   val stopUndo=Value("Stop undo session")
+  val answerEnquiry=Value("Answer Enquiry")
 }

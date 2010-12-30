@@ -37,7 +37,7 @@ case class StringConstant(val n:String) extends Constant {
   
   def write(file:DataOutput)= { 
   	file.writeByte(DataType.StringTyp.id)
-  	//println("StringID:" +DataType.StringTyp.id)
+  	//System.out.println("StringID:" +DataType.StringTyp.id)
   	//Thread.dumpStack()
   	file.writeUTF(n)
   }

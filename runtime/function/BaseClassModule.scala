@@ -8,6 +8,7 @@ import definition.data._
 import definition.typ._
 import definition.expression.{Constant,IntConstant}
 import transaction.handling.TransactionManager
+import server.comm.UserSocket
 
 /** Action module for base class
  * 
@@ -27,15 +28,15 @@ class BaseClassModule extends ActionModule {
 	
   def getActionsIterator = mList.iterator 
   
-  def doDelete(data:Seq[InstanceData],param:Seq[(String,Constant)]):Boolean = {
+  def doDelete(u:UserSocket,parent:OwnerReference,data:Seq[InstanceData],param:Seq[(String,Constant)]):Boolean = {
   	//if(!param.isEmpty && param(0)._2.toBoolean) {  		
   		  for(inst <-data)
-  		  	TransactionManager.tryDeleteInstance(inst.ref,None)  		
+  		  	TransactionManager.tryDeleteInstance(inst.ref,Some(parent),None)  		
   	//}  		
   	true
   }
 	
-	def doStressTest(data:InstanceData,param:Seq[(String,Constant)]):Boolean = {
+	def doStressTest(u:UserSocket,data:InstanceData,param:Seq[(String,Constant)]):Boolean = {
   	if(!param.isEmpty) {
   		val typ=param(0)._2.toInt
   		val propField=param(1)._2.toInt
@@ -49,5 +50,7 @@ class BaseClassModule extends ActionModule {
   	}  		
   	true
   }
+	
+	def setObjectType(typeID:Int)={}
 
 }

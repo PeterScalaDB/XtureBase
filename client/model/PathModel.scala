@@ -23,15 +23,15 @@ class PathModel extends AbstractListModel {
 		if(subsID== -1) {
 			subsID= ClientQueryManager.createPathSubscription(newPath) { 
 				(ntype: NotificationType.Value,data:IndexedSeq[InstanceData]) => {
-					//println("Path notification:"+ntype+" subsID:"+subsID+" data:"+data.map(_.ref).mkString(","))
+					//System.out.println("Path notification:"+ntype+" subsID:"+subsID+" data:"+data.map(_.ref).mkString(","))
 					val oldSize=dataList match { case Some(list) => list.size;case None => 0 }
 					ntype match {
 						case NotificationType.sendData  =>{
-							println("path send data "+data.mkString)
+							System.out.println("path send data "+data.mkString)
 							dataList=Some(data) 
 						}
 						case NotificationType.FieldChanged  => {
-							println("path field changed "+data(0))
+							System.out.println("path field changed "+data(0))
 							val searchRef=data(0).ref
 							for (list <- dataList)
 								for(i <- list.indices)								
@@ -41,7 +41,7 @@ class PathModel extends AbstractListModel {
 							val searchRef=data(0).ref							
 							dataList =Some(dataList.get.filter(searchRef!= _.ref))
 						}
-						case a => println("unhandled notification type "+a)
+						case a => System.out.println("unhandled notification type "+a)
 					}
 					//SwingUtilities.invokeLater(new Runnable {
 					//def run () = {
@@ -50,7 +50,7 @@ class PathModel extends AbstractListModel {
 					else if(newSize<oldSize) fireIntervalRemoved(this,newSize,oldSize-1)
 					else  fireContentsChanged(this,0,newSize)
 					//}})
-					//println("Fire changed "+dataList.get.size)
+					//System.out.println("Fire changed "+dataList.get.size)
 					if(ntype==NotificationType.sendData) readyFunc()
 				}
 			}
@@ -70,7 +70,7 @@ class PathModel extends AbstractListModel {
 	
 	private [model] def jumpUp(newPos:Int) = 
 		if(subsID> -1) { 
-			//println("Jumping to "+newPos)
+			//System.out.println("Jumping to "+newPos)
 			dataList=Some(dataList.get.take(newPos+1))
 			ClientQueryManager.pathSubs_jumpUp(subsID,newPos)
 			fireContentsChanged(this,0,dataList.get.size)

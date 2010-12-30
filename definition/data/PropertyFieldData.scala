@@ -21,17 +21,17 @@ class PropertyFieldData (val isSingle:Boolean,val propertyList: IndexedSeq[Refer
 	def addPropertyInstance(ref:Reference,atPos:Int):PropertyFieldData = {
 		if(isSingle && propertyList.length==1) 
 			throw new IllegalArgumentException("Cant add more than 1 Property to a single property data")
-		//println("addPropertyInstance "+ref+" "+atPos+ " oldList:"+propertyList)
+		//System.out.println("addPropertyInstance "+ref+" "+atPos+ " oldList:"+propertyList)
 		val newList= if(atPos< 0|| atPos>=propertyList.size) propertyList :+ ref
 		   else  if(atPos==0) ref +: propertyList 
 		   else {
 		  	 val posOfNth=findPosOfNthOfType(propertyList,ref.typ,atPos)
-		  	 //println("addPropertyInstance "+ref+" atPos: "+atPos+ " oldList:"+propertyList)
-		  	 //println("pos of Nth:"+posOfNth)
+		  	 //System.out.println("addPropertyInstance "+ref+" atPos: "+atPos+ " oldList:"+propertyList)
+		  	 //System.out.println("pos of Nth:"+posOfNth)
 		  	 if(posOfNth<0) propertyList :+ ref
 		  	 else (propertyList.take(posOfNth):+ ref) ++ propertyList.drop(posOfNth)
 		   }
-		 //println("new List: "+newList)
+		 //System.out.println("new List: "+newList)
 		new PropertyFieldData(isSingle,newList )
 		
 	}
@@ -63,12 +63,12 @@ class PropertyFieldData (val isSingle:Boolean,val propertyList: IndexedSeq[Refer
 		   else  if(toPos==0) ref +: redList 
 		   else {
 		  	 val posOfNth=findPosOfNthOfType(redList,ref.typ,toPos)
-		  	 //println("addPropertyInstance "+ref+" atPos: "+toPos+ " oldList:"+propertyList)
-		  	 //println("pos of Nth:"+posOfNth)
+		  	 //System.out.println("addPropertyInstance "+ref+" atPos: "+toPos+ " oldList:"+propertyList)
+		  	 //System.out.println("pos of Nth:"+posOfNth)
 		  	 if(posOfNth<0) redList :+ ref
 		  	 else (redList.take(posOfNth):+ ref) ++ redList.drop(posOfNth)
 		   }
-		 //println("new List: "+newList)
+		 //System.out.println("new List: "+newList)
 		new PropertyFieldData(isSingle,newList )
 	}
 
@@ -90,7 +90,7 @@ class PropertyFieldData (val isSingle:Boolean,val propertyList: IndexedSeq[Refer
 		
 		
 	override def toString() = {
-		"["+propertyList.mkString(", ")+"]"
+		"["+propertyList.foldLeft(" ")((r,c)=>r+c.sToString+", ")+"]"
 	}
 
 

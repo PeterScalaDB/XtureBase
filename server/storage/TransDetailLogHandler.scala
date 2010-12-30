@@ -26,9 +26,9 @@ object TransDetailLogHandler {
 		insertPos=theFile.readInt
 		theFile.seek(filePosToIndex(insertPos-1))
 		lastLoggedID=theFile.readInt
-		println("DetailLog last logged ID:"+lastLoggedID)
+		System.out.println("DetailLog last logged ID:"+lastLoggedID)
 		theFile.seek(filePosToIndex(insertPos))
-		//println("Last logged Time:"+new java.util.Date(lastLoggedTime*60000L)+" id:"+lastLoggedID)
+		//System.out.println("Last logged Time:"+new java.util.Date(lastLoggedTime*60000L)+" id:"+lastLoggedID)
 	} else theFile.writeInt(0)	
 	
 	
@@ -37,7 +37,7 @@ object TransDetailLogHandler {
 	def log(trID:Int,userID:Int,firstInst:Reference,multiInst:Boolean,action:Short,createType:Int ) = {		
 		val time=(System.currentTimeMillis/60000).toInt
 		lastLoggedID=trID
-		//println("timediff:"+(time-lastLoggedTime))
+		//System.out.println("timediff:"+(time-lastLoggedTime))
 	  theFile.writeInt(trID)
 	  theFile.writeInt(time)
 	  theFile.writeInt(userID)
@@ -56,15 +56,15 @@ object TransDetailLogHandler {
 	
 	def readTransStepData(trID:Int):TransStepData = {
 		if (trID>lastLoggedID){
-			println("TRID>lastLoggedID  trID:"+trID+" lastLoggedID"+lastLoggedID)
+			System.out.println("TRID>lastLoggedID  trID:"+trID+" lastLoggedID"+lastLoggedID)
 			null
 		}
 		else if(trID<0) {
-			println("trid<0  "+trID)
+			System.out.println("trid<0  "+trID)
 			null
 		}
 		else {
-			//println("read transStep "+trID+" insPos:"+insertPos+" lastLoggedID:"+lastLoggedID)
+			//System.out.println("read transStep "+trID+" insPos:"+insertPos+" lastLoggedID:"+lastLoggedID)
 		  theFile.seek(filePosToIndex(insertPos-(lastLoggedID-trID)-1))		  
 		  val ntrID=theFile.readInt
 		  if(ntrID!=trID) System.err.println("readTransStep trID:"+trID+" ntrID:"+ntrID)

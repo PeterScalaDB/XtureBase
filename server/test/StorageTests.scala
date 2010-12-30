@@ -30,23 +30,23 @@ class StorageTests extends JUnitSuite
 
 	@Test def storageManTest() =  {  	
 		assert(AllClasses.get.getClassList.size>0)
-		println(AllClasses.get.getClassList.toMap)
+		System.out.println(AllClasses.get.getClassList.toMap)
 	}
 
 	@Test def createTest() =  {  	
 		val inst=StorageManager.createInstance(3,Array(),true)
-		println(inst)  	
+		System.out.println(inst)  	
 		var newInst=inst.setField(0,new StringConstant("Object "+inst.ref.instance )).
 		setField(1,new DoubleConstant(math.random*100 ))
 		StorageManager.writeInstance(newInst,true)
-		println(newInst)
+		System.out.println(newInst)
 		assert(newInst!=null)
 	}
 
 	/*@Test def createPropTest():Unit =   {
 		assert(TransactionManager.doTransaction(0,{
 			val inst=TransactionManager.tryCreateInstance(3,Array(new OwnerReference(0,new Reference(3,1))),true)
-			println(inst)			
+			System.out.println(inst)			
 			assert (TransactionManager.tryWriteInstanceField(inst.ref,0,new StringConstant("Sub-Object "+inst.ref.instance )))
 			assert (TransactionManager.tryWriteInstanceField(inst.ref,1,new DoubleConstant(math.random*200 )))			
 		})==None)
@@ -70,7 +70,7 @@ class StorageTests extends JUnitSuite
 		    	 })==None)
 		    	 
 			}
-			case _ => println("No properties found ")
+			case _ => System.out.println("No properties found ")
 		}		
 	}
 	
@@ -105,7 +105,7 @@ class StorageTests extends JUnitSuite
 
 		for(i <-1 to maxID.toInt)
 			if(StorageManager.instanceExists(3,i))
-				println(StorageManager.getInstanceData(new Reference(3,i)))
+				System.out.println(StorageManager.getInstanceData(new Reference(3,i)))
 		StorageManager.shutDown()		
 	}
 

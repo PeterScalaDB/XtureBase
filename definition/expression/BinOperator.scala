@@ -27,7 +27,7 @@ object BinOperator
 	
 	// constant 1 is numberConstant
 	def doCalculation(c1:Constant,c2:Constant,func:(Double,Double)=>Number):Constant= {
-		//println("do calculation c1:"+c1+" "+c1.getType+" c2:"+c2+" "+c2.getType+" func:"+func)
+		//System.out.println("do calculation c1:"+c1+" "+c1.getType+" c2:"+c2+" "+c2.getType+" func:"+func)
 		if(c2.isNumberConstant) { // both are Number constants
 			if(c1.getType==DataType.CurrencyTyp&&c2.getType==DataType.CurrencyTyp)
 				new CurrencyConstant(Math.round(func(c1.toDouble,c2.toDouble).doubleValue*100L))

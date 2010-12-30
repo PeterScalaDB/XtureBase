@@ -10,7 +10,7 @@ import server.storage._
 import definition.expression.StringParser
 import transaction.handling._
 
-/**
+/** Table Model for showing the property field values of an instance
  * 
  */
 object InstPropTableModel extends AbstractTableModel {
@@ -29,9 +29,9 @@ object InstPropTableModel extends AbstractTableModel {
 	def setPropData(nprop:Option[InstanceProperties])
 	{		
 		propData=nprop
-		//println("propData "+propData)
+		//System.out.println("propData "+propData)
 		
-  	//println("Set inst "+theVersion)
+  	//System.out.println("Set inst "+theVersion)
   	fireTableStructureChanged()
 	}
 	

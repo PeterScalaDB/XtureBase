@@ -93,6 +93,7 @@ object UserSettings {
 		getGroup(group).properties(name)=new IntValue(name,value)
 
 	def setListProperty[T](group:String,name:String,value:collection.Seq[T]) =
+		if(!value.isEmpty)
 		getGroup(group).properties(name)=new ListValue[T](name,value)	
 
 	def removeProperty(group:String,name:String) = getGroup(group).properties.remove(name)	
@@ -223,8 +224,8 @@ object UserSettings {
   	UserSettings.setListProperty("other group","a stringlist",Seq("hallo "," du ", "da hier"))
   	UserSettings.setListProperty("other group","a reflist",Seq(Reference(1,2),Reference(3,4)))
   	val ostr=UserSettings.writeProperties
-  	println(ostr)
-  	//println(UserSettings.parse(ostr).mkString("\n"))
+  	System.out.println(ostr)
+  	//System.out.println(UserSettings.parse(ostr).mkString("\n"))
   }
 }
 

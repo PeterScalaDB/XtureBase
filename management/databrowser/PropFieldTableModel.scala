@@ -6,7 +6,8 @@ package management.databrowser
 import definition.typ._
 import definition.data._
 import server.storage.ServerObjectClass
-/**
+
+/** Table Model for showing and setting up the property fields definition of a class
  * 
  */
 class PropFieldTableModel(val showLastLine:Boolean) extends ActivableAbstractTableModel {
@@ -30,7 +31,7 @@ class PropFieldTableModel(val showLastLine:Boolean) extends ActivableAbstractTab
 	
   def getRowCount(): Int = { propFieldList.size+(if(showLastLine)1 else 0) }
 
-  def getColumnCount(): Int = { 3 }
+  def getColumnCount(): Int = { 5 }
 
   def getValueAt(row: Int, col: Int): Object = {
   	if(row>=propFieldList.size) null
@@ -40,6 +41,8 @@ class PropFieldTableModel(val showLastLine:Boolean) extends ActivableAbstractTab
   			 case 0 => fd.name 
   			 case 1 => fd.single.asInstanceOf[AnyRef]
   			 case 2 => fd.allowedClass.asInstanceOf[AnyRef]
+  			 case 3 => fd.hidden .asInstanceOf[AnyRef]
+  			 case 4 => fd.volatile .asInstanceOf[AnyRef]
   		 }
   		}
   }
@@ -49,12 +52,14 @@ class PropFieldTableModel(val showLastLine:Boolean) extends ActivableAbstractTab
   		propFieldList =propFieldList:+ new PropertyFieldDefinition("")
   	}
   	val ov=propFieldList(row)
-  	//println("Set Value At:"+value+" row:"+row+" col:"+column)
+  	//System.out.println("Set Value At:"+value+" row:"+row+" col:"+column)
   	propFieldList = MainWindow.updateSeq(propFieldList,row,
   		column match {
   			case 0 => ov.setName(value.toString)
   			case 1 => ov.setSingle(value.asInstanceOf[Boolean].booleanValue)
   			case 2 => ov.setAllowedClass(value.asInstanceOf[Integer].intValue)
+  			case 3 => ov.setHidden(value.asInstanceOf[Boolean].booleanValue)
+  			case 4 => ov.setVolatile(value.asInstanceOf[Boolean].booleanValue)
   			case _ => ov
   		})
   	isDirty=true  	
@@ -66,18 +71,22 @@ class PropFieldTableModel(val showLastLine:Boolean) extends ActivableAbstractTab
   		case 0 => classOf[String]
   		case 1 => classOf[Boolean]
   		case 2 => classOf[Int]
+  		case 3 => classOf[Boolean]
+  		case 4 => classOf[Boolean]
   		case _ => classOf[String]
   	}
   }
 
-  override def getColumnName(col:Int)= {
+  /*override def getColumnName(col:Int)= {
   	col match {  		
   		case 0 => "FieldName"
   		case 1 => "Single"
-  		case 2 => "Allowed Class"
+  		case 2 => "Allowed Cl"
+  		case 3 => "Hidden"
+  		case 4 => "Volatile"
   		case _ => "*"
   	}
-  } 
+  } */
   
   def getPropField(row:Int)=  propFieldList(row)
   

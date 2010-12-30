@@ -7,8 +7,7 @@ import server.storage.TransLogHandler
 import server.comm._
 import server.storage._
 import server.config._
-import definition.typ.AllClasses
-
+import definition.typ.{AllClasses,SystemSettings}
 
 
 /** the main class for server
@@ -27,31 +26,33 @@ object SessionManager {
   
   
   def registerSetupListener(func:()=>Unit) = {
-  	//println("call setup "+func)
+  	System.out.println("register setup "+func+" isSetup:"+isSetup)
   	if(isSetup){
-  		//println("call direct")
-  		func // if the classes List is ready, call the func
+  		//System.out.println("call direct")
+  		func() // if the classes List is ready, call the func
   	}
   	else setupListeners +=func // else wait for getting set up
   }
   
   def init() = {
-  	println("Sessionmanager init")
+  	System.out.println("Sessionmanager init")
   	scl=new ServerClassList( xml.XML.loadFile(FSPaths.configDir+"types.xml" ))
   	AllClasses.set(scl)  	
   	UserList.fromXML(xml.XML.loadFile(FSPaths.configDir+"users.xml" ))
   	StorageManager.init(scl.classList)
   	ActionNameMap.read
-  	println(ActionNameMap)
-  	//println("transDetail:")
-  	//println(TransDetailLogHandler.readFully.mkString("\n"))
-  	//println("ready")
-  	//println("TimeLog \n"+TimeLogger.readFully.map(a => " TR:"+a._1+"- "+new java.util.Date(a._2*60000L)).mkString("\n"))
-  	CommonSubscriptionHandler.init(AllClasses.get.getClassList.toMap)
+  	//System.out.println(ActionNameMap)
+  	//System.out.println("transDetail:")
+  	//System.out.println(TransDetailLogHandler.readFully.mkString("\n"))
+  	//System.out.println("ready")
+  	//System.out.println("TimeLog \n"+TimeLogger.readFully.map(a => " TR:"+a._1+"- "+new java.util.Date(a._2*60000L)).mkString("\n"))
+  	CommonSubscriptionHandler.init(AllClasses.get.getClassList.toMap)  
+  	SystemSettings.settings=new ServerSystemSettings(FSPaths.settingsObjectRef)
+  	println("call setup"+setupListeners.mkString)
   	for(li <-setupListeners)
   		li() // call listeners
   	isSetup=true	
-  	println("Max Trans:"+TransLogHandler.transID)
+  	System.out.println("Max Trans:"+TransLogHandler.transID)  	
   	
   	Runtime.getRuntime.addShutdownHook(new Thread {
       override def run = { 
@@ -68,12 +69,12 @@ object SessionManager {
   
   def shutDown() = {
   	// notify all users to quit connection
-  	println("Shutting Down Server")  	
+  	System.out.println("Shutting Down Server")  	
   	ActiveUsers.shutDown(() => {
   	 StorageManager.shutDown()	
   	}  	)
-  	Thread.sleep(1000)
-  	println("finish")
+  	Thread.sleep(500)
+  	System.out.println("finish")
   }	
   	
   	

@@ -87,14 +87,21 @@ class GraphViewController {
 	}
 	
 	def graphElemRemoved(lay:Layer,elem:GraphElem) = {
-		selectModel.elemRemoved(elem)
+		selectModel.elemRemoved(lay,elem)
 		canvas.repaint
 	}
 	
-	def graphElemChanged(newState:GraphElem,repaint:Boolean=true) = {
-		selectModel.elemChanged(newState)
+	def graphElemChanged(lay:Layer,newState:GraphElem,repaint:Boolean=true) = {
+		selectModel.elemChanged(lay,newState)
 		if(repaint)canvas.repaint
 	}
+	
+	
+	def graphElementsChanged(lay:Layer,newStates:Seq[GraphElem],repaint:Boolean=true) = {
+		selectModel.elementsChanged(lay,newStates)
+		if(repaint)canvas.repaint
+	}
+	
 	// will be called when the DataViewController has another selection
 	
 		
@@ -137,8 +144,14 @@ class GraphViewController {
 		}		
 	}
 	
-	
-	def checkSelection(startPoint:Point,endPoint:Point,add:Boolean) {
+	/** finds the elements that are in the given rectangle and selects them 
+	 * in the select model
+	 * 
+	 * @param startPoint
+	 * @param endPoint
+	 * @param add
+	 */
+	def checkSelection(startPoint:Point,endPoint:Point,add:Boolean):Unit= {
 		val onlyInside=startPoint.x<endPoint.x // catch only Objects inside of the rectangle when 
 		 // moving the mouse from left to right. When moving from right to left, catch all cutting objects
 		val p1x=scaleModel.xToWorld(startPoint.x)
@@ -158,11 +171,14 @@ class GraphViewController {
 	  		val eb=e.getBounds
 	  		eb.width>=minX && eb.x<=maxX && eb.height>=minY && eb.y<=maxY	  	
 	  	})
+	  System.out.println("check selection result="+elemList)
 	  if(add) {
-	  	if(!elemList.isEmpty)selectModel.addSelection(elemList,false)
+	  	for(it<-elemList)
+	  	  selectModel.addSelection(it._1,it._2,false)
 	  } else {
 	  	if (elemList.isEmpty)selectModel.deselect(true)
-	  	else selectModel.setSelection(elemList)
+	  	else for(it<-elemList)	  		
+	  		selectModel.setSelection(it._1,it._2)
 	  }
 	  
 	}
@@ -172,8 +188,8 @@ class GraphViewController {
 		// check for single element selection
 		val clickPosX=scaleModel.xToWorld(where.x)
 		val clickPosY=scaleModel.yToWorld(where.y)
-		println("single Click "+rightButton+" "+middleButton)
-		//println("Hittest clx:"+clickPosX+" cly:"+clickPosY+" dist:"+lineCatchDistance+" scale:"+scaleModel.scale)
+		System.out.println("single Click "+rightButton+" "+middleButton)
+		//System.out.println("Hittest clx:"+clickPosX+" cly:"+clickPosY+" dist:"+lineCatchDistance+" scale:"+scaleModel.scale)
 		if(rightButton) {
 			_viewportState match { // switch bracket mode
 				case ViewportState.AskPoint| ViewportState.LineTo => {
@@ -186,12 +202,14 @@ class GraphViewController {
 			case ViewportState.SelectState => {
 				val lineCatchDistance=canvas.lineCatchDistance.toDouble/scaleModel.scale
 		    val hittedElements=layerModel.filterLayersSelection(_.hits(clickPosX,clickPosY,lineCatchDistance) )
-		    //println("hitted elements:"+hittedElements)
+		    //System.out.println("hitted elements:"+hittedElements)
 		    if(control) {
-		    	if(!hittedElements.isEmpty) selectModel.addSelection(hittedElements,true)
+		    	for(el<-hittedElements)
+		    	 selectModel.addSelection(el._1,el._2,true)
 		    }else 
 		    	if(hittedElements.isEmpty) selectModel.deselect(true)
-		    	else selectModel.setSelection(hittedElements) 		
+		    	else for(el<-hittedElements)
+		    		selectModel.setSelection(el._1,el._2) 		
 			}
 			case ViewportState.AskPoint | ViewportState.LineTo => {					
 				internSetPoint(findMatchingPoint(clickPosX,clickPosY,middleButton))
@@ -204,15 +222,15 @@ class GraphViewController {
 		getNearestPoint(clickPosX,clickPosY) match {
 					case MatchingPoints(Some(nearestPoint),_,_) => nearestPoint
 					case MatchingPoints(None,Some(nearestX),Some(nearestY)) if(middleButton)=> {
-						println("project both")
+						System.out.println("project both")
 						new VectorConstant(nearestX.x,nearestY.y,0)						
 					}
 					case MatchingPoints(None,Some(nearestX),None) if(middleButton)=>{
-						println("project x")
+						System.out.println("project x")
 						new VectorConstant(nearestX.x,clickPosY,0)
 					}
 					case MatchingPoints(None,None,Some(nearestY)) if(middleButton)=> {
-						println("project y")
+						System.out.println("project y")
 						new VectorConstant(clickPosX,nearestY.y,0)
 					}
 					case _ => new VectorConstant(clickPosX,clickPosY,0)
@@ -240,7 +258,7 @@ class GraphViewController {
 			}
 			case _ =>
 		}
-		//println("processpoint rubber:"+rubberStartPoint+" point:"+point)
+		//System.out.println("processpoint rubber:"+rubberStartPoint+" point:"+point)
 		rubberStartPoint=point
 		pointListener.pointClicked(point)		
 	}
@@ -269,7 +287,7 @@ class GraphViewController {
 	}
 	
 	def keyPressed(e:KeyPressed) = {
-		//println("key typed "+e)
+		//System.out.println("key typed "+e)
 		_viewportState match {
 			case ViewportState.SelectState =>
 			e.key match {
@@ -278,14 +296,14 @@ class GraphViewController {
 				case Key.Up => scaleModel.moveUp
 				case Key.Down => scaleModel.moveDown
 				case Key.Escape => cancelModus()
-				case _ => //println(e)
+				case _ => //System.out.println(e)
 		  }
 			case ViewportState.AskPoint |  ViewportState.LineTo => 
 			e.key match {				
 				case Key.Escape => DialogManager.reset
-				case _ => //println(e)
+				case _ => //System.out.println(e)
 			}
-			case o => // println(o)
+			case o => // System.out.println(o)
 		}		
 	}
 	
@@ -306,7 +324,7 @@ class GraphViewController {
 		currLineToFactory=lineToFactory
 		pointListener=plistener		
 		changeViewportState(ViewportState.LineTo)
-		println("askforLineTo")
+		System.out.println("askforLineTo")
 	}
 	
 	def getNearestPoint(clickPosX:Double,clickPosY:Double):MatchingPoints = {

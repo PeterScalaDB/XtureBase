@@ -16,15 +16,17 @@ import server.comm.CommonSubscriptionHandler
 object ActionList {
 	var theList=collection.mutable.LinkedHashMap[Reference,TransactionData]()
 
-
+  
+	def isEmpty=theList.isEmpty
+	
 	def breakAllData() = {
-		println("Break")
+		System.out.println("Break")
 	for(trans <- theList.valuesIterator)
 		trans match {
 			case CreateAction(ref,_,_,_,_,_) => { // delete the Instances that got created during the try phase
 				try {
 					StorageManager.deleteInstance(ref.typ, ref.instance)
-				} catch {case e => {println("BreakAllData error "+e)}} 
+				} catch {case e => {System.out.println("BreakAllData error "+e)}} 
 			}
 			case _ =>
 	}
@@ -37,7 +39,7 @@ def reset() = {theList.clear}
 def commitAllData() = {
 	var hasMoveOrCopy:Boolean=false
 	try {		
-		//println("actions:\n"+theList.mkString("\n"))
+		//System.out.println("actions:\n"+theList.mkString("\n"))
 		for(trans <- theList.valuesIterator)
 			trans match {
 				case CreateAction(ref,instData,propData,linkData,collData,cmi) => { // Instances get created during the Try-Phase of the transaction
@@ -59,7 +61,7 @@ def commitAllData() = {
 					for (c <- collData) StorageManager.writeCollectingFuncData(c)
 					for(l <- linkData) StorageManager.writeReferencingLinks(l)					
 				}
-				case DataChangeAction(instData,propData,linkData,collData,cmi) => {
+				case DataChangeAction(instData,propData,linkData,collData,cmi,deleteFromUser) => {
 					for(i <- instData){
 						StorageManager.writeInstance(i,false); // if instance is defined, write
 						val sendData =if(propData.isDefined && propData.get.hasChildren !=i.hasChildren) i.setHasChildren(propData.get.hasChildren)
@@ -83,12 +85,15 @@ def commitAllData() = {
 					}
 					for(l <- linkData) StorageManager.writeReferencingLinks(l)
 					for(c <- collData) StorageManager.writeCollectingFuncData(c)
+					for(d <- deleteFromUser) CommonSubscriptionHandler.instanceDeleted(d,instData.get.ref)
 				}
 				
 				case DeleteAction(inst) => {
-					StorageManager.deleteInstance(inst.ref.typ,inst.ref.instance )
+					 StorageManager.deleteInstance(inst.ref.typ,inst.ref.instance )
 					for(owner <-inst.owners)
-					CommonSubscriptionHandler.instanceDeleted(owner,inst.ref)
+						CommonSubscriptionHandler.instanceDeleted(owner,inst.ref)
+					for(owner <-inst.secondUseOwners)
+						CommonSubscriptionHandler.instanceDeleted(owner,inst.ref)
 				}
 				//TODO: delete link, property and collFunc data !
 		}
@@ -97,7 +102,7 @@ def commitAllData() = {
 		if(hasMoveOrCopy ) {
 			for(trans <- theList.valuesIterator)
 			 trans match {
-				case DataChangeAction(_,Some(pr),_,_,Some(RefreshDestinationOwner)) => {
+				case DataChangeAction(_,Some(pr),_,_,Some(RefreshDestinationOwner),_) => {
 					CommonSubscriptionHandler.refreshSubscriptionsFor(pr.ref)
 				}
 				case _ =>
@@ -111,12 +116,12 @@ def commitAllData() = {
 
 
 def addTransactionData (ref:Reference,newRec:TransactionData) = {
-	//println("add Transdata "+ref+"|"+newRec)
+	//System.out.println("add Transdata "+ref+"|"+newRec)
 	if (theList.contains(ref))
 		theList(ref) match { // is there already an transaction data for this instance ?			
 			case a:CreateAction => newRec match { 
 				// a createAction is already there. What action shall be added ?
-				case  DataChangeAction(in,pr,li,co,cmi ) => {
+				case  DataChangeAction(in,pr,li,co,cmi,_ ) => {
 					if (in!=None) a.newInstData = in // add the new data to the createAction
 					if (pr!=None) a.newPropData = pr
 					if (li!=None)/* if(a.newLinksData!=None) throw new IllegalArgumentException("Cant add external links to created Instance "+ref+" "+li+" oldlinks:"+a.newLinksData )
@@ -131,12 +136,13 @@ def addTransactionData (ref:Reference,newRec:TransactionData) = {
 
 			case b:DataChangeAction => newRec match {
 				// a DataChange action is already there. What action shall be added ?
-				case  DataChangeAction(in,pr,li,co,cmi) => {
+				case  DataChangeAction(in,pr,li,co,cmi,deFrOw) => {
 					if (in!=None) b.newInstData = in // add the new data to the createAction
 					if (pr!=None) b.newPropData = pr
 					if (li!=None) b.newLinksData = li
 					if (co!=None) b.newCollData= co
 					if(cmi.isDefined) b.cmi=if(b.cmi.isDefined) Some(b.cmi.get.replaceWith(cmi.get)) else cmi
+					if(deFrOw!=None) b.deleteFromOwner=deFrOw
 				}				
 				case x: DeleteAction => theList += (ref ->newRec) // replace the datachange action with the delete
 				case x: CreateAction =>  throw new IllegalArgumentException("Creating an existing instance "+ref)																	 
@@ -155,7 +161,7 @@ def getInstanceData(ref:Reference):InstanceData = {
 	if (theList.contains(ref))
 		(theList(ref))  match {
 		case CreateAction(_,Some(data),_,_,_,_) => return data
-		case DataChangeAction(Some(data),_,_,_,_) => return data
+		case DataChangeAction(Some(data),_,_,_,_,_) => return data
 		case a:DeleteAction => return null 
 		case _ => // drink another beer
 	}
@@ -167,7 +173,7 @@ def getInstanceProperties(ref:Reference):Option[InstanceProperties] = {
 	if (theList.contains(ref))
 		(theList(ref)) match {
 		case CreateAction(_,_, a @ Some(_),_,_,_) => return a
-		case DataChangeAction(_,a @ Some(_),_,_,_) => return a
+		case DataChangeAction(_,a @ Some(_),_,_,_,_) => return a
 		case _ => // ignore
 	}
 	StorageManager.getInstanceProperties(ref)
@@ -179,8 +185,8 @@ def getInstanceProperties(ref:Reference):Option[InstanceProperties] = {
 def getReferencingLinks(ref:Reference):Option[ReferencingLinks] = {
 	if(theList.contains(ref))
 		(theList(ref)) match {
-			 case CreateAction(_,_,_, a @ Some(_),_,_) =>{println("get links hit create"); return a}
-		   case DataChangeAction(_,_,a@ Some(_),_,_) => {println("get links hit change"); return a}
+			 case CreateAction(_,_,_, a @ Some(_),_,_) =>{System.out.println("get links hit create"); return a}
+		   case DataChangeAction(_,_,a@ Some(_),_,_,_) => {System.out.println("get links hit change"); return a}
 		   case _ => 
 	  }
 	StorageManager.getReferencingLinks(ref)
@@ -191,7 +197,7 @@ def getCollData(ref:Reference):Option[CollFuncResultSet] =
 	if (theList.contains(ref))
 		(theList(ref)) match {
 		case CreateAction(_,_,_,_,a@ Some(_),_) => return a
-		case DataChangeAction(_,_,_,b @ Some(_),_) => return b
+		case DataChangeAction(_,_,_,b @ Some(_),_,_) => return b
 		case _ => // ignore
 	}
 	StorageManager.getCollectingFuncData(ref)

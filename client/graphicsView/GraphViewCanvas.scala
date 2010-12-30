@@ -86,7 +86,7 @@ class GraphViewCanvas(controller:GraphViewController) extends Component  {
 		case e:MouseMoved => {
 			if(!inside) {
 				inside=true
-				//println("not iside "+e.point)
+				//System.out.println("not iside "+e.point)
 			}
 			else if(currentMousePos!=null) drawCrossHair()
 			currentMousePos=e.point
@@ -193,7 +193,7 @@ class GraphViewCanvas(controller:GraphViewController) extends Component  {
 			
     // draw selected elements
 		g.setRenderingHints(new RenderingHints(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_OFF ))			
-		for(el <-controller.selectModel.list)
+		for(group <-controller.selectModel.list;el <-group.children)
 			el.draw(g,controller.scaleModel,selectColor)
 		
 			// draw Line-To graphics
@@ -201,7 +201,7 @@ class GraphViewCanvas(controller:GraphViewController) extends Component  {
 		if(controller.viewportState == ViewportState.LineTo)
 			for(el <-controller.layerModel.newElemLayer.elemList) 
 				el.draw(g,controller.scaleModel,lineToColor)
-		//println("repaint "+controller.layerModel.newElemLayer.elemList.mkString)
+		//System.out.println("repaint "+controller.layerModel.newElemLayer.elemList.mkString)
 		// draw braket cross
 		if(controller.bracketMode) {
 		  g.setStroke(defaultStroke)
@@ -218,7 +218,7 @@ class GraphViewCanvas(controller:GraphViewController) extends Component  {
 			drawDragGraphics(g)
 		//if(drawCrossHairInPaint) {
 			drawCrossHairInPaint=false
-			//println("In paint")
+			//System.out.println("In paint")
 			drawCrossHair(g)
 		//}
 		

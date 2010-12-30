@@ -21,7 +21,7 @@ object TestGraphListModel extends AbstractListModel {
 	def getSize(): Int = {
 		if(controller==null) 0
   	val nsize=dataList.foldLeft(0)((result,elem)=>result+elem.elemList.size)
-  	//println("TestMod size:"+nsize+ " datalist"+dataList.size)
+  	//System.out.println("TestMod size:"+nsize+ " datalist"+dataList.size)
   	nsize
  }
 

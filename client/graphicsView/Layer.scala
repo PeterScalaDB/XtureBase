@@ -3,7 +3,7 @@
  */
 package client.graphicsView
 
-import definition.data.{InstanceData,Reference,Referencable}
+import definition.data.{InstanceData,Reference,Referencable,OwnerReference}
 import client.comm.ClientQueryManager
 import definition.typ.AllClasses
 import definition.comm.NotificationType
@@ -20,6 +20,7 @@ class Layer(val controller:GraphViewController,override val ref:Reference,val na
   val bounds=new Rectangle2D.Double(0,0,0,0)
 	var startTime:Long=_
 	var firstLoad=true
+	val ownerRef=new OwnerReference(0,ref)
 	
 	def load() = {
 		visible=true
@@ -32,14 +33,14 @@ class Layer(val controller:GraphViewController,override val ref:Reference,val na
 						case NotificationType.sendData  =>{
 							val endTime=System.currentTimeMillis();
 							elemList=data
-							println("Layer "+name+" loadTime:"+(endTime-startTime)+" num elements:"+elemList.size+
+							System.out.println("Layer "+name+" loadTime:"+(endTime-startTime)+" num elements:"+elemList.size+
 								(if(!elemList.isEmpty)(" last Ref:"+elemList(elemList.size-1).ref.sToString) else ""))							 
 							/*if(firstLoad){
 								firstLoad=false*/
 								calcBounds
 								controller.layerChanged(this)
 							//}							
-							for(el <-elemList) controller.graphElemChanged(el,false)
+							controller.graphElementsChanged(this,elemList,false)
 							controller.canvas.repaint
 						}
 						
@@ -50,7 +51,7 @@ class Layer(val controller:GraphViewController,override val ref:Reference,val na
 										val oldState=elemList(i)
 										elemList=elemList updated(i,data(0))
 										//checkElemBounds(data(0))
-										controller.graphElemChanged(data(0))
+										controller.graphElemChanged(this,data(0))
 									}
 						}
 						case NotificationType.instanceRemoved => {
@@ -66,7 +67,7 @@ class Layer(val controller:GraphViewController,override val ref:Reference,val na
 							//checkElemBounds(data(0))
 							controller.graphElemAdded(this,data(0))
 						}
-						case a => println("unhandled notification type "+a)
+						case a => System.out.println("unhandled notification type "+a)
 				}
 			}
 		}
@@ -103,8 +104,8 @@ class Layer(val controller:GraphViewController,override val ref:Reference,val na
 			checkElemBounds(elem)
 		bounds.width-=bounds.x
 		bounds.height-=bounds.y
-		//println
-		//println("layerbounds "+bounds)
+		//System.out.println
+		//System.out.println("layerbounds "+bounds)
 		bounds
 	}
 	

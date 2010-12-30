@@ -41,7 +41,7 @@ class TableViewbox extends BorderPanel with ViewboxContent  {
 				viewportView= pathView				
 				preferredSize=new Dimension(200,200)
 				def callback(nsize:Int):Unit= {
-					//println(size+" "+pathView.peer.getFixedCellHeight())
+					//System.out.println(size+" "+pathView.peer.getFixedCellHeight())
 					preferredSize=new Dimension(400,(nsize+1)*pathController.lineHeight )
 					maximumSize=preferredSize
 					TableViewbox.this.revalidate
@@ -78,10 +78,10 @@ class TableViewbox extends BorderPanel with ViewboxContent  {
   			//val mwls:Array[MouseWheelListener]=peer.getMouseWheelListeners()   			
 				viewportView=dataviewController.panel
 				peer.setWheelScrollingEnabled(true)
-				//println("mwls:"+mwls.mkString(","))
+				//System.out.println("mwls:"+mwls.mkString(","))
 				/*def handleScrollEvent(e:MouseWheelEvent)= {
 					if(mwls.size>0){
-						println(mwls(0).getClass)
+						System.out.println(mwls(0).getClass)
 						mwls(0).mouseWheelMoved( e)
 					}
 					
@@ -95,7 +95,7 @@ class TableViewbox extends BorderPanel with ViewboxContent  {
 			
 	def open(): Unit = {  	
   	val entry=PathFactory.getNextPathEntry
-  	//println("Open "+entry)
+  	//System.out.println("Open "+entry)
   	pathFactoryIndex=entry._1
   	pathController.loadPath(entry._2)  
   	}

@@ -66,7 +66,7 @@ class ServerObjectClass (var name:String,var id:Int,var description:String="",va
   				else fieldSetting(i).startValue.generate  		
   			}
   			else Expression.generateNullConstant(fields(i).typ ) 
-  	new InstanceData(ref,fieldExpressions,owner,false)
+  	new InstanceData(ref,fieldExpressions,owner,Seq.empty,false)
   }
   
   /** creates an empty InstanceProperty of this class
@@ -110,9 +110,10 @@ object ServerObjectClass
 		  createActionList=IndexedSeq.empty
 		} else {
 			val module=ActionModule.load(moduleName)
+			module.setObjectType(id)
 			actionList=module.getActionsIterator.toSeq
 			createActionList=module.getCreateActionsIterator.toSeq
-			//if(createActionList.size>0) println("class:"+name+" Module:"+moduleName+" "+createActionList.mkString)
+			//if(createActionList.size>0) System.out.println("class:"+name+" Module:"+moduleName+" "+createActionList.mkString)
 		}			
 		new ServerObjectClass(name,id ,  (node \"@desc").text,
 			for(afield <-(node \\"FieldDef")) yield FieldDefinition.fromXML(afield),

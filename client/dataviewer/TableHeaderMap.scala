@@ -7,6 +7,8 @@ import javax.swing.table._
 import definition.typ._
 import client.comm._
 import scala.collection.JavaConversions._
+import client.dialog.ComboBoxEditor
+import javax.swing.JComboBox
 /** stores the header configuration for all Tables
  * 
  */
@@ -38,8 +40,11 @@ object TableHeaderMap {
   
   def setupEmptyColumnModel(typ:Int)= {
   	val newModel=new MyColumnModel
-  	val theClass=AllClasses.get.getClassByID(typ)
+  	val theClass=AllClasses.get.getClassByID(typ).asInstanceOf[ClientObjectClass]
   	val numColumn:Int=theClass.fields.size
+  	
+  	//val enumEditors:Seq[ComboBoxEditor]=for(ef<-theClass.enumFields) yield new ComboBoxEditor(new JComboBox(ef._2 .javaVect))
+  	
   	val firstColumn=new TableColumn(0)
   	firstColumn.setHeaderValue(" ")
   	firstColumn.setMaxWidth(25)
@@ -50,13 +55,19 @@ object TableHeaderMap {
 		// is there a stored TableSetup for this type ?
 		val settings=UserSettings.getListProperty[Tuple2[Int,Int]]("TableColumns",typ.toString,Nil)
 		if(!settings.isEmpty) {
-			println("settings for Typ:"+typ+" "+settings+" ")
+			System.out.println("settings for Typ:"+typ+" "+settings+" ")
 			for(cs <-settings){				
 				val newCol=new TableColumn(cs._1)
-				newCol.setHeaderValue(theClass.fields(cs._1-1).name)
+				try {
+					newCol.setHeaderValue(theClass.fields(cs._1-1).name)					
+					newCol.setWidth(cs._2)
+					newCol.setPreferredWidth(cs._2)
+					if(theClass.enumFields!=null) theClass.enumFields find(_._1 ==cs._1-1) match {
+						case Some(tuple)=> newCol.setCellEditor(new ComboBoxEditor(new JComboBox(tuple._2 .javaVect)))
+						case None =>
+					}
+				} catch {case e => System.err.println(e) } 
 				newModel.addColumn(newCol)
-				newCol.setWidth(cs._2)
-				newCol.setPreferredWidth(cs._2)
 			}
 		} else
 		for(i <-0 until numColumn){
@@ -64,6 +75,11 @@ object TableHeaderMap {
 			newCol.setHeaderValue(theClass.fields(i).name)
 			newModel.addColumn(newCol)
 		}
+  	/*if(theClass.enumFields!=null)
+  	for(ef<-theClass.enumFields){
+  		println("column "+ef._1+" set editor "+ef._2 .javaVect .mkString(","))
+  		newModel.getColumn(ef._1+1).setCellEditor(new ComboBoxEditor(new JComboBox(ef._2 .javaVect)))
+  	}*/
 		newModel	
   }
 }

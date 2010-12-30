@@ -76,7 +76,7 @@ object CommonSubscriptionHandler {
 	  listLock.synchronized {
 		 subscriptionList(subsID) match {
 			 case subs:PathSubscription => {
-				 //println("open child "+newRef)
+				 //System.out.println("open child "+newRef)
 				 val newList=subs.path :+ newRef
 				 val newSubs=subs.updatePath(newList)
 				 subscriptionList(subsID)= newSubs
@@ -84,7 +84,7 @@ object CommonSubscriptionHandler {
 				 newList
 			 }
 			 case _ => {
-				 println("Subscription "+subsID+" is no path subscription when open Child ref"+newRef)
+				 System.err.println("Subscription "+subsID+" is no path subscription when open Child ref"+newRef)
 				 null
 			 }
 		 }		 
@@ -96,18 +96,18 @@ object CommonSubscriptionHandler {
 	def jumpUp(subsID:Int,newPos:Int) = listLock.synchronized {		
 		subscriptionList(subsID) match {
 			 case subs:PathSubscription => {
-				 //println("jumpup " + newPos+" oldpath:"+subs.path)
-				 if(subs.path.size<=newPos) println("Wrong jump Pos "+newPos+" when jumping up "+subs.path .mkString("/"))				 
+				 //System.out.println("jumpup " + newPos+" oldpath:"+subs.path)
+				 if(subs.path.size<=newPos) System.err.println("Wrong jump Pos "+newPos+" when jumping up "+subs.path .mkString("/"))				 
 				 else {
 					 for (i <-(newPos+1) until subs.path.size) { // remove unneeded entries
 						 val pRef=subs.path(i)
 						 classHandlerMap(pRef.typ).removeSinglePathSubs(subs,pRef)
-						// println("remove "+pRef)
+						// System.out.println("remove "+pRef)
 					 }
 					 subscriptionList(subsID)= subs.updatePath(subs.path.take(newPos+1) ) 
 				 }				 
 			 }
-			 case _ => println("Subscription "+subsID+" is no path subscription when jump Up "+subsID)
+			 case _ => System.err.println("Subscription "+subsID+" is no path subscription when jump Up "+subsID)
 		 }
 	}
 	
@@ -124,7 +124,7 @@ object CommonSubscriptionHandler {
 					classHandlerMap(n.typ).addPathSubscription(newSubs,n) 
 				 subscriptionList(subsID)= newSubs				 
 			 }
-			 case _ => println("Subscription "+subsID+" is no path subscription when changing Path to"+newPath.mkString("/"))
+			 case _ => System.err.println("Subscription "+subsID+" is no path subscription when changing Path to"+newPath.mkString("/"))
 		 }
 	}
 	
@@ -179,10 +179,12 @@ object CommonSubscriptionHandler {
 	}
 	
 	def instanceChanged(newState:InstanceData) = {	
-		//println("comsubsman inst changed"+newState.ref+" "+newState)
+		//System.out.println("comsubsman inst changed"+newState.ref+" "+newState)
 		classHandlerMap(newState.ref.typ ).singleInstanceChanged(newState)			 
 		for(owner <-newState.owners )
-			classHandlerMap(owner.ownerRef.typ).childInstanceChanged(owner.ownerRef,owner.ownerField,newState)		
+			classHandlerMap(owner.ownerRef.typ).childInstanceChanged(owner.ownerRef,owner.ownerField,newState)	
+		for(owner <-newState.secondUseOwners )
+			classHandlerMap(owner.ownerRef.typ).childInstanceChanged(owner.ownerRef,owner.ownerField,newState)	
 	}
 	
 	def refreshSubscriptionsFor(parentRef:Reference) = {
@@ -191,21 +193,21 @@ object CommonSubscriptionHandler {
 	
 	
 	def instanceCreated(owner:OwnerReference,newInstance:InstanceData) = {
-		//println("subsMan inst created "+ newInstance.ref)
+		//System.out.println("subsMan inst created "+ newInstance.ref)
 		if(classHandlerMap.contains(owner.ownerRef.typ))
 		classHandlerMap(owner.ownerRef.typ).instanceCreated(owner,newInstance)		
 	}
 	
 	
 	def instanceDeleted(owner:OwnerReference,ref:Reference) = {
-		//println("subsMan inst deleted "+ ref)
+		//System.out.println("subsMan inst deleted "+ ref)
 		classHandlerMap(ref.typ).instanceDeleted(null,ref)//single
 		classHandlerMap(owner.ownerRef.typ).instanceDeleted(owner,ref) // prop
 	}
 	
 	
 	def userLogsOff(userID:Int) = listLock.synchronized {		
-		//println("subsMan user log off "+userID)
+		//System.out.println("subsMan user log off "+userID)
 		for(subs <- subscriptionList; if (subs!=null))			
 			if(subs.user.info.id==userID) {				
 				removeSubscription(subs.id)				 

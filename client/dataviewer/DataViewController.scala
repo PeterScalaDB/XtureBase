@@ -23,6 +23,9 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	var ref:Reference= _
 	var mainClass:AbstractObjectClass = _
 	
+	var selGroup=new SelectGroup[InstanceData](null,Seq.empty)
+	var selGroupList=List(selGroup)
+	
 	var smallFont=new Font("Arial",0,10)
 	
 	val propertyModels =scala.collection.mutable.ArrayBuffer[PropertyModel]()
@@ -44,7 +47,7 @@ class DataViewController  extends PathControllable with SelectSender with Refere
     		val scrollbarWidth=scSize.width+8
     		val hAmount=(if(superScrollPane.peer.getVerticalScrollBar.isVisible)scrollbarWidth else 8)
     		val vAmount=(if(superScrollPane.peer.getHorizontalScrollBar.isVisible)scrollbarWidth else 8)
-    		//println("dataView prefSize:"+ps+ " super:"+superScrollPane.size+" scrollWidth:"+scrollbarWidth)
+    		//System.out.println("dataView prefSize:"+ps+ " super:"+superScrollPane.size+" scrollWidth:"+scrollbarWidth)
     		new Dimension(
     		if( ps.width<superScrollPane.size.width-hAmount) superScrollPane.size.width-hAmount else ps.width ,
     		if( ps.height<superScrollPane.size.height-vAmount) superScrollPane.size.height-vAmount else ps.height )	
@@ -81,21 +84,25 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	 *  @param selectRef reference of an instance that should be selected
 	 */
 	def openData(nparentRef:Reference,selectRef:Option[Reference]) = {
-		//println("open Data: "+nparentRef+" "+loaded)
+		//System.out.println("open Data: "+nparentRef+" "+loaded)
 	  if(loaded) shutDown()
 	  selectedInstance=null
-	  ref=nparentRef
+	  ref=nparentRef	  
 	  mainClass=AllClasses.get.getClassByID(ref.typ)
+	  val hiddenFields=mainClass.getNum_FirstHiddenPropFields
+	  println("class:"+mainClass.name+" hiddenFields:"+hiddenFields)
+	  
 	  for(i <- 0 until mainClass.propFields.size) {
 	  	val propFieldInfo=mainClass.propFields(i)
-	  	val mod=getPropModel
-	  	panel.contents+=mod.panel	  	
-	  	mod.load(propFieldInfo.allowedClass,i.toByte,propFieldInfo.name,selectRef,i==0,mainClass.propFields.size==1)	  	
-	  		  	
+	  	if(!(propFieldInfo.hidden && DataViewController.hideProperties)) {
+	  		val mod=getPropModel
+	  		panel.contents+=mod.panel	  	
+	  		mod.load(propFieldInfo.allowedClass,i.toByte,propFieldInfo.name,selectRef,i==hiddenFields,mainClass.propFields.size==1)	  	
+	  	}	  	
 	  }
 	  //panel.contents+=vGlue
 	  updateHeight()
-	  if(!selectRef.isDefined) selectListener foreach(_.selectionChanged(this,null))
+	  if(!selectRef.isDefined) selectListener foreach(_.selectionChanged(this,EMPTY_GROUP.list ))
 	  loaded =true
 	}
 	
@@ -150,10 +157,12 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	}
 	
 	def selectionChanged(tabMod:TypeTableModel,proMod:PropertyModel,instList:Seq[InstanceData]):Unit = {
-		//println("sel: propfield:"+proMod.propertyField+" typ:"+tabMod.typ +" \n"+instList.mkString)
+		//System.out.println("sel: propfield:"+proMod.propertyField+" typ:"+tabMod.typ +" \n"+instList.mkString)
+		selGroup.parent =proMod.ownerRef
+		selGroup.children =instList
 		for(i <- 0 until numUsedModels;val mod=propertyModels(i))
 			mod.deselect(if(proMod==mod) tabMod.typ else -1)
-		 selectListener foreach(_.selectionChanged(this,instList))	
+		 selectListener foreach(_.selectionChanged(this,selGroupList))	
 		//selectedInstance=inst
 	}
 	
@@ -180,6 +189,10 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 		if(scrollEventListener!=null) scrollEventListener.handleScrollEvent(e)
 	}*/
 
+}
+
+object DataViewController {
+	var hideProperties:Boolean=false
 }
 
 /*trait ScrollEventListener {

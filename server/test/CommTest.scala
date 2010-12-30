@@ -27,7 +27,7 @@ class CommTest extends JUnitSuite {
 		val file=FSPaths.configDir+"users.xml"
   	scala.xml.XML.save(file,UserList.toXML,"UTF-8",true,null)
 		UserList.fromXML(xml.XML.loadFile(file))
-		println(UserList.toXML)
+		System.out.println(UserList.toXML)
 	}
 
 }

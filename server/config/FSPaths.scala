@@ -5,6 +5,7 @@ package server.config
 
 import java.util.prefs._
 import java.io.File
+import definition.data.Reference
 
 /** Contains the directories in the file system
  * 
@@ -22,6 +23,8 @@ object FSPaths
   val dataDir=checkSeparator( dirNode.get("DataDir","data"))
   
   val serverPort=setupNode.get("ServerPort","9000").toInt
+  
+  val settingsObjectRef=Reference(setupNode.get("SettingsObject","30,1"))
   
   
   private def checkSeparator(path:String) =  	

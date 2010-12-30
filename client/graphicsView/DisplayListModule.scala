@@ -9,6 +9,7 @@ import definition.expression._
 import definition.data._
 import java.io._
 import transaction.handling.{TransactionManager,SessionManager}
+import server.comm.UserSocket
 
 import scala.collection.Iterator
 
@@ -18,14 +19,17 @@ import scala.collection.Iterator
 class DisplayListModule extends ActionModule {
 
   var lineTyp= -1
+  var dlistTyp= -1
   
   SessionManager.registerSetupListener(() => {
 		lineTyp=AllClasses.get.getClassIDByName("LineElem")
 	})
 
-	
+	def setObjectType(typeID:Int)= {
+    dlistTyp=typeID	
+  }
 
-	val importAction=new ActionImpl("DXF-Import",Some(new ParamQuestion("Welche DXF Datei importieren ?",
+	val importAction=new ActionImpl("DXF-Import",Some(new DialogQuestion("Welche DXF Datei importieren ?",
 		Seq(new ParamAnswerDefinition("Dateinamen Eingeben:",DataType.StringTyp,None)))),doImport)
 
 	val mList=List(importAction)
@@ -34,10 +38,11 @@ class DisplayListModule extends ActionModule {
 	def getActionsIterator() =  mList.iterator 
 	
 
-	def doImport(data:InstanceData,param:Seq[(String,Constant)]):Boolean = {
+	def doImport(u:UserSocket,data:InstanceData,param:Seq[(String,Constant)]):Boolean = {
 		if(!param.isEmpty) {
 			val startTime=System.currentTimeMillis();
 			val dateiName=param(0)._2.toString
+			System.out.println("Import DXF-File :"+dateiName)
 			val file=new File(dateiName)  		
 			val reader=new BufferedReader(new FileReader(file))
 			val owner=Array(new OwnerReference(0,data.ref))
@@ -59,10 +64,10 @@ class DisplayListModule extends ActionModule {
 					while(elemTyp!="SECTION") {
 						while (code!="  0") {
 							code=reader.readLine
-							//println("Code1:"+code)
+							//System.out.println("Code1:"+code)
 						}
 						elemTyp=reader.readLine
-						//println("elTyp:"+elemTyp)
+						//System.out.println("elTyp:"+elemTyp)
 						elemTyp match {
 							case "LINE" => {
 								  code==""
@@ -72,7 +77,7 @@ class DisplayListModule extends ActionModule {
 									var color:Int=0
 									code=reader.readLine
 									while(code!=" 31") {
-										//println("code "+code)
+										//System.out.println("code "+code)
 										if(code(0)==' ') {
 											val field=code.trim.toInt  			    	  						
 											val value=reader.readLine
@@ -83,7 +88,7 @@ class DisplayListModule extends ActionModule {
 												case 11 =>x2=value.trim.toDouble
 												case 21 =>{
 													y2=value.trim.toDouble
-													//println("Line ("+x1+","+y1+")-("+x2+","+y2+")")
+													//System.out.println("Line ("+x1+","+y1+")-("+x2+","+y2+")")
 													var inst=TransactionManager.tryCreateInstance(lineTyp,owner,false)
 													inst=inst.setField(3,new VectorConstant(x1,y1,0))
 													inst=inst.setField(4,new VectorConstant(x2,y2,0))
@@ -110,7 +115,7 @@ class DisplayListModule extends ActionModule {
 									
 									do {
 										code=reader.readLine
-										//println("code "+code)
+										//System.out.println("code "+code)
 										if(code(0)==' ') {
 											val field=code.trim.toInt  			    	  						
 											val value=reader.readLine
@@ -122,7 +127,7 @@ class DisplayListModule extends ActionModule {
 												case 50 =>sA=value.trim.toDouble												
 												case 51 =>{
 													eA=value.trim.toDouble
-													//println("Arc ("+x1+","+y1+") d="+dia+" ,sa:"+sA+" ,ea:"+eA+")")
+													//System.out.println("Arc ("+x1+","+y1+") d="+dia+" ,sa:"+sA+" ,ea:"+eA+")")
 													var inst=TransactionManager.tryCreateInstance(41,owner,false)
 													inst=inst.setField(3,new VectorConstant(x1,y1,0))
 													inst=inst.setField(4,new DoubleConstant(dia))
@@ -148,7 +153,7 @@ class DisplayListModule extends ActionModule {
 					}
 			reader.close
 			val endTime=System.currentTimeMillis()
-			println("Import ready "+dateiName+" time:"+(endTime-startTime))
+			System.out.println("Import ready "+dateiName+" time:"+(endTime-startTime))
 		}
 		true
 	}

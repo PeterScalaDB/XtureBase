@@ -15,7 +15,7 @@ object MainServerSocket extends Thread("MainSock") {
   override def run():Unit = {
   	try {
       val listener = new ServerSocket(FSPaths.serverPort);
-      println("ServerSocket ready on port "+FSPaths.serverPort)
+      System.out.println("ServerSocket ready on port "+FSPaths.serverPort)
       while (true)
         new UserSocket(listener.accept()).start();
        

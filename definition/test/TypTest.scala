@@ -17,21 +17,21 @@ import server.storage._
  * 
  */
 class TypTest extends JUnitSuite {
-	val rudolfClass=new ServerObjectClass("Rudolf",3,"Rudolfs Klasse",IndexedSeq(FieldDefinition("GewerkName",DataType.StringTyp ),
-		  FieldDefinition("GewerkSumme",DataType.DoubleTyp )),IndexedSeq.empty,IndexedSeq(PropertyFieldDefinition("Kinder",false,0)),
+	val rudolfClass=new ServerObjectClass("Rudolf",3,"Rudolfs Klasse",IndexedSeq(new FieldDefinition("GewerkName",DataType.StringTyp ),
+		  new FieldDefinition("GewerkSumme",DataType.DoubleTyp )),IndexedSeq.empty,IndexedSeq(PropertyFieldDefinition("Kinder",false,0)),
 		  IndexedSeq.empty,IndexedSeq.empty,Seq.empty,"",NOFORMAT,NOFORMAT,NOFORMAT)
 	 
 	
 	
 	
-	val hugoClass=new ServerObjectClass("Hugo",7,"hugos klasse",IndexedSeq(FieldDefinition("Hugofeld",DataType.StringTyp ),FieldDefinition("HugoWert",
+	val hugoClass=new ServerObjectClass("Hugo",7,"hugos klasse",IndexedSeq(new FieldDefinition("Hugofeld",DataType.StringTyp ),new FieldDefinition("HugoWert",
   		DataType.DoubleTyp )),IndexedSeq.empty,IndexedSeq(PropertyFieldDefinition("Subelements",false,0)),IndexedSeq.empty,IndexedSeq.empty,
   		IndexedSeq(3 ),"",NOFORMAT,NOFORMAT,NOFORMAT)
 	  
   
   @Test def FieldDefinitionTest()
   {
-  	val x=FieldDefinition("GewerkName",DataType.StringTyp)
+  	val x=new FieldDefinition("GewerkName",DataType.StringTyp)
   	assertEquals(FieldDefinition.fromXML(x.toXML),x)  	
   }
   
@@ -39,13 +39,13 @@ class TypTest extends JUnitSuite {
   
   @Test def ClassTest()
   {
-  	Console.println(rudolfClass.toXML);
-  	println(hugoClass.toXML)
-  	println(".................................................")
+  	System.out.println(rudolfClass.toXML);
+  	System.out.println(hugoClass.toXML)
+  	System.out.println(".................................................")
   	val baclass=ServerObjectClass.fromXML(rudolfClass.toXML)
   	assertEquals(baclass.name,rudolfClass.name)
   	assertEquals(baclass.description,rudolfClass.description)
-  	//Console.println(baclass.toXML)
+  	//Console.System.out.println(baclass.toXML)
   	//assertEquals(baclass.versions,dieclass.versions)
   }
   
@@ -59,12 +59,12 @@ class TypTest extends JUnitSuite {
   	val file=FSPaths.configDir+"testtypes.xml"
   	scala.xml.XML.save(file,AllClasses.get.asInstanceOf[ServerClassList].toXML(),"UTF-8",true,null)
   	AllClasses.set(new ServerClassList( xml.XML.loadFile(file)))
-  	Console.println(AllClasses.get.asInstanceOf[ServerClassList].toXML())
+  	System.out.println(AllClasses.get.asInstanceOf[ServerClassList].toXML())
   }
   
   @Test def pathTest()
   {
-  	Console.println(FSPaths.configDir )
+  	System.out.println(FSPaths.configDir )
   }
   
   

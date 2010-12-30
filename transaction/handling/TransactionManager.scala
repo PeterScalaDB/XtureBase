@@ -37,16 +37,20 @@ object TransactionManager {
 	  if(running ) throw new IllegalArgumentException("An Transaction is still running ")
 		running=true
 	  TransLogHandler.incrementTransID();
-	  //println("Start Trans " +TransLogHandler.transID)
+	  //System.out.println("Start Trans " +TransLogHandler.transID)
 	}
 	
 	// Finishes the Transaction and commits all changes to the database
 	private def finishTransaction() = 	{
 		
-		if(!running) throw new IllegalArgumentException("Finish: No transaction running ")		
-		ActionList.commitAllData()
-		TransDetailLogHandler.log(TransLogHandler.transID,currentUser,currentRef,multiInst,currentActionCode,logCreateType)
-		//println("Finish Trans "+ TransLogHandler.transID)
+		if(!running) throw new IllegalArgumentException("Finish: No transaction running ")
+		if(ActionList.isEmpty) {
+			TransLogHandler.resetTransID()
+		}else {
+		  ActionList.commitAllData()
+		  TransDetailLogHandler.log(TransLogHandler.transID,currentUser,currentRef,multiInst,currentActionCode,logCreateType)	
+		}		
+		//System.out.println("Finish Trans "+ TransLogHandler.transID)
 		running=false
 	}
 	
@@ -72,8 +76,8 @@ object TransactionManager {
 	 }
 	 
 	 def stopUndo(user:UserEntry) = {
-		 if(undoUserEntry==null) println(" Undo process not running !")
-		 else if (user.info .id!=undoUserEntry.info.id) println("UNDO user "+undoUserEntry.info+" but stopped by "+user.info)
+		 if(undoUserEntry==null) System.out.println(" Undo process not running !")
+		 else if (user.info .id!=undoUserEntry.info.id) System.out.println("UNDO user "+undoUserEntry.info+" but stopped by "+user.info)
 		 else {
 			 ActiveUsers.releaseUsersForUndo(user)
 			 undoUserEntry=null
@@ -201,9 +205,9 @@ object TransactionManager {
 		
 		 // Check for CollFunctionCalls 
 		val oldCollCalls= instD.fieldData(fieldNr).getElementList[CollectingFuncCall](DataType.CollFunctionCall,Nil)
-		if( !oldCollCalls.isEmpty) println("oldCollCalls "+oldCollCalls)
+		if( !oldCollCalls.isEmpty) System.out.println("oldCollCalls "+oldCollCalls)
 		val newCollCalls=newExpression.getElementList[CollectingFuncCall](DataType.CollFunctionCall,Nil)
-		if( !newCollCalls.isEmpty) println("newCollCalls "+newCollCalls)
+		if( !newCollCalls.isEmpty) System.out.println("newCollCalls "+newCollCalls)
 		 
 		// Remove all CollResults of the removed CollCalls
 		val removedCalls=findMissingElements[CollectingFuncCall](oldCollCalls,newCollCalls)
@@ -234,7 +238,7 @@ object TransactionManager {
 	}
 	
 	def checkCircularRef(targetRef:Reference,targetField:Byte,dependingRefs:List[FieldReference]):Unit={
-		println("checking target:"+targetRef+" field:"+targetField+" list:"+dependingRefs.mkString(","))
+		System.out.println("checking target:"+targetRef+" field:"+targetField+" list:"+dependingRefs.mkString(","))
 		//val qualifiedSourceRef=link qualifyWith targetRef
 		val targetFieldReference=new FieldReference(Some(targetRef.typ),Some(targetRef.instance),targetField)
 		if(dependingRefs.contains(targetFieldReference)) 
@@ -249,10 +253,15 @@ object TransactionManager {
 		var instData:InstanceData=null			
 		try {
 		   instData=ActionList.getInstanceData(targetRef)
-		} catch {case e:Exception => {println(e);return}}
-		for(owner <-instData.owners) {
+		} catch {case e:Exception => {System.out.println(e);return}}
+		for(owner <-instData.owners) 
+			checkCircular(owner)
+		for(owner <-instData.secondUseOwners) 
+			checkCircular(owner)
+		
+		def checkCircular(owner:OwnerReference)= {
 			val collData=ActionList.getCollData(owner.ownerRef )
-			println("owner:"+owner+" colldata:"+collData)
+			System.out.println("owner:"+owner+" colldata:"+collData)
 			for(cData<-collData)
 				for(cFResult <-cData.callResultList;
 				  if (cFResult.parentPropField==owner.ownerField &&
@@ -260,7 +269,6 @@ object TransactionManager {
 				  		cFResult.childField ==targetField))
 					checkCircularRef(owner.ownerRef,cFResult.parentField,newDepList)
 		}
-		
 	}
 	
 	
@@ -291,6 +299,15 @@ object TransactionManager {
 				case _ => // another beer
 			}
 		}
+		for(owner <-newInst.secondUseOwners ) {
+			ActionList.getCollData(owner.ownerRef) match {
+				case Some(collData) => {
+					notifyCollFunc_ChildChanged(owner ,collData,newInst.ref,fieldNr,oldValue,nValue)
+				}
+				case _ => // another beer
+			}
+		}
+		
 		// notify Subscriptions
 		//CommonSubscriptionHandler.instanceChanged(newInst)
 	}	
@@ -311,13 +328,13 @@ object TransactionManager {
 	
 	private def passOnDeletedInstanceToCollFuncParents(instD:InstanceData,ownerList:Seq[OwnerReference]) = {
 		for(owner <-ownerList) 	{
-  		//println(" "+owner.ownerRef)
+  		//System.out.println(" "+owner.ownerRef)
   		ActionList.getCollData(owner.ownerRef) match {
 				case Some(collData) => {
-					//println("notify CollFunc Child Deleted, owner:"+owner+" child"+instD.ref)
+					//System.out.println("notify CollFunc Child Deleted, owner:"+owner+" child"+instD.ref)
 					notifyCollFunc_ChildDeleted(owner ,collData,instD)
 				}
-				case b => //println("check "+owner+" for Colldata:"+b) // more beer !
+				case b => //System.out.println("check "+owner+" for Colldata:"+b) // more beer !
 			}
   	}
 	}
@@ -391,10 +408,10 @@ object TransactionManager {
 	 */
 	private def addLinkRef(targetRef:Reference,targetField:Byte,sourceRef:FieldReference):Unit = {		
 		val qualifiedSourceRef = resolveLinkRef(targetRef,sourceRef) // resolve missing type and instance information
-		println("addLinkRef targetRef:"+targetRef+" targetField:"+targetField+" sourceRef:"+
+		System.out.println("addLinkRef targetRef:"+targetRef+" targetField:"+targetField+" sourceRef:"+
 			sourceRef+ " qualSourceRef:"+qualifiedSourceRef)
 		val newLinkData= ( ActionList.getReferencingLinks(qualifiedSourceRef) match {
-			case Some(linkData) =>{println("Linkdata already there:"+linkData); linkData}
+			case Some(linkData) =>{System.out.println("Linkdata already there:"+linkData); linkData}
 			case _ => new ReferencingLinks(qualifiedSourceRef,Map())				
 		} ).addTargetLink(ExtFieldRef(targetRef.typ,targetRef.instance ,targetField),sourceRef.remField)
 		ActionList.addTransactionData(qualifiedSourceRef,DataChangeAction(None,None,Some(newLinkData)))
@@ -459,7 +476,7 @@ object TransactionManager {
 		newTerm.replaceExpression((ex:Expression) => {
 		  	 ex match {
 		  		 case fc:CollectingFuncCall => {
-		  			   println("setFuncResults fc:"+fc + "call:"+call+" =="+(fc==call)+" newValue:"+newValue)
+		  			   System.out.println("setFuncResults fc:"+fc + "call:"+call+" =="+(fc==call)+" newValue:"+newValue)
 		  			   if(fc==call) return fc.setValue(newValue)
 		  			   else return fc
 		  			 }
@@ -475,18 +492,18 @@ object TransactionManager {
 	 * @return a new version of the owner's InstanceData
 	 */
 	private def updateOwnerCollFunc(ownerInst:InstanceData,collData:CollFuncResult,newValue:Constant):InstanceData = {
-		//println("updateOwnerCollFunc "+ownerInst.fieldData(collData.parentField ))
+		//System.out.println("updateOwnerCollFunc "+ownerInst.fieldData(collData.parentField ))
 		val newExpression=ownerInst.fieldData(collData.parentField ).replaceExpression((ex:Expression) => {
 		  	 ex match {
 		  		 case fc:CollectingFuncCall => {
-		  			 //println("UpdateOwnerCollFunc fc:"+fc+ " colldata:"+collData+" newValue:"+newValue)
+		  			 //System.out.println("UpdateOwnerCollFunc fc:"+fc+ " colldata:"+collData+" newValue:"+newValue)
 		  			 if(collData.fitsToFuncCall(fc,collData.parentField)) fc.setValue(newValue)
 		  			 else fc		  		 
 		  		 }
 		  		 case a => a 
 		  	 }
 		   })
-		 //println(" newExpr:"+newExpression)  
+		 //System.out.println(" newExpr:"+newExpression)  
 		 ownerInst.setField(collData.parentField,newExpression)
 	}
 	
@@ -534,14 +551,14 @@ object TransactionManager {
 		// check if the child matches to any of the collFuncResults 
 		
 		for(res <-collData.callResultList ){
-			//println("myclass "+ myClass+ " res.childType:"+res.childType+ " " +myClass.inheritsFrom(res.childType))
+			//System.out.println("myclass "+ myClass+ " res.childType:"+res.childType+ " " +myClass.inheritsFrom(res.childType))
 			if(res.childField ==childField && res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
 		  		 myClass.inheritsFrom(res.childType)) fieldMatchSet=fieldMatchSet+ res.parentField
 		}
 		   
 		
 		if(!fieldMatchSet.isEmpty) {  // if yes, update the changes			
-			//println("fieldMatchSet: "+fieldMatchSet)
+			//System.out.println("fieldMatchSet: "+fieldMatchSet)
 			var parentInstData=ActionList.getInstanceData(owner.ownerRef)
 			val oldParentValues:Array[Constant]= new Array[Constant](parentInstData.fieldData .size)
 				for(i <-fieldMatchSet) oldParentValues(i)= parentInstData.fieldValue(i)
@@ -568,12 +585,12 @@ object TransactionManager {
 		var fieldMatchSet:Set[Int]=Set()
 		for(res <-collData.callResultList )
 		{
-			//println("res :"+res)
+			//System.out.println("res :"+res)
 			if( res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
 		  		 myClass.inheritsFrom(res.childType)) fieldMatchSet=fieldMatchSet+ res.parentField
 		}
 		if(!fieldMatchSet.isEmpty) {
-			//println("matches")
+			//System.out.println("matches")
 			var parentInstData=ActionList.getInstanceData(owner.ownerRef)
 			if (parentInstData!=null)
 			{
@@ -584,7 +601,7 @@ object TransactionManager {
 						yield if( res.parentPropField ==owner.ownerField && // if we have a matching collresult		  		
 								myClass.inheritsFrom(res.childType))  {
 							val (newRes,value) = collData.childDeleted(res,childInstance.ref ,childInstance.fieldValue(res.childField ))
-							//println("ChildDeleted newRes:"+newRes+ " new Value:"+value)
+							//System.out.println("ChildDeleted newRes:"+newRes+ " new Value:"+value)
 							parentInstData=updateOwnerCollFunc(parentInstData,newRes,value)		  	      
 							newRes
 						}	
@@ -609,23 +626,57 @@ object TransactionManager {
 		resultList
 	}	
 	
-	/**
+	/** Delete the instance
+	 * if fromOwner is a regular owner: if there are SU Owners, the first SUOwner takes over the place of the from owner
+	 * if there are no SUOwners, the instance is deleted completely
+	 * if fromOwner is a SU-Owner, the instance is only deleted from that owner
+	 * 
 	 * @param ref the instance to be deleted
+	 * @param fromOwner the ownerReference this instance should be deleted from, if None, delete the instance completely
 	 * @param dontNotifyOwner When notifying the parents of that instance, ignore the given parent
 	 */
-	def tryDeleteInstance(ref:Reference,dontNotifyOwner:Option[Reference]):Boolean =	{
+	def tryDeleteInstance(ref:Reference,fromOwner:Option[OwnerReference],dontNotifyOwner:Option[Reference]):Boolean =	{
+		System.out.println("delete instance "+ref+" from Owner:"+fromOwner)
   	if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
   	val instD=ActionList.getInstanceData(ref)
   	// mark this instance as deleted
-  	ActionList.addTransactionData(ref,new DeleteAction(instD))
-
-  	// notify owners
-  	for(owner <-instD.owners)
-  	{
-  		if(dontNotifyOwner match {case Some(dno)=> owner!=dno;case _ =>true}) {			
-  			internRemovePropertyFromOwner(ref,owner)
-  		}
+  	
+  	if(fromOwner.isDefined) {
+  		internRemovePropertyFromOwner(ref,fromOwner.get)
+  		passOnDeletedInstanceToCollFuncParents(instD,fromOwner.toList)
+  		
+  		if(instD.secondUseOwners.contains(fromOwner.get))
+  		{ // delete from seconduser list, dont change the instance beyond that  			
+  			val newSU=instD.secondUseOwners.filterNot(_ == fromOwner.get)
+  			val newInst=instD.changeSecondUseOwners(newSU)  			
+  			ActionList.addTransactionData(ref,new DataChangeAction(Some(newInst),None,None,None,None,Some(fromOwner.get))) // store that target  			
+  			return true
+  		} else if(instD.owners .contains(fromOwner.get)) {
+  			if(!instD.secondUseOwners.isEmpty){ // deletion from standard user list, but secondusers still use it
+  				val newOwners=instD.owners.filterNot(_ ==fromOwner.get) :+ instD.secondUseOwners.first
+  				val newSUOwners=instD.secondUseOwners.drop(1)
+  				// raise one of the su owners to a general owner
+  				val newInst=instD.clone(ref,newOwners,newSUOwners)  				
+  				ActionList.addTransactionData(ref,new DataChangeAction(Some(newInst),None,None,None,None,Some(fromOwner.get))) // store that target  				
+  				return true
+  			}
+  			// else do the standard procedure and delete the instance fully
+  		} // can not find fromOwner
+  		else throw new IllegalArgumentException("cant delete "+ref+" from unknown owner "+fromOwner.get)
+  		
   	}
+  	else { // no fromOwner defined => remove from all Owners
+  	  for(owner <-instD.owners)  	  
+  	  	if(dontNotifyOwner match {case Some(dno)=> owner!=dno;case _ =>true}) 			
+  	  		internRemovePropertyFromOwner(ref,owner)
+  	  for(owner <-instD.secondUseOwners)  	  
+  	  	if(dontNotifyOwner match {case Some(dno)=> owner!=dno;case _ =>true}) 			
+  	  		internRemovePropertyFromOwner(ref,owner)
+  	  passOnDeletedInstanceToCollFuncParents(instD,instD.owners)
+  	  passOnDeletedInstanceToCollFuncParents(instD,instD.secondUseOwners)
+  	}
+  	
+  	ActionList.addTransactionData(ref,new DeleteAction(instD))  	
   	
   	// remove link information at external source instances
   	for(afield <-instD.fieldData) // check all fields for FieldReferences
@@ -649,7 +700,7 @@ object TransactionManager {
 					  			(anExpression:Expression) =>{ anExpression match  {
 					  				case aFieldRef:FieldReference => {	
 					  					val relink=resolveLinkRef(targetRef,aFieldRef);
-					  				  //println("checking ref:"+aFieldRef+" resolved:"+relink+" with:"+ref);
+					  				  //System.out.println("checking ref:"+aFieldRef+" resolved:"+relink+" with:"+ref);
 					  				  if (relink==ref) aFieldRef.cachedValue // replace the reference with the cached value
 					  				  else aFieldRef // wrong reference, leave it
 					  				}
@@ -662,15 +713,10 @@ object TransactionManager {
 					  		)					  		
 					  		ActionList.addTransactionData(targetRef,new DataChangeAction(Some(targetData.setField(aref.field, theField)))) // store that target
 					  	}
-					  }
-				   
+					  }				   
 			}
 			case _ => // go drink a beer			
-		}
-  	
-  	// notify CollFuncs of the parent instances
-  	//println("check Coll "+ instD.owners.mkString(", "))
-  	passOnDeletedInstanceToCollFuncParents(instD,instD.owners)
+		}	
   	
   	//TODO delete instance from caches !!!
   	
@@ -679,20 +725,25 @@ object TransactionManager {
   		case Some(propdat) => 
   		{
   			val myRef=Some(ref)
-  		  for (pfield <-propdat.propertyFields; child <-pfield.propertyList )
-  		  try {	
-  		  	tryDeleteInstance(child,myRef)
-  		  } catch {
-  		  	case e:Exception => println("Error when deleting child "+child);e.printStackTrace
-  		  }
+  		  for (pfieldIx <-propdat.propertyFields.indices) {
+  		  	val oRef=Some(new OwnerReference(pfieldIx.toByte,ref))
+  		  	for( child <-propdat.propertyFields(pfieldIx).propertyList )
+  		  		try {	
+  		  			tryDeleteInstance(child,oRef,myRef)
+  		  		} catch {
+  		  			case e:Exception => System.out.println("Error when deleting child "+child);e.printStackTrace
+  		  		}	
+  		  	} 		  
   		}
   		case None => 
   	}
   	true
   }
 	
+	
+	
 	def tryMoveMultiInstances(subRefs:Seq[Reference],fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int):Unit = {
-		//println(" move Instances: "+subRefs.mkString(",")+ " from:"+fromOwner+ " to:"+toOwner+" pos:"+atPos)
+		//System.out.println(" move Instances: "+subRefs.mkString(",")+ " from:"+fromOwner+ " to:"+toOwner+" pos:"+atPos)
 		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
 		var pos=atPos
 	  for(ref <-subRefs) {
@@ -725,20 +776,24 @@ object TransactionManager {
 		}
 	}
 	
+	/** checks if the Reference given as toOwner is a child of source
+	 * 
+	 */
 	private def checkIsChildOf(toOwner:OwnerReference,source:Reference):Boolean= {
-		//println("check Child toOwner:"+toOwner+" source:"+source)
+		//System.out.println("check Child toOwner:"+toOwner+" source:"+source)
 		if(toOwner.ownerRef==source)return true
 		val instData=ActionList.getInstanceData(toOwner.ownerRef )
 		for(owner <-instData.owners)
-			if(checkIsChildOf(owner,source)) return true		
+			if(checkIsChildOf(owner,source)) return true	
+		for(owner <-instData.secondUseOwners)
+			if(checkIsChildOf(owner,source)) return true	
 		return false		
 	}
 	
 	def tryCopyMultiInstances(instList:Seq[Reference],fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int) = {
 		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")		
 		var pos=atPos
-		var lastInst:Int=0
-		//println("copy Multi :"+instList.mkString(",")+" from:"+fromOwner+" to:"+toOwner+" pos:"+atPos)
+		var lastInst:Int=0		
 		for(ref <-instList) {
 			lastInst=tryCopyInstance(ref,fromOwner,toOwner,pos,true)
 			if(atPos> -1) pos +=1
@@ -750,7 +805,7 @@ object TransactionManager {
 	
 	def tryCopyInstance(instRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int,
 	                    collNotifyOwners:Boolean):Int = {
-		//println("try copy instance:"+instRef+" "+atPos+" "+collNotifyOwners)
+		//System.out.println("try copy instance:"+instRef+" "+atPos+" "+collNotifyOwners)
 		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
 		if(checkIsChildOf(toOwner,instRef))throw new IllegalArgumentException("Copy not possible. ToOwner "+toOwner+" is child of copying Instance "+fromOwner)
 		//readLine
@@ -760,27 +815,31 @@ object TransactionManager {
 	
 	private def internTryCopyInstance(instRef:Reference,fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int,
 	                    collNotifyOwners:Boolean):Int = {
-		//println("intern tryp Copy Instance:"+instRef)
+		//System.out.println("intern tryp Copy Instance:"+instRef)
 		val instD=ActionList.getInstanceData(instRef)
 		// get the other owners of that instance, apart from "fromOwner", and add the new owner toOwner
-		if(!instD.owners.contains(fromOwner)) throw new IllegalArgumentException("Copy: instance "+instRef+" is not owned by "+ fromOwner)
-		//if(instD.owners.contains(toOwner)) throw new IllegalArgumentException("Copy: instance "+instRef+" is already owned by "+ toOwner)
+		if(!instD.owners.contains(fromOwner)) {
+			if(!instD.secondUseOwners.contains(fromOwner)) throw new IllegalArgumentException("Copy: instance "+instRef+" is not owned by "+ fromOwner)
+			else if(!collNotifyOwners){
+				// is a child as second use
+				System.out.println("copy as second use:"+instRef+" from:"+fromOwner+" to:"+toOwner)
+				trySecondUseInstances(List(instRef),fromOwner,toOwner,-1,false)// dont notify coll owners 
+				return 0
+			}
+		}
+		
 		val newOwners:Array[OwnerReference]= instD.owners.filter(_ !=fromOwner) :+ toOwner
 		var createInst=tryCreateInstance(instRef.typ ,newOwners,false,atPos,false,false) // new instance created by DB
-		
-		createInst=instD.clone(createInst.ref,newOwners)
-		
-		// Register FieldReferences to other instances
-		
+		createInst=instD.clone(createInst.ref,newOwners,Seq.empty)
+		// Register FieldReferences to other instances		
 		for(i <- 0 until instD.fieldData.size;if (!instD.fieldData(i).isNullConstant))
 		{
 			val refList=instD.fieldData(i).getElementList[FieldReference](DataType.FieldRefTyp,Nil)
-			//println("try copy inst:"+instRef+" newInst:"+createInst.ref+" "+refList)
-			//println("old referencing Links "+ActionList.getReferencingLinks(instRef))
+			//System.out.println("try copy inst:"+instRef+" newInst:"+createInst.ref+" "+refList)
+			//System.out.println("old referencing Links "+ActionList.getReferencingLinks(instRef))
 			for(rf <-refList)
 				 addLinkRef(createInst.ref,i.toByte,rf)
-		}
-		
+		}		
 		// store data and copy collData to new Instance
 		var collData=ActionList.getCollData(instRef)
 		for(c <-collData)
@@ -806,6 +865,32 @@ object TransactionManager {
 		createInst.ref.instance 
 	}
 	
+	/** creates links of the given instances into the new Owner
+	 * @param instlist instances to link
+	 * @param fromOwner current owner
+	 * @param toOwner new owner where the instances should be linked at
+	 * @param atPos position where they should be linked at
+	 * @param collNotifyOwners should owners be notified of the change, is used when called from copy
+	 * 
+	 */
+	def trySecondUseInstances(instList:Seq[Reference],fromOwner:OwnerReference,toOwner:OwnerReference,
+	                          atPos:Int,collNotifyOwners:Boolean=true)= {
+		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")		
+		var pos=atPos				
+		for(instRef <-instList) {
+			if(checkIsChildOf(toOwner,instRef))throw new IllegalArgumentException("Copy not possible. ToOwner "+toOwner+" is child of linking Instance "+instRef)
+			val instD=ActionList.getInstanceData(instRef)
+			if(!instD.owners.contains(fromOwner)&& !instD.secondUseOwners.contains(fromOwner)) throw new IllegalArgumentException("Link: instance "+instRef+" is not owned by "+ fromOwner)
+			val newSUOwners=instD.secondUseOwners :+toOwner
+			val newInst=instD.changeSecondUseOwners(newSUOwners)
+			internAddPropertyToOwner(newInst,toOwner,pos,true)
+			if(collNotifyOwners)
+				passOnNewInstanceToCollFuncParents(newInst,Seq(toOwner))
+			ActionList.addTransactionData(instRef,new DataChangeAction(Some(newInst),None,None,None))
+			if(atPos> -1) pos +=1
+		}
+	}
+	
 	
 	// internal routine
 	private def internRemovePropertyFromOwner(subRef:Reference,fromOwner:OwnerReference,notifyOwner:Boolean=false)
@@ -826,6 +911,11 @@ object TransactionManager {
 	/**
 	 *  encapsulates a transaction so that StartTransaction and Finishtransaction/BreakTransaction
 	 *  will always be executed
+	 *  @param userID id of the user that started the transaction
+	 *  @param actionCode code for the Action , to be used for the transaction log
+	 *  @param ref Reference of the first instance that is changed, for the transaction log
+	 *  @param multi are there multiple instances changed in this transaction - for the transaction log
+	 *  @param f a function that does all the work for this transaction
 	 */
 	def doTransaction (userID:Short,actionCode:Short,ref:Reference,multi:Boolean,createType:Int,f :  => Unit):Option[Exception] = transLock.synchronized{
     startTransaction()
@@ -838,14 +928,15 @@ object TransactionManager {
     try {
         f
     } catch { case e:Exception => {e.printStackTrace(); success=false; breakTransaction();return Some(e)}   }
-    if(success) finishTransaction()   
+    if(success) finishTransaction()  
+    println("Transaction ready "+ActionNameMap.getActionName(actionCode)+ " "+ref)
     None
 	}
 	
 	
 	def doUndo(user:UserEntry)= {
 		if(undoUserEntry!=null && user.info.id==undoUserEntry.info .id) {
-			println("do undo "+TransLogHandler.transID)
+			System.out.println("do undo "+TransLogHandler.transID)
 			StorageManager.undoLastStep()
 			CommonSubscriptionHandler.refreshAfterUndo()
 			ActiveUsers.releaseUsersForUndo(user)

@@ -12,11 +12,13 @@ import javax.swing.border._
 import scala.swing.event._
 import javax.swing.table._
 import server.storage._
-import client.dataviewer.MultilineEditor
-import client.dialog.ReactiveTextField
+import client.dataviewer.{MultilineEditor,FieldColumnModel}
+import client.dialog.{ReactiveTextField,ComboBoxEditor}
 import transaction.handling.SessionManager
 import server.config.FSPaths
 import scala.collection.JavaConversions._
+import server.config.{ServerSystemSettings}
+
 
 /**
  * 
@@ -40,18 +42,25 @@ object TypeDefPanel extends ScrollPane {
 	val saveBut=new Button("Save changes")
 	val inheritedFieldMod=new FieldDefTableModel(false)
 	val ownFieldMod=new FieldDefTableModel(true)
-	val vect=new java.util.Vector[DTWrap](DataType.wrappedValues)  	
-  val typeComboBox=new JComboBox(vect)
-	val typeEditor=new TypeEditor(typeComboBox)
+	val typeVect=new java.util.Vector[DTWrap](DataType.wrappedValues)  	
+  val typeComboBox=new JComboBox(typeVect)
+	val typeEditor=new ComboBoxEditor(typeComboBox)
+	val enumVect=new java.util.Vector[EnumDefinition](SystemSettings().enums.valuesIterator.toSeq)
+	println("enums :"+enumVect.mkString(" + "))
+	val enumCombo=new JComboBox(enumVect)
+	val enumEditor=new ComboBoxEditor(enumCombo)
+	
 	val fieldColMod=new FieldColumnModel{
-    	createColumn(0,"Name",120)
+    	createColumn(0,"Name",110)
     	createColumn(1,"Typ",70)
-    	createColumn(2,"locked",50)    	
-    	createColumn(3,"term",50)  
-    	createColumn(4,"editor",100)
-    	createColumn(5,"startValue",100)
-    	createColumn(6,"Format",80)
+    	createColumn(2,"EnumID",110)
+    	createColumn(3,"lock",35)    	
+    	createColumn(4,"term",35)  
+    	createColumn(5,"editor",90)
+    	createColumn(6,"startValue",100)
+    	createColumn(7,"Format",80)
     	getColumn(1).setCellEditor(typeEditor)
+    	getColumn(2).setCellEditor(enumEditor)
     }
 	val inheritedFieldTable=new FieldTable(inheritedFieldMod,fieldColMod)
 	
@@ -59,9 +68,16 @@ object TypeDefPanel extends ScrollPane {
 	//ownFieldTable.peer.getColumnModel.getColumn(1).setCellEditor(typeEditor)
 	val inheritedPropMod=new PropFieldTableModel(false)
 	val ownPropMod= new PropFieldTableModel(true)
-	val inheritedPropTable=new FieldTable(inheritedPropMod)
+	val propFieldColMod=new FieldColumnModel{
+    	createColumn(0,"Name",80)
+    	createColumn(1,"single",50)
+    	createColumn(2,"Allowed Class",90)
+    	createColumn(3,"hidden",50)    	
+    	createColumn(4,"volat",45)    	
+	}
+	val inheritedPropTable=new FieldTable(inheritedPropMod,propFieldColMod)
 	inheritedPropTable.background=Color.lightGray
-	val ownPropTable=new FieldTable(ownPropMod)
+	val ownPropTable=new FieldTable(ownPropMod,propFieldColMod)
 	val classNameRenderer=new ClassNameRenderer
 	inheritedPropTable.peer.setDefaultRenderer(classOf[Integer],classNameRenderer)
 	ownPropTable.peer.setDefaultRenderer(classOf[Integer],classNameRenderer)	
@@ -88,6 +104,7 @@ object TypeDefPanel extends ScrollPane {
 		peer.setRowHeight(19)
 		peer.setDefaultEditor(classOf[String],stringEditor)		
 		peer.setDefaultEditor(classOf[DTWrap],typeEditor)	
+		peer.setDefaultEditor(classOf[EnumDefinition],enumEditor)
 		autoResizeMode=Table.AutoResizeMode.Off
 		selection.intervalMode=Table.IntervalMode.Single
 		selection.elementMode=Table.ElementMode.None    
@@ -210,7 +227,7 @@ object TypeDefPanel extends ScrollPane {
 						var row=table.peer.getSelectedRow
 						if(row> -1){							
 							val mod=table.model.asInstanceOf[PropFieldTableModel]
-							println("select row:"+row+" size:"+mod.propFieldList .size)
+							System.out.println("select row:"+row+" size:"+mod.propFieldList .size)
 							//row=row-inheritedPropMod.getRowCount
 							if(row<mod.propFieldList.size){
 								val propField=mod.getPropField(row)
@@ -241,7 +258,7 @@ object TypeDefPanel extends ScrollPane {
 			case ButtonClicked(`saveBut`) => safeClass
 			case ButtonClicked(`checkBut`) => {
 				updateClassInfo
-				println(theClass.saveToXML.mkString("\n"))
+				System.out.println(theClass.saveToXML.mkString("\n"))
 			}
 		}
 	}
@@ -363,21 +380,10 @@ object TypeDefPanel extends ScrollPane {
   	override def getCellEditorValue():java.lang.Object =
   	{
   		val ix =getComponent().asInstanceOf[JComboBox].getSelectedIndex();
-  		println("getValue "+ix)
+  		System.out.println("getValue "+ix)
   		if(ix<0) new Integer(-1)
   		else classList(ix).asInstanceOf[AnyRef]
   	}
   }
-  class TypeEditor(box:JComboBox) extends DefaultCellEditor(box) {  	
-  	override def getTableCellEditorComponent(table: JTable,value: Object,isSelected:Boolean,row:Int,column:Int ) = {
-  		println("get comp")
-  		val editor:JComboBox =super.getTableCellEditorComponent( table, value, isSelected, row, column ).asInstanceOf[JComboBox]; 
-  		editor.setSelectedItem( value )
-  		editor
-  	}
-  	override def getCellEditorValue():java.lang.Object =
-  	{
-  		getComponent().asInstanceOf[JComboBox].getSelectedItem();  		
-  	}
-  }
+  
 }

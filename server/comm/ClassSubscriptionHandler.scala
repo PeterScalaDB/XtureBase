@@ -16,7 +16,7 @@ class ClassSubscriptionHandler(typID:Int) {
 	var propSubsMap=Map[Reference,List[PropSubscription]]()
 	
 	def addSubscription(s:SubscriptionInfo) = {
-		//println("csh typ:"+typID+" addSubs:"+s)
+		//System.out.println("csh typ:"+typID+" addSubs:"+s)
 		s match {
 			case a:SingleSubscription => addSingleS(a)
 			case b:PropSubscription => addPropS(b)
@@ -28,11 +28,11 @@ class ClassSubscriptionHandler(typID:Int) {
 		  // add to existing
 			val list=if(singleSubsMap.contains(ref )) (p:: singleSubsMap(ref)) else List(p)
 			singleSubsMap.put(ref, list)		 
-			//println("csh addPathSubs:"+p+ " => "+ref+" List:"+list)
+			//System.out.println("csh addPathSubs:"+p+ " => "+ref+" List:"+list)
 	}
 	
 	def removeSubscription(s:SubscriptionInfo) = {
-		//println("csh typ:"+typID+" addSubs:"+s)
+		//System.out.println("csh typ:"+typID+" addSubs:"+s)
 		s match {
 			case c:PathSubscription => removePathS(c)
 			case a:SingleSubscription => removeSingleS(a)
@@ -44,14 +44,14 @@ class ClassSubscriptionHandler(typID:Int) {
 		if(singleSubsMap.contains(forElem)) {
 			val list=singleSubsMap(forElem)
 			singleSubsMap.put(forElem,list.filterNot (_ == s))
-		} else println("RemoveSingePathSubs "+s+" forElem:"+forElem+" Cant find elem !!")				 
+		} else System.out.println("RemoveSingePathSubs "+s+" forElem:"+forElem+" Cant find elem !!")				 
 	}
 	
 	
 	def singleInstanceChanged(newState:InstanceData) = {
 		if (singleSubsMap.contains(newState.ref))	{
 			val list=singleSubsMap(newState.ref)
-			//println("single instance changed subslist:"+list.mkString(", "))
+			//System.out.println("single instance changed subslist:"+list.mkString(", "))
 			for(subs <-list)
 				subs.user.queryHandler.notifyInstanceChanged(subs,newState)
 		}
@@ -66,7 +66,7 @@ class ClassSubscriptionHandler(typID:Int) {
 	}
 	
 	def childInstanceChanged(ownerRef:Reference,propField:Byte,childInst:InstanceData) = {
-		//println("csh single instance changed subslist owner:"+ownerRef+" childInst:"+childInst)
+		//System.out.println("csh single instance changed subslist owner:"+ownerRef+" childInst:"+childInst)
 		if(propSubsMap.contains(ownerRef)) {
 			val list=propSubsMap(ownerRef)
 			for(subs <-list)
@@ -136,26 +136,26 @@ class ClassSubscriptionHandler(typID:Int) {
 	}
 	
 	private def removeSingleS(s:SingleSubscription) = {
-		//println("csm remove singleSubs:"+s)
+		//System.out.println("csm remove singleSubs:"+s)
 		if(singleSubsMap.contains(s.parentRef)) {
 			val list=singleSubsMap(s.parentRef)
 			if(list.contains(s))
 				singleSubsMap.put(s.parentRef,list.filterNot(_ ==  s))
 		}
-		else println("Entry for "+s.parentRef+" not found")
+		else System.out.println("Entry for "+s.parentRef+" not found")
 	}
 	
 	private def removePropS(s:PropSubscription) = {
-		//println("csm remove propSubs:"+s)
+		//System.out.println("csm remove propSubs:"+s)
 		if(propSubsMap.contains(s.parentRef)) {
 		val list=propSubsMap(s.parentRef)
 		if(list.contains(s))
 			propSubsMap.put(s.parentRef,list.filterNot(_ == s))
-		} else println("Entry for "+s.parentRef+" not found")
+		} else System.out.println("Entry for "+s.parentRef+" not found")
 	}	
 	
 	def removePathS(s:PathSubscription) = {
-		//println("csm remove pathSubs:"+s)
+		//System.out.println("csm remove pathSubs:"+s)
 		for((k,list) <-singleSubsMap.iterator)
 			if(list.contains(s))
 				 singleSubsMap.put(k,list.filterNot (_ == s))

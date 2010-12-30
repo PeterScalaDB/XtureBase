@@ -23,7 +23,7 @@ object ActiveUsers {
    
    def addUser(newEntry:UserEntry) =  	 {
   	   list.put(newEntry.info.id,newEntry)
-  	   println("addUser "+newEntry+" Listsize: "+list.size)
+  	   System.out.println("addUser "+newEntry+" Listsize: "+list.size)
   	 }
    
    def getUserSocket(userID:Int) = list.get(userID).thread
@@ -34,7 +34,7 @@ object ActiveUsers {
   	 val entry=list.get(userID)  	 
   	 list.remove(userID)
   	 CommonSubscriptionHandler.userLogsOff(userID)
-  	 println("Remove user "+userID+"List size: "+list.size+" " +wantQuit)
+  	 System.out.println("Remove user "+userID+"List size: "+list.size+" " +wantQuit)
   	 checkFinish()
    }
    
@@ -42,7 +42,7 @@ object ActiveUsers {
   	 finalFunc=nf
   	 wantQuit=true
   	 checkFinish()
-  	 println("Shutting Down UserList size:" +list.size)
+  	 System.out.println("Shutting Down UserList size:" +list.size)
   	 for (u <-list.values.iterator())
   		 u.thread.tellToQuit()
    }

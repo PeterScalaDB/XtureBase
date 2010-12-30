@@ -21,4 +21,10 @@ object ServerCommands extends Enumeration {
   val lockForUndo=Value("Lock for Undo")
   val releaseUndoLock=Value("Release Undo Lock")
   val sendUndoInformation= Value("Send Undo information")
+  val askEnquiry=Value("Ask Enquiry")
+  val sendGeneratedData=Value("Send generated Data")
+}
+
+object GeneratorType extends Enumeration{
+	val printGenerator=Value("Print Generator")
 }

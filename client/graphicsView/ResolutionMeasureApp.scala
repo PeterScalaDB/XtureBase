@@ -65,7 +65,7 @@ object ResolutionMeasureApp extends SimpleSwingApplication  {
 		reactions += {
 			case EditDone(`widthEdit`) =>{
 				val nw=textToDouble(widthEdit.text,400)
-				println("nw:"+nw)
+				System.out.println("nw:"+nw)
 				val nsize=new Dimension(nw.toInt,showBox.preferredSize.height)
 				showBox.minimumSize=nsize
 				showBox.preferredSize=nsize
@@ -75,7 +75,7 @@ object ResolutionMeasureApp extends SimpleSwingApplication  {
 			}																
 			case EditDone(`heightEdit`) => {
 				val nh=textToDouble(heightEdit.text,200)
-				println("NH:"+nh)
+				System.out.println("NH:"+nh)
 				val nsize=new Dimension(showBox.preferredSize.width,nh.toInt)
 				showBox.minimumSize=nsize
 				showBox.preferredSize=nsize

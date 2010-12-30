@@ -105,12 +105,12 @@ object DataViewPanel extends BorderPanel
 	
 	def openInstance() =
 	{		
-		//println("openBut "+ixTable.selection.rows)
+		//System.out.println("openBut "+ixTable.selection.rows)
 		if(! (ixTable.selection.rows.isEmpty))		 
 		{			
 			val ix:Int= ixTable.selection.rows.head
 			val inst:Int=IndexTableModel.ixList(ix).inst
-			println("inst: "+inst)
+			//System.out.println("inst: "+inst)
 			if (StorageManager.instanceExists(InstFieldTableModel.theClass.id,inst))
 			{
 				val r=new Reference(InstFieldTableModel.theClass.id,inst)
@@ -138,11 +138,11 @@ object DataViewPanel extends BorderPanel
 		{			
 			val ix:Int= ixTable.selection.rows.head
 			val inst:Int=IndexTableModel.ixList(ix).inst
-			//println("inst: "+inst)
+			//System.out.println("inst: "+inst)
 		  InstFieldTableModel.setInstance(null)	
 		  val ref=new Reference(InstFieldTableModel.theClass.id,inst)
 		  TransactionManager.doTransaction(0,ClientCommands.deleteInstance.id.toShort,ref,false,0,{
-			  TransactionManager.tryDeleteInstance(ref,None)	
+			  TransactionManager.tryDeleteInstance(ref,None,None)	
 			}	  )
 		  
 		  IndexTableModel.readTheList
@@ -155,9 +155,9 @@ object DataViewPanel extends BorderPanel
 		{			
 			val ix:Int= ixTable.selection.rows.head
 			val inst:Int=IndexTableModel.ixList(ix).inst
-			//println("inst: "+inst)
+			//System.out.println("inst: "+inst)
 			
-			println(ActionList.getCollData(new Reference(InstFieldTableModel.theClass.id,inst)))		  
+			System.out.println(ActionList.getCollData(new Reference(InstFieldTableModel.theClass.id,inst)))		  
 		  
 		}
 	}

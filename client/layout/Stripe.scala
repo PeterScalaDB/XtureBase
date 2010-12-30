@@ -25,7 +25,7 @@ class ExpandStripe(val isHorizontal:Boolean,var baseBox:Viewbox) extends
 	BoxPanel(if(isHorizontal)Orientation.Horizontal else Orientation.Vertical) with Stripe{
 	
 	val butList=ViewboxContentTypeList.list.map(  new ExpandButton( _ ))
-	//println("Types:"+ViewboxContentTypeList.list.mkString)
+	//System.out.println("Types:"+ViewboxContentTypeList.list.mkString)
 	contents+=(if(isHorizontal)Swing.HStrut(10) else Swing.VStrut(10))
 	contents ++=butList
 	contents+=(if (isHorizontal)Swing.HGlue else Swing.VGlue)
@@ -91,7 +91,7 @@ class ConnectorStripe(val isHorizontal:Boolean,val baseBox:Viewbox,var connected
 	
 	
 	def dragStopped = {
-		//println("drag stopped dragScale:"+dragScale)
+		//System.out.println("drag stopped dragScale:"+dragScale)
 		if(dragScale!= -1) scaleValue=dragScale
 		dragScale= -1
 		revalidate
@@ -103,7 +103,7 @@ class ConnectorStripe(val isHorizontal:Boolean,val baseBox:Viewbox,var connected
 		  else baseBox.bounds.width
 		  val scale=if(scaleValue == -1 ) defaultScale else scaleValue
 		  maxSize=baseSize.toDouble/scale
-		  //println("Start: scale:"+scale+" baseSize:"+baseSize+" maxSize:"+maxSize)
+		  //System.out.println("Start: scale:"+scale+" baseSize:"+baseSize+" maxSize:"+maxSize)
 		}		
 		
 		
@@ -111,7 +111,7 @@ class ConnectorStripe(val isHorizontal:Boolean,val baseBox:Viewbox,var connected
 		
 		if(newSize>30 && newSize<maxSize-30) {
 			dragScale=newSize/maxSize
-			//println(" delta:"+delta+" newSize:"+newSize+" dragScale:"+dragScale)
+			//System.out.println(" delta:"+delta+" newSize:"+newSize+" dragScale:"+dragScale)
 			revalidate
 		}		
 	}

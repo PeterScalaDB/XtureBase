@@ -50,7 +50,7 @@ class ScaleModel {
 													 else {
 														 val newStroke=new BasicStroke(thicknessToScreen(thick).toFloat,BasicStroke.CAP_ROUND,
 															 BasicStroke.JOIN_MITER)
-														 //println("Stroke "+thick+" ->"+newStroke.getLineWidth)
+														 //System.out.println("Stroke "+thick+" ->"+newStroke.getLineWidth)
 														 strokeMap(thick)=newStroke
 														 newStroke
 													 }
@@ -81,29 +81,29 @@ class ScaleModel {
 	}
 	
 	def zoomIn(start:Point,end:Point) = {
-		//println("zoom start:"+start+" end:"+end)
-		//println("before zoom: world x:"+_world_X+" y:"+_world_Y+" w:"+_world_Width+" h:"+_world_Height+
+		//System.out.println("zoom start:"+start+" end:"+end)
+		//System.out.println("before zoom: world x:"+_world_X+" y:"+_world_Y+" w:"+_world_Width+" h:"+_world_Height+
 		//	" xof:"+xOffset+" yof:"+yOffset+ " scale:"+scale)
 		val x1=xToWorld(start.x)
 		val x2=xToWorld(end.x)		
 		val y1=yToWorld(start.y)
-		//println("startY:"+start.y+" to world:"+y1+" back:"+yToScreen(y1))		
+		//System.out.println("startY:"+start.y+" to world:"+y1+" back:"+yToScreen(y1))		
 		val y2=yToWorld(end.y)
-		//println("endY:"+end.y+" to world:"+y2+" back:"+yToScreen(y2))
+		//System.out.println("endY:"+end.y+" to world:"+y2+" back:"+yToScreen(y2))
 		_world_X=Math.min(x1,x2)
 		_world_Width=Math.max(x1,x2)-world_X		
 		_world_Y=Math.min(y1,y2)
 		_world_Height=Math.max(y1,y2)-world_Y
 		zoomStack=new Rectangle2D.Double(_world_X,_world_Y,_world_Width,_world_Height):: zoomStack
 		calcOffsets
-		//println("after zoom: world x:"+_world_X+" y:"+_world_Y+" w:"+_world_Width+" h:"+_world_Height+
+		//System.out.println("after zoom: world x:"+_world_X+" y:"+_world_Y+" w:"+_world_Width+" h:"+_world_Height+
 		//	" xof:"+xOffset+" yof:"+yOffset)
 		
 		notifyScaleChanged()
 	}
 	
 	def zoomOut () = {
-		//println("zoomout" + zoomStack)
+		//System.out.println("zoomout" + zoomStack)
 		if(zoomStack.tail!=Nil){ 
 			zoomStack=zoomStack.tail
 			_world_X=zoomStack.head.x
@@ -165,8 +165,8 @@ class ScaleModel {
 		}
 		_thicknessScale=(scale*_dotPitch/1000d)/(_relativeScale._1/_relativeScale._2)
 		strokeMap.clear
-		//println("thicknessScale:"+_thicknessScale)
-		//println("calcOff world x:"+_world_X+" y:"+_world_Y+" w:"+_world_Width+" h:"+_world_Height+" view:"+_viewSize+
+		//System.out.println("thicknessScale:"+_thicknessScale)
+		//System.out.println("calcOff world x:"+_world_X+" y:"+_world_Y+" w:"+_world_Width+" h:"+_world_Height+" view:"+_viewSize+
 		//	" xof:"+xOffset+" yof:"+yOffset+" wr:"+worldRatio+" vr:"+viewRatio+" hs:"+_heightSet)
 	}
 	
@@ -185,7 +185,7 @@ class ScaleModel {
 		  if(_world_Width==0) 1
 		else(_viewSize.width.toDouble/_world_Width)	
 		}
-		//println("scale heightSet:"+_heightSet+" wh:"+_world_Height+" ww:"+_world_Width+ " sc:"+scal)
+		//System.out.println("scale heightSet:"+_heightSet+" wh:"+_world_Height+" ww:"+_world_Width+ " sc:"+scal)
 		//scal
 	}
 	
@@ -199,7 +199,7 @@ class ScaleModel {
 	def setScaleRatio(a:Double,b:Double) = {
 		
 		val wishScale= (a / b)*1000d/_dotPitch
-		println("SetScale "+a+" / "+b+" wsc:"+wishScale)
+		System.out.println("SetScale "+a+" / "+b+" wsc:"+wishScale)
 		var newWorldHeight:Double= 0
 		var newWorldWidth:Double= 0
 		if(_heightSet) {
@@ -258,7 +258,7 @@ object ScalaModel {
 		val sm=new ScaleModel()
 		sm.viewSize=new Dimension(2200,1200)
 		
-		println(sm.scale+" "+sm.worldScale+" "+sm.getScaleRatio)
+		System.out.println(sm.scale+" "+sm.worldScale+" "+sm.getScaleRatio)
 	}
 }
 

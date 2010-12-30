@@ -33,7 +33,7 @@ abstract class MultilineEditor(theTable:JTable) extends AbstractCellEditor with 
 	val component:JTextArea = new JTextArea(document) {		
     setBackground(editColor)    
 		override protected def processKeyBinding( ks: KeyStroke,e: KeyEvent, condition:Int , pressed:Boolean):Boolean ={
-			//println("Edit process Key Bindings:"+ks+" condition:"+condition)
+			//System.out.println("Edit process Key Bindings:"+ks+" condition:"+condition)
 			if (textArea.hasFocus()) {
 				return super.processKeyBinding(ks, e, condition, pressed)
 			} else {
@@ -55,7 +55,7 @@ abstract class MultilineEditor(theTable:JTable) extends AbstractCellEditor with 
     	def ancestorAdded(e:AncestorEvent ) = {	} 
     	def ancestorMoved(e:AncestorEvent ) = {
     		val newPoint:Point=e.getComponent.getLocation
-    		//println("Moved oldPos:"+oldPos+" newPos:"+newPoint)    		
+    		//System.out.println("Moved oldPos:"+oldPos+" newPos:"+newPoint)    		
     	  setPopupLocation(newPoint)
     	}
     	def ancestorRemoved(e:AncestorEvent) = {
@@ -85,7 +85,7 @@ abstract class MultilineEditor(theTable:JTable) extends AbstractCellEditor with 
 					}
 					else {						
 						val action=textArea.getActionMap.get("selectNextRowCell")
-						//println("action :"+action)
+						//System.out.println("action :"+action)
 						SwingUtilities.notifyAction(action,KeyStroke.getKeyStroke(e.getKeyCode,e.getModifiers),e,theTable, e.getModifiers)
 						e.consume
 					}
@@ -101,7 +101,7 @@ abstract class MultilineEditor(theTable:JTable) extends AbstractCellEditor with 
     def removeUpdate(e:DocumentEvent )={update}   
     def changedUpdate(e:DocumentEvent ) = {update}
     def update= {
-    	//println("Change")
+    	//System.out.println("Change")
     	SwingUtilities.invokeLater(new Runnable() {
     		def run() { 
     			updateEditorHeight
@@ -118,14 +118,14 @@ abstract class MultilineEditor(theTable:JTable) extends AbstractCellEditor with 
 	}
 	
 	override def cancelCellEditing()= {
-		//println("cancel ")
+		//System.out.println("cancel ")
 		super.cancelCellEditing
 		hidePopup
 		
 	}
 	
 	override def stopCellEditing() = {
-		//println("stop ")
+		//System.out.println("stop ")
 		val ret=super.stopCellEditing
 		hidePopup
 		ret
@@ -201,14 +201,14 @@ abstract class MultilineEditor(theTable:JTable) extends AbstractCellEditor with 
 		if(actionName!=null) {
 		  textArea.getInputMap(JComponent.WHEN_FOCUSED).put(keyStroke, actionName)
 		  val action=theTable.getActionMap().get(actionName)
-		  //println("instEdit install action :"+actionName +" => "+action)
+		  //System.out.println("instEdit install action :"+actionName +" => "+action)
 		  if(action!=null) textArea.getActionMap().put(actionName,new ActionWrapper(action))
 		}	
 	}
 	
 	class ActionWrapper(oldAction:Action) extends AbstractAction {	  
 		def actionPerformed(e:ActionEvent) = {
-			//println("wrapper actionPerformed "+e+" oldaction:"+oldAction)
+			//System.out.println("wrapper actionPerformed "+e+" oldaction:"+oldAction)
 			val newEvent=new ActionEvent(theTable,e.getID,e.getActionCommand,e.getWhen,e.getModifiers)
 			oldAction.actionPerformed(newEvent)
 		}

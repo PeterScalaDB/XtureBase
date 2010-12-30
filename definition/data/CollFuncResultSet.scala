@@ -131,7 +131,7 @@ class CollFuncResultSet(override val ref:Reference,
 	 * @return the result of collecting all data from the children
 	 */
 	def calculateSingleResult(propField:Byte,cType:Int,cField:Byte,func:SingleCollFunction):Constant = 	{
-		println("calculate SingleResult")
+		System.out.println("calculate SingleResult")
 		ActionList.getInstanceProperties(ref) match {
 			case Some(prop) => { // if there are children
 				var result=func.emptyValue // init loop variable
@@ -140,7 +140,7 @@ class CollFuncResultSet(override val ref:Reference,
 					if ( AllClasses.get.getClassByID(cRef.typ).inheritsFrom(cType) ) // when they fit
 					{ 
 						val instData=ActionList.getInstanceData(cRef)
-						println(" fits "+instData)
+						System.out.println(" fits "+instData)
 						if(instData!=null) // null == instance should be deleted
 						result=func.childAdded(result,instData.fieldValue(cField ))
 					}}

@@ -12,7 +12,7 @@ import definition.typ._
  * 
  */
 class InstanceData (override val ref:Reference,	val fieldData:IndexedSeq[Expression],	 									
-	val owners:Array[OwnerReference]=Array(),val hasChildren:Boolean) extends Referencable
+	val owners:Array[OwnerReference]=Array(),val secondUseOwners:Seq[OwnerReference]=Seq.empty,val hasChildren:Boolean) extends Referencable
 	{	
 	lazy val fieldValue:Seq[Constant]=regenFieldCache
 	
@@ -47,8 +47,8 @@ class InstanceData (override val ref:Reference,	val fieldData:IndexedSeq[Express
 	
 	def resultString= {
 		if(theClass.resultFormat!=NOFORMAT) {
-			//println("resultArray:"+resultFormArray.mkString)
-			//println(fieldValue(0).getType)
+			//System.out.println("resultArray:"+resultFormArray.mkString)
+			//System.out.println(fieldValue(0).getType)
 			try {
 			theClass.resultFormat.formStr.format(resultFormArray:_*)
 			}
@@ -70,10 +70,14 @@ class InstanceData (override val ref:Reference,	val fieldData:IndexedSeq[Express
 		{			
 			field.write(file)
 		}
-
+		// owners
 		file.writeByte(owners.length)
 		for(owner<-owners)
-			owner.write(file)	
+			owner.write(file)
+			// secondUseOwners
+		file.writeShort(secondUseOwners.length)
+		for(so<-secondUseOwners)
+			so.write(file)
 	}
 
 	def writeWithChildInfo(file:DataOutput) = {
@@ -90,15 +94,25 @@ class InstanceData (override val ref:Reference,	val fieldData:IndexedSeq[Express
 	def setField(fieldNr:Byte,newValue:Expression):InstanceData = 	{
 		val newArray:IndexedSeq[Expression]=(for (i <- 0 until fieldData.length) 
 			yield (if (i==fieldNr) newValue else fieldData(i)))
-			new InstanceData(ref,newArray,owners,hasChildren)
+			new InstanceData(ref,newArray,owners,secondUseOwners,hasChildren)
 	}
 
 	def changeOwner(newOwners:Array[OwnerReference]) = {
-		new InstanceData(ref,fieldData,newOwners,hasChildren)
+		new InstanceData(ref,fieldData,newOwners,secondUseOwners,hasChildren)
 	}
+	
+	def changeSecondUseOwners(newOwners:Seq[OwnerReference]) = {
+		new InstanceData(ref,fieldData,owners,newOwners,hasChildren)
+	}
+	
+	def addSecondUseOwner(newOwner:OwnerReference)= {
+		changeSecondUseOwners(secondUseOwners:+ newOwner)
+	}
+	
+	
 
 	def setHasChildren(newValue:Boolean) = {
-		new InstanceData(ref,fieldData,owners,newValue)
+		new InstanceData(ref,fieldData,owners,secondUseOwners,newValue)
 	}
 
 	/** creates a copy of this instance
@@ -111,8 +125,8 @@ class InstanceData (override val ref:Reference,	val fieldData:IndexedSeq[Express
 	 * @param newOwners the owners of the new instance
 	 * @return
 	 */
-	def clone(newRef:Reference,newOwners:Array[OwnerReference]):InstanceData =	{
-		new InstanceData(newRef,fieldData.map(_.createCopy),newOwners,hasChildren)
+	def clone(newRef:Reference,newOwners:Array[OwnerReference],newSecondUseOwners:Seq[OwnerReference]):InstanceData =	{
+		new InstanceData(newRef,fieldData.map(_.createCopy),newOwners,newSecondUseOwners,hasChildren)
 	}
 
 	/** replaces an ownerReferene with another ref and returns a new Instance with the new values
@@ -123,7 +137,7 @@ class InstanceData (override val ref:Reference,	val fieldData:IndexedSeq[Express
 	def changeSingleOwner(fromRef:OwnerReference,toRef:OwnerReference):InstanceData = {
 		val newOwnerList= for (ref <- owners)
 			yield (if (ref==fromRef) toRef else ref)
-			new InstanceData(ref,fieldData,newOwnerList,hasChildren)
+			new InstanceData(ref,fieldData,newOwnerList,secondUseOwners,hasChildren)
 	}
 
 
@@ -142,9 +156,9 @@ class InstanceData (override val ref:Reference,	val fieldData:IndexedSeq[Express
 	def regenFieldCache:Seq[Constant] = for(index<-0 until fieldData.size)yield {					  
 			val fieldType = theClass.fields(index).typ
 			val result=fieldData(index).getValue
-			//println("inst "+ref+" getfield "+index+" fieldType:"+fieldType+" result:" +result)
+			//System.out.println("inst "+ref+" getfield "+index+" fieldType:"+fieldType+" result:" +result)
 			if(result==null) { 
-				println("result== null "+ref+" field:"+index+" "+fieldData(index))
+				System.out.println("result== null "+ref+" field:"+index+" "+fieldData(index))
 				EMPTY_EX
 			} else			 			
 			if(result.getType==fieldType )
@@ -177,12 +191,21 @@ def readOwners(file:DataInput) = {
 		ownArray
 }
 
+def readSecondUseOwners(file:DataInput) = {
+	val nOwners=file.readShort
+	val ownArray=new Array[OwnerReference](nOwners)
+	for( o<- 0 until nOwners)
+		ownArray(o)= OwnerReference.read(file)
+		ownArray
+}
+
+
 def read(nref:Reference,file:DataInput,nhasChildren:Boolean) = 
 	/*if(nref.isNull) new InstanceData(nref,Array(),Array(),false)
-	else*/ new InstanceData(nref,readFields(file),readOwners(file),nhasChildren)	
+	else*/ new InstanceData(nref,readFields(file),readOwners(file),readSecondUseOwners(file),nhasChildren)	
 
 def readWithChildInfo(nref:Reference,file:DataInput)= 
-	new InstanceData(nref,readFields(file),readOwners(file),file.readBoolean)
+	new InstanceData(nref,readFields(file),readOwners(file),readSecondUseOwners(file),file.readBoolean)
 
 
 
@@ -199,6 +222,7 @@ case class OwnerReference(val ownerField:Byte, //in what property field of the o
 		out.writeByte(ownerField)
 		ownerRef.write(out)
 	}
+	override def toString= ((if(ownerRef==null)"()" else ownerRef.sToString)+"|"+ownerField)
 }
 object OwnerReference {
 	def read(in:DataInput) = new OwnerReference(in.readByte,Reference(in))	

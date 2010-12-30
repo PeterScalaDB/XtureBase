@@ -26,15 +26,18 @@ class AnswerArea extends BoxPanel(scala.swing.Orientation.Vertical ) {
   
   
   def reset()= {
-  	//println("answerArea reset")
+  	//System.out.println("answerArea reset")
   	poolArray foreach( _.reset)
   	customPools.values.foreach( _.reset)
   	contents.clear
   	revalidate
+  	repaint
   }
   
-  def loadAnswerDefinitions(question:ParamQuestion) = {
+  def loadAnswerDefinitions(question:DialogQuestion) = {
   	//reset()
+  	contents.clear
+  	var firstPanel=true
   	for(ans <-question.possibleAnswers ) {
   		val panel= ans dataType match {
   			case DataType.BoolTyp =>  boolPool.getPanel()
@@ -49,10 +52,15 @@ class AnswerArea extends BoxPanel(scala.swing.Orientation.Vertical ) {
   				}
   				else throw new IllegalArgumentException ("Answertype "+a+" not supported ")
   		}
-  		panel.loadParamAnswer(ans)
+  		panel.loadParamAnswer(ans)  		
   		contents+=panel
+  		if(firstPanel){
+  			firstPanel=false
+  			panel.setFocus()
+  		}
   	}
   	revalidate	
+  	repaint
   }
   
   def registerAnswerCallBack(nfunc: (ParamAnswerDefinition,Constant)=>Unit) = 

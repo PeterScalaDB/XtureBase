@@ -71,7 +71,7 @@ class Viewbox(val mainbox:MainBox,val showCloseButton:Boolean,var holder:Viewbox
 		var h=prefS.height
 		var rightSize:Dimension=null
 		var botSize:Dimension=null
-		//println ("getFullPrefSize "+header.label.text+" rightFirst:"+rightFirstExpanded+" w:"+w+" h:"+h)
+		//System.out.println ("getFullPrefSize "+header.label.text+" rightFirst:"+rightFirstExpanded+" w:"+w+" h:"+h)
 		if(rightEdge.isExpanded){
 			rightSize=rightEdge.connectorStripe.get.connectedBox.getFullPrefSize
 			if(!rightFirstExpanded && rightSize.height>h) h=rightSize.height			
@@ -85,7 +85,7 @@ class Viewbox(val mainbox:MainBox,val showCloseButton:Boolean,var holder:Viewbox
 		if(!rightFirstExpanded && botSize!=null && botSize.width>w) w=botSize.width
 		if(rightFirstExpanded && rightSize!=null && rightSize.height>h)h=rightSize.height
 		
-		//println("result "+header.label.text+" w:"+w+" h:"+h)
+		//System.out.println("result "+header.label.text+" w:"+w+" h:"+h)
 		return new Dimension(w,h)
 	}
 	
@@ -252,13 +252,13 @@ object Viewbox extends SimpleSwingApplication  {
 			background=new Color((Math.random*(255*255*255).toDouble).toInt)
 			preferredSize=new Dimension(100,100)
 			def open() = {
-				println("open ")
+				System.out.println("open ")
 			}
 			def close() = {
-				println("close ")
+				System.out.println("close ")
 			}
 			def storeSettings() = {
-				println("store settings")
+				System.out.println("store settings")
 			}
 			def getType=contBoxType			
 			def setViewbox(box:Viewbox) = {box.setTitle("Test-Box "+getCounter)}

@@ -7,7 +7,7 @@ import java.net._
 import java.io._
 import server.config._
 import definition.comm._
-import definition.typ.AllClasses
+import definition.typ.{AllClasses,ParamQuestion,SystemSettings}
 import definition.data._
 import definition.expression._
 import server.storage._
@@ -31,6 +31,7 @@ private var userName=""
 
 	private var commandHandlerMap= scala.collection.mutable.HashMap[ClientCommands.Value,CommandHandlerFunc]()
 	val queryHandler=new UserQueryHandler(this)
+	var currentEnquiryContinuation:(UserSocket,Seq[(String,Constant)])=>Unit = _
 
 	// register routines
 	registerCommandHandler(ClientCommands.writeField) (wantWriteField)
@@ -46,6 +47,8 @@ private var userName=""
 	registerCommandHandler(ClientCommands.requestUndoData  )(requestUndoData)
 	registerCommandHandler(ClientCommands.undo  )(doUndo)
 	registerCommandHandler(ClientCommands.stopUndo  )(stopUndo)
+	registerCommandHandler(ClientCommands.secondUseInstances )(create2ndUseCopies)
+	registerCommandHandler(ClientCommands.answerEnquiry  )(answerEnquiry)
 
 
 	override def run ():Unit = { // receiving loop
@@ -74,7 +77,7 @@ private var userName=""
 				} 
 				writeOut("welcome")
 
-				println("and added")
+				System.out.println("and added")
 				userEntry=new UserEntry(user,this,queryHandler)
 				ActiveUsers.addUser(userEntry)
 				// start command loop
@@ -86,7 +89,7 @@ private var userName=""
 			}
 		}
 		catch {
-			case e: SocketException => println("Socket failed: "+e) 
+			case e: SocketException => System.out.println("Socket failed: "+e) 
 			// avoid stack trace when stopping a client with Ctrl-C
 			case e: IOException =>
 			e.printStackTrace();
@@ -102,7 +105,7 @@ private var userName=""
 			while(wantRun)
 			{					
 				val command =ClientCommands(in.readByte.toInt)
-				println("#"+user.id+"# ClientCommand:"+command)
+				//System.out.println("#"+user.id+"# ClientCommand:"+command)
 				try {
 					command match {
 						case ClientCommands.getTypes => sendTypes()
@@ -110,7 +113,7 @@ private var userName=""
 						//case ClientCommands.getSetupData => sendSetupData()
 						case ClientCommands.storeSetupData=> storeSetupData()
 						case a => if (commandHandlerMap.contains(a))commandHandlerMap(a)(in)
-						else println("unhandled command "+a)
+						else System.err.println("unhandled command "+a)
 					}			  
 				}
 				catch {
@@ -124,7 +127,7 @@ private var userName=""
 	}
 
 	private def logoutUser(id:Int) = 	{
-		println("user "+userName+" logged off")
+		System.out.println("user "+userName+" logged off")
 		ActiveUsers.removeUser(id)
 	}
 
@@ -144,9 +147,10 @@ private var userName=""
 		}
 
 	private def sendTypes() = 	{
-		println("Sending Types to "+userName)
+		System.out.println("Sending Types to "+userName)
 		sendData(ServerCommands.sendTypes) {out=>
 		out.writeUTF(AllClasses.get.asInstanceOf[ServerClassList].toXML().toString())
+		SystemSettings().asInstanceOf[ServerSystemSettings].write(out)
 		}
 	}
 
@@ -156,7 +160,7 @@ private var userName=""
 	*/
 
 	private def storeSetupData() = {
-		println("store setup data")
+		System.out.println("store setup data")
 	}
 
 	def registerCommandHandler(command:ClientCommands.Value)(func:CommandHandlerFunc) = {
@@ -183,7 +187,7 @@ private var userName=""
 		error=new CommandError(e.toString,ClientCommands.writeField.id,0)
 	}
 	sendData(ServerCommands.sendCommandResponse ) {out =>
-	//println("sendCommandResponse writeField "+ref+" "+expr)
+	//System.out.println("sendCommandResponse writeField "+ref+" "+expr)
 	if(error!=null) {
 		out.writeBoolean(true)
 		error.write(out)	
@@ -217,7 +221,7 @@ private var userName=""
 		error=new CommandError(e.toString,ClientCommands.writeField.id,0)
 	}
 	sendData(ServerCommands.sendCommandResponse ) {out =>
-	//println("sendCommandResponse writeFields "+refList.size+" "+expr)
+	//System.out.println("sendCommandResponse writeFields "+refList.size+" "+expr)
 	if(error!=null) {
 		out.writeBoolean(true)
 		error.write(out)	
@@ -253,7 +257,7 @@ private var userName=""
 		error=new CommandError(e.toString,ClientCommands.createInstance.id,0)
 	}
 	sendData(ServerCommands.sendCommandResponse ) {out =>
-	println("sendCommandResponse create typ "+typ+" result:" +result)
+	//System.out.println("sendCommandResponse create typ "+typ+" result:" +result)
 	if(error!=null) {
 		out.writeBoolean(true)
 		error.write(out)	
@@ -269,11 +273,12 @@ private var userName=""
 	private def wantDeleteInstance(in:DataInputStream) = {
 		var error:CommandError=null
 		var result:Constant=null
-		val ref=Reference(in)			
+		val ref=Reference(in)		
+		val fromOwner=OwnerReference.read(in)
 		try {
 			val ret=TransactionManager.doTransaction (userEntry.info.id,ClientCommands.deleteInstance.id.toShort,
 				ref,false,0,{
-				if (!TransactionManager.tryDeleteInstance(ref,None))
+				if (!TransactionManager.tryDeleteInstance(ref,Some(fromOwner),None))
 					error=new CommandError("Unknown Issue",ClientCommands.writeField.id,0)
 			})
 			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.deleteInstance.id,0)
@@ -284,7 +289,7 @@ private var userName=""
 		error=new CommandError(e.toString,ClientCommands.deleteInstance.id,0)
 	}
 	sendData(ServerCommands.sendCommandResponse ) {out =>
-	println("send delete ready")
+	//System.out.println("send delete ready")
 	if(error!=null) {
 		out.writeBoolean(true)
 		error.write(out)	
@@ -316,33 +321,67 @@ private var userName=""
 		//SimpleProfiler.startMeasure("start copy")
 		try {
 			val ret=TransactionManager.doTransaction(userEntry.info.id,command.id.toShort,
-				refList.first,false,0,{
+				refList.first,numInstances>1,0,{
 				if(move)TransactionManager.tryMoveMultiInstances(refList,fromOwner,toOwner,atPos)
 				else {
 					instID=TransactionManager.tryCopyMultiInstances(refList,fromOwner,toOwner,atPos)
 					if(instID<0) error=new CommandError("Unknown Issue",command.id,0)
 				}
-				//println("actionList:"+ActionList.theList.mkString(" |"))
+				//System.out.println("actionList:"+ActionList.theList.mkString(" |"))
 			})
 			for(transError <-ret) error=new CommandError(transError.getMessage,command.id,0)
 		} 
-	catch {
-		case e:Exception =>
-		e.printStackTrace()
-		error=new CommandError(e.toString,command.id,0)
-	}
-	sendData(ServerCommands.sendCommandResponse ) {out =>
-		if(error!=null) {
-			out.writeBoolean(true)
-			error.write(out)	
+		catch {
+			case e:Exception =>
+			e.printStackTrace()
+			error=new CommandError(e.toString,command.id,0)
 		}
-		else {
-			out.writeBoolean(false) // no errors
-			out.writeBoolean(true)
-			IntConstant(instID).write(out)				  
-		}
-	}			 
+		sendData(ServerCommands.sendCommandResponse ) {out =>
+			if(error!=null) {
+				out.writeBoolean(true)
+				error.write(out)	
+			}
+			else {
+				out.writeBoolean(false) // no errors
+				out.writeBoolean(true)
+				IntConstant(instID).write(out)				  
+			}
+		}			 
 	}
+	
+	private def create2ndUseCopies(in:DataInput)= {
+		var error:CommandError=null
+		var result:Constant=null
+		val numInstances=in.readShort
+		val refList:Seq[Reference] = for(i <- 0 until numInstances) yield Reference(in)		
+		val fromOwner:OwnerReference=OwnerReference.read(in)
+		val toOwner:OwnerReference=OwnerReference.read(in)
+		val atPos:Int = in.readInt
+		try {
+			val ret=TransactionManager.doTransaction(userEntry.info.id,ClientCommands.secondUseInstances.id.toShort,
+				refList.first,numInstances>1,0,{
+				TransactionManager.trySecondUseInstances(refList,fromOwner,toOwner,atPos)  
+			})
+			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.secondUseInstances.id,0)
+		}
+		catch {
+			case e:Exception =>
+			e.printStackTrace()
+			error=new CommandError(e.toString,ClientCommands.secondUseInstances .id,0)
+		}
+		sendData(ServerCommands.sendCommandResponse ) {out =>
+			if(error!=null) {
+				out.writeBoolean(true)
+				error.write(out)	
+			}
+			else {
+				out.writeBoolean(false) // no errors
+				out.writeBoolean(false) // no results								  
+			}
+		}		
+	}
+	
+	
 
 	private def executeAction(createAction:Boolean)(in:DataInputStream) = {
 		var error:CommandError=null	
@@ -354,12 +393,12 @@ private var userName=""
 		val numParams=in.readInt
 		val paramList=for(i <-0 until numParams) 
 					yield (in.readUTF,Expression.readConstant(in))
-		
+		val owner=if(createAction)null else OwnerReference.read(in)
 		try {
 			val ret=TransactionManager.doTransaction(userEntry.info.id,ActionNameMap.getActionID(actionName),
 				instList.head.ref,instList.size>1,newType,{
-				println("Execute Action "+actionName+ " instances:"+instList.mkString(",")+" create:"+createAction+" new Type:"+newType)
-		    //println("params: "+paramList.mkString(","))
+				//System.out.println("Execute Action "+actionName+ " instances:"+instList.mkString(",")+" create:"+createAction+" new Type:"+newType)
+		    //System.out.println("params: "+paramList.mkString(","))
 				if(actionName=="*" && createAction&&instList.size==1) simplyCreateInstance(instList,newType,propField)
 				else {
 					val theAction= if(createAction){					
@@ -371,12 +410,14 @@ private var userName=""
 						for ((typ,partList) <- instList.groupBy(_.ref.typ))
 						{
 							val theAction= AllClasses.get.getClassByID(typ).actions(actionName).asInstanceOf[ActionImpl]
-							                                                                                 partList.foreach(a => theAction.func(a,paramList))
+							partList.foreach(a => theAction.func(this,a,paramList))
 						}
+						
 						case b:ActionIterator => // Iterator, runs through all instances in given order 
-						b.func(instList,paramList)
-						//case c:CreateActionImpl => c.func(instList,paramList,newType)	
-						case e => println("unknown type "+e)
+						b.func(this,owner,instList,paramList)
+						
+						case c:CreateActionImpl if( createAction) => c.func(this,instList,paramList,newType)	
+						case e => System.err.println("unknown type "+e+" "+createAction)
 					}		
 				}		
 			})
@@ -385,6 +426,8 @@ private var userName=""
 	catch {
 		case e:Exception =>
 		e.printStackTrace()
+		error=new CommandError(e.toString,ClientCommands.executeAction.id,0)
+		case e:Error => e.printStackTrace()
 		error=new CommandError(e.toString,ClientCommands.executeAction.id,0)
 	}
 	sendData(ServerCommands.sendCommandResponse ) {out =>
@@ -412,13 +455,13 @@ private var userName=""
 			else {
 				val in=new FileInputStream(file)
 				val l=file.length.toInt
-				println("read Settings: "+l)
+				//System.out.println("read Settings: "+l)
 				val readBuffer= new Array[Byte](l)
 				in.read(readBuffer,0,l)
 				out.writeInt(l)
 				out.write(readBuffer,0,l)
 				in.close				
-			}
+			}			
 		}
 	}
 	
@@ -435,13 +478,13 @@ private var userName=""
 
 
 	def tellToQuit() = {
-		println("tell Quit to "+userName)
+		System.out.println("tell Quit to "+userName)
 		sendData(ServerCommands.wantQuit ) {out =>}
 	}
 	
 	
 	def requestUndoData(in:DataInputStream) = {
-		println("User "+userName+" requests Undo data")
+		System.out.println("User "+userName+" requests Undo data")
 		TransactionManager.requestUndoData(userEntry)		
 	}
 	
@@ -450,7 +493,7 @@ private var userName=""
 	}
 	
 	def stopUndo(in:DataInputStream) = {
-		println("Stop Undo ")
+		System.out.println("Stop Undo ")
 		TransactionManager.stopUndo(userEntry)
 	}
 	
@@ -472,12 +515,31 @@ private var userName=""
 	}
 	
 	def sendUndoInformation(stepList:Seq[TransStepData]) = {
-		//println(stepList.mkString("\n"))
+		//System.out.println(stepList.mkString("\n"))
 		sendData(ServerCommands.sendUndoInformation   ) {out =>
 		  out.writeInt(stepList.size)
-		  println("StepList size:"+stepList.size)
+		  System.out.println("StepList size:"+stepList.size)
 		  stepList.foreach(_.write(out))
 		}
+	}
+	
+	def askEnquiry(question:ParamQuestion,continuation:(UserSocket,Seq[(String,Constant)])=>Unit)= {
+		sendData(ServerCommands.askEnquiry ) {out=>
+		  out.writeUTF(question.toXML.toString)						
+			currentEnquiryContinuation=continuation
+		}		
+	}
+	
+	def answerEnquiry(in:DataInputStream) = {
+		val numParams=in.readInt
+		val paramList=for(i <-0 until numParams) 
+					yield (in.readUTF,Expression.readConstant(in))
+		if(currentEnquiryContinuation!=null)
+			currentEnquiryContinuation(this,paramList)
+	}
+	
+	def sendGeneratedData(func:(DataOutput)=>Unit) = {
+		sendData(ServerCommands.sendGeneratedData ) (func)
 	}
 }
 

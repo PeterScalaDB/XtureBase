@@ -24,7 +24,8 @@ case class DataChangeAction(var newInstData:Option[InstanceData],
 														var newPropData:Option[InstanceProperties]=None,
 														var newLinksData:Option[ReferencingLinks]=None,
 														var newCollData:Option[CollFuncResultSet]=None,
-														var cmi:Option[CopyMoveInfo]=None		) extends TransactionData // is called by copy to notify
+														var cmi:Option[CopyMoveInfo]=None,	
+														var deleteFromOwner:Option[OwnerReference]=None) extends TransactionData // is called by copy to notify
 
 case class DeleteAction(inst:InstanceData) extends TransactionData
 
@@ -56,7 +57,7 @@ object ChangeDontNotifyOwners extends CopyMoveInfo {
 
 case class RemoveNotifySourceOwners(owner:OwnerReference,var childRefs:List[Reference]) extends CopyMoveInfo {
 	override def replaceWith(other:CopyMoveInfo):CopyMoveInfo = {
-		//println(toString + " replace with "+other)
+		//System.out.println(toString + " replace with "+other)
 		other match {
 			case RefreshDestinationOwner   => other			
 			case AddDontNotifyOwners|ChangeDontNotifyOwners => this

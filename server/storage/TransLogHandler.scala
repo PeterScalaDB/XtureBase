@@ -30,7 +30,7 @@ object TransLogHandler
 	  else {
 	  	theFile.seek(0)
 	  	insertPos=theFile.readInt
-	  	println("TransLog insPos:"+insertPos)
+	  	System.out.println("TransLog insPos:"+insertPos)
 	  	theFile.seek(getSeekPos(insertPos-1)+1)	  	
 	  	theFile.readInt
 	  }
@@ -50,7 +50,7 @@ object TransLogHandler
 	}	
 	
 	def dataChanged(transTyp: TransType.Value,typ:Int,inst:Int,dataPos:Long,dataLength:Int) =	{		
-		//println("TransLog changed ID:" + transID+ " transtyp:"+transTyp+" "+typ+", "+inst )		
+		//System.out.println("TransLog changed ID:" + transID+ " transtyp:"+transTyp+" "+typ+", "+inst )		
 		bufferStream.reset()		
 		outStream.writeByte(transTyp.id)
 		outStream.writeInt(transID)
@@ -132,7 +132,7 @@ object TransLogHandler
 	 */
 	def undoLastStep(numStepsBack:Int) = {		
 		insertPos -=numStepsBack
-		println("translog undo "+insertPos)
+		System.out.println("translog undo "+insertPos)
 		readFinished()
 		transID -=1
 	}

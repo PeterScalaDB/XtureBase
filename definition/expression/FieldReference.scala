@@ -73,14 +73,14 @@ def write(file: DataOutput): Unit = {
 		case _ => file.writeInt(0)
 	}
 	file.writeByte(remField)
-	//println("write "+toString+" cached Value:"+cachedValue)
+	//System.out.println("write "+toString+" cached Value:"+cachedValue)
 	cachedValue.write(file)
 }
 
 def setCachedValue(newVal:Constant) = {
-	println("SetCachedValue "+toString+"  newVal:"+newVal)
+	System.out.println("SetCachedValue "+toString+"  newVal:"+newVal)
 	cachedValue=newVal
-	//println(" newval: "+cachedValue)
+	//System.out.println(" newval: "+cachedValue)
 }
 
 	/** returns a new FieldReference with qualified Type and Instance fields
@@ -106,7 +106,7 @@ object FieldReference {
 		val i=file.readInt
 		val f=file.readByte
 		val ret =new FieldReference(if(t==0)None else Some(t),if(i==0)None else Some(i),f,Expression.read(file).asInstanceOf[Constant])
-		//println(" read "+ret+" cv: "+ret.cachedValue )
+		//System.out.println(" read "+ret+" cv: "+ret.cachedValue )
 		ret
 	}
 }

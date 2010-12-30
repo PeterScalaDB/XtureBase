@@ -37,7 +37,7 @@ case class DoubleConstant(n:Double) extends Constant {
   
   def write(file:DataOutput)= { 
   	file.writeByte(DataType.DoubleTyp.id)
-  	//println("DoubleID:" +DataType.DoubleTyp.id)
+  	//System.out.println("DoubleID:" +DataType.DoubleTyp.id)
   	file.writeDouble(n)
   }
   

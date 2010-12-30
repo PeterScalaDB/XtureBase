@@ -44,7 +44,7 @@ object FieldSetting
 		val startV=(node \ "@startValue").text
 		val startEx=if(startV=="") EMPTY_EX else StringParser.parse(startV)
 		val format=(node \ "@format").text
-		//if(editor.size>0) println(" edit:"+name)
+		//if(editor.size>0) System.out.println(" edit:"+name)
 		
 		FieldSetting(fnr,readonly,visible,showForm,editor,startEx,format)
 		

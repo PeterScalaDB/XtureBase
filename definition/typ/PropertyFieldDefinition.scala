@@ -8,10 +8,11 @@ package definition.typ
  * 
  */
 case class PropertyFieldDefinition(name:String,single:Boolean=false,allowedClass:Int=0,
-	createChildDefs:Seq[CreateChildDefinition]=Seq.empty) {
+	createChildDefs:Seq[CreateChildDefinition]=Seq.empty,hidden:Boolean=false,volatile:Boolean=false) {
 	
 	def toXML() = 	{
-		<PropertyFieldDef  name= {name} single= {if(single) "1" else "0"} allowedClass= {allowedClass.toString} >
+		<PropertyFieldDef  name= {name} single= {if(single) "1" else "0"} allowedClass= {allowedClass.toString} hidden= {if(hidden) "1" else "0"}
+			volatile= {if(volatile) "1" else "0"}>
    {createChildDefs.map(_.toXML)} 
 		</PropertyFieldDef>
 	}
@@ -20,6 +21,8 @@ case class PropertyFieldDefinition(name:String,single:Boolean=false,allowedClass
 	def setSingle(newValue:Boolean)=new PropertyFieldDefinition(name,newValue,allowedClass,createChildDefs)
 	def setAllowedClass(newValue:Int)=new PropertyFieldDefinition(name,single,newValue,createChildDefs)
 	def setChildDefs(newList:Seq[CreateChildDefinition])= new PropertyFieldDefinition(name,single,allowedClass,newList)
+	def setHidden(newValue:Boolean)=new PropertyFieldDefinition(name,single,allowedClass,createChildDefs,newValue)
+	def setVolatile(newValue:Boolean)=new PropertyFieldDefinition(name,single,allowedClass,createChildDefs,hidden,newValue)
 }
 
 /** defines a createAction to create a certain child type in that propertyField
@@ -53,9 +56,10 @@ object CreateChildDefinition {
 object PropertyFieldDefinition {
 	def fromXML(node: scala.xml.Node) = 	{
 		val name= (node \ "@name").text
-		val single= ((node \ "@single").text=="1")
+		val single= (node \ "@single").text=="1"
 		val allowedClass= (node \ "@allowedClass").text.toInt		
 		val createChildList = for(afield <-(node \\"CreateChild")) yield CreateChildDefinition.fromXML(afield)
-		PropertyFieldDefinition(name,single,allowedClass,createChildList)		
+		PropertyFieldDefinition(name,single,allowedClass,createChildList,(node \ "@hidden").text=="1",
+			(node \ "@volatile").text=="1"  )		
 	}
 }

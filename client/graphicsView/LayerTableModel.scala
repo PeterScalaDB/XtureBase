@@ -220,9 +220,18 @@ class LayerTableModel(controller:GraphViewController) extends AbstractTableModel
 		collection.mutable.ArrayBuffer()++=ret1++=ret2		
 	}
 	
-	def filterLayersSelection(filtFunc:(GraphElem)=>Boolean):Seq[GraphElem]= {
-		val ret1=layerList.flatMap(_.filterSelection(filtFunc))
-		val ret2=newElemLayer.filterSelection(filtFunc)
-		collection.mutable.ArrayBuffer()++=ret1++=ret2
+	def filterLayersSelection(filtFunc:(GraphElem)=>Boolean):Seq[(Layer,Seq[GraphElem])]= {
+		val ret1=layerList.flatMap(a=>{
+			val list=a.filterSelection(filtFunc)
+			if (list.isEmpty) Seq.empty 
+			else List((a,list))
+			})
+		System.out.println("filterLayer newElem:"+newElemLayer.elemList.size)	
+		val nList=newElemLayer.filterSelection(filtFunc)
+		if(nList.isEmpty)
+			ret1
+		else
+			ret1:+(newElemLayer,nList)
+		
 	}
 }

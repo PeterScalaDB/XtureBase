@@ -32,7 +32,7 @@ case class CurrencyConstant(n:Long) extends Constant {
   
   def write(file:DataOutput)= { 
   	file.writeByte(DataType.CurrencyTyp.id)
-  	//println("DoubleID:" +DataType.DoubleTyp.id)
+  	//System.out.println("DoubleID:" +DataType.DoubleTyp.id)
   	file.writeLong(n)
   }
   

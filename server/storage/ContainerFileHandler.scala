@@ -61,7 +61,7 @@ class ContainerFileHandler [T <: Referencable] (val fileName:String,factory: (Re
 		//print(" R:"+pos+","+size )
 		if(pos!=lastReadPos+lastReadSize) { // dont seek for subsequent instances
 			/*if(followCount>0) {				
-				println("following hits:"+followCount)
+				System.out.println("following hits:"+followCount)
 				followCount=0
 			}*/
 			theFile.seek(pos)
@@ -91,7 +91,7 @@ class BoolContFileHandler [T <: Referencable] (override val fileName:String,with
 		}		
 		def pushData(pos:Long,size:Int,out:DataOutput) = {
 			readInBuffer(pos,size)
-			//println("pushData "+fileName)
+			//System.out.println("pushData "+fileName)
 			out.write(readBuffer,0,size)			
 		}
 	}

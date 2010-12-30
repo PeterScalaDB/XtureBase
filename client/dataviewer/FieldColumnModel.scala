@@ -1,7 +1,7 @@
 /**
  * Author: Peter Started:28.11.2010
  */
-package management.databrowser
+package client.dataviewer
 
 import javax.swing.table._
 

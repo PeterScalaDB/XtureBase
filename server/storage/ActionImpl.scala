@@ -6,14 +6,15 @@ package server.storage
 import definition.typ._
 import definition.data._
 import definition.expression._
+import server.comm.UserSocket
 
 /** Implementation of an action
  * 
  */
 
 class ActionImpl(val name:String,override val question:Option[ParamQuestion],
-	val func:(InstanceData,Seq[(String,Constant)]) => Boolean) extends AbstractAction  {
-	def isIterator=true
+	val func:(UserSocket,InstanceData,Seq[(String,Constant)]) => Boolean) extends AbstractAction  {
+	def isIterator=false
 	def toXML = 
    {		
   	 <Action  name={name} iter= {"0"}   >
@@ -26,8 +27,13 @@ class ActionImpl(val name:String,override val question:Option[ParamQuestion],
    }
 }
 	
+/**
+ * @param name name of the iterator action
+ * @param question definition of the questions for the action dialog
+ * @param func the function to call with parameters(parentRef,childRefs,params)
+ */
 class ActionIterator(val name:String,override val question:Option[ParamQuestion],
-	val func:(Seq[InstanceData],Seq[(String,Constant)]) => Boolean) extends AbstractAction  {
+	val func:(UserSocket,OwnerReference,Seq[InstanceData],Seq[(String,Constant)]) => Boolean) extends AbstractAction  {
 	def isIterator=true	
 	def toXML = 
    {		
@@ -40,9 +46,11 @@ class ActionIterator(val name:String,override val question:Option[ParamQuestion]
   	 </Action> 
    }
 }
-/*class CreateActionImpl(val name:String,override val question:Option[ParamQuestion],
-	val func:(Seq[InstanceData],Seq[(String,Constant)],Int) => Boolean) extends AbstractAction  {
-	def isIterator=true	
+
+
+class CreateActionImpl(val name:String,override val question:Option[ParamQuestion],
+	val func:(UserSocket,Seq[InstanceData],Seq[(String,Constant)],Int) => Boolean) extends AbstractAction  {
+	def isIterator=false	
 	def toXML = 
    {		
   	 <Action  name={name} iter={"1"}  >
@@ -53,4 +61,4 @@ class ActionIterator(val name:String,override val question:Option[ParamQuestion]
   	 }
   	 </Action> 
    }
-}*/
+}

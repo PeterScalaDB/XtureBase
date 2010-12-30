@@ -13,7 +13,7 @@ case class LogIndexSet(transTyp: TransType.Value,trID:Int,typ:Int,inst:Int,dataP
 
 case class TransStepData(val trID:Int,val time:Int,userID:String,firstInst:InstanceData,multiInst:Boolean,action:String,
 	createType:Int) {
-	//println("transstep "+trID)
+	//System.out.println("transstep "+trID)
 	def write(out:DataOutput) = {
 		out.writeInt(trID)
 	  out.writeInt(time)

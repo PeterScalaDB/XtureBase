@@ -7,7 +7,7 @@ package definition.typ
 /**
  * Description of a single Datafield in a DataObject
  */
-case class FieldDefinition (val name:String,val typ: DataType.Value) 
+class FieldDefinition (val name:String,val typ: DataType.Value) 
 {
    override def toString = 
    { 
@@ -25,9 +25,36 @@ case class FieldDefinition (val name:String,val typ: DataType.Value)
    }  
    
    def setName(newName:String)=new FieldDefinition(newName,typ)
-   def setType(newType:DataType.Value)=new FieldDefinition(name,newType)
-    
+   
+   def setType(newType:DataType.Value)= 
+  	 if(newType==DataType.EnumTyp.id) new EnumFieldDefinition(name,0)
+  	 else new FieldDefinition(name,newType)
+   
+   def setEnumID(newID:Int)= {
+  		 //println("set enum ID:"+newID)
+  	 if(typ==DataType.EnumTyp) new EnumFieldDefinition(name,newID)
+  	 else this
+   } 
+   
+   override def equals(other: Any) = other match {
+		case that: FieldDefinition => that.canEqual(this) && this.name == that.name && this.typ==that.typ 
+		case _ => false
+	}
+	override def hashCode = 41 * name.hashCode + 1041*typ.hashCode+3
+	
+	def canEqual(that: FieldDefinition) = true   
 }
+
+case class EnumFieldDefinition(nname:String,val enumID:Int) extends FieldDefinition(nname,DataType.EnumTyp) {
+	override def toXML = 
+   {  	 
+  	 <FieldDef  name={name} typ={typ.id.toString} enumID={enumID.toString}
+  	 /> 
+   } 
+  override def toString = "E"+super.toString+" eid:"+enumID
+}
+
+
 
 object FieldDefinition
 {
@@ -35,8 +62,8 @@ object FieldDefinition
 	{
 		val name= (node \ "@name").text
 		val typ= (node \ "@typ").text.toInt	
-		
-		FieldDefinition(name,DataType(typ))
+	  if(typ==DataType.EnumTyp.id)  EnumFieldDefinition(name,(node \ "@enumID").text.toInt)	
+		else new FieldDefinition(name,DataType(typ))
 		
 	}
 }

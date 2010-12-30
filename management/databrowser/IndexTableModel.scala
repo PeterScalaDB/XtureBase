@@ -26,7 +26,7 @@ object IndexTableModel extends AbstractTableModel
 	
 	def readTheList()
 	{
-		println(handler.lastID)
+		System.out.println(handler.lastID)
 		var ix=0
 		ixList=handler.readFully									
 		fireTableStructureChanged()

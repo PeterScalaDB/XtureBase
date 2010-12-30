@@ -55,19 +55,29 @@ object StorageManager {
   	val handler=getHandler(ref.typ)
   	handler.instCache.getInstanceData(ref.instance ) match
   	{
-  		case Some(cacheValue) =>{/*println(" cacheHit:"+cacheValue);*/ cacheValue}
+  		case Some(cacheValue) =>{/*System.out.println(" cacheHit:"+cacheValue);*/ cacheValue}
   		case None =>
   	  {
   	    val rec=handler.getInstanceRecord(ref.instance )
   	    if (rec.dataPos < 1 && rec.dataLength==0) throw new 
   	               IllegalArgumentException("get Instance() instance "+ref+" is deleted")
   	    val instObj=dataFileHandler.readWithBool(ref,rec.dataPos,rec.dataLength,(rec.propPos !=0)&&(rec.propLength !=0) )
-  	    //println(" cacheMiss:"+instObj)
+  	    //System.out.println(" cacheMiss:"+instObj)
   	    handler.instCache.putInstanceData(instObj)
   	    instObj
   	  }
   	}
   } 
+  
+  def loadChildren(parent:Reference,ofType:Int,propField:Int) :Seq[InstanceData]= 
+  	getInstanceProperties(parent) match 
+  	{
+  		case Some(props) => {
+  			for (child <-props.propertyFields(propField).propertyList;if(child.typ ==ofType))
+  				yield getInstanceData(child)
+  		}
+  		case None=> Seq.empty
+  	}
   
   /** loads an instance from the data file. When that instance is deleted, tries to find the old state
    * 
@@ -80,21 +90,21 @@ object StorageManager {
   	if (rec.dataPos == -1 && rec.dataLength==0) { // deleted
   		val (transType,npos,nlength)=TransLogHandler.getLastLivingData(ref.typ,ref.instance,
   			TransLogHandler.insertPos-1,List(TransType.created.id,TransType.dataChanged.id))
-  		//println("Last Living "+ref+" is: pos:"+npos+" size:"+nlength)
-  		if(transType== -1) return new InstanceData(ref,IndexedSeq(),Array(),false)
+  		//System.out.println("Last Living "+ref+" is: pos:"+npos+" size:"+nlength)
+  		if(transType== -1) return new InstanceData(ref,IndexedSeq(),Array(),Seq.empty,false)
   		pos=npos;length=nlength
   		
   	}
-  	//else if(rec.dataPos<1) println("get Inst pos<1 :"+ref+" "+rec.dataPos)
+  	//else if(rec.dataPos<1) System.out.println("get Inst pos<1 :"+ref+" "+rec.dataPos)
   	val instObj=dataFileHandler.readWithBool(ref,pos,length,false )
   	instObj
   }
   
   def pushInstanceData(ref:Reference,out:DataOutput) = {  	
   	val handler=getHandler(ref.typ)
-  	//println("push before "+ref)
+  	//System.out.println("push before "+ref)
   	val rec=handler.getInstanceRecord(ref.instance )
-  	//println("push "+ref+" "+rec)
+  	//System.out.println("push "+ref+" "+rec)
   	ref.write(out)
   	dataFileHandler.pushData(rec.dataPos,rec.dataLength,out )
   	out.writeBoolean((rec.propPos !=0)&&(rec.propLength !=0))
@@ -102,12 +112,12 @@ object StorageManager {
   
   
   def bulkGetInstanceData(startRef:Reference,endRef:Reference) = {
-  	//println("bulkget:"+startRef+" - "+endRef)
+  	//System.out.println("bulkget:"+startRef+" - "+endRef)
   	getHandler(startRef.typ).bulkGetInstanceRecords(startRef.instance,endRef.instance,dataFileHandler)  	 
   }
   
   def bulkPushInstanceData(startRef:Reference,endRef:Reference,out:DataOutput) = {
-  	//println("bulkpush:"+startRef+" - "+endRef)
+  	//System.out.println("bulkpush:"+startRef+" - "+endRef)
   	getHandler(startRef.typ).bulkPushInstanceRecords(startRef.instance,endRef.instance,dataFileHandler,out)
   }
   
@@ -164,14 +174,14 @@ object StorageManager {
   
   def getInstanceProperties(ref:Reference):Option[InstanceProperties] =  {
   	val handler=getHandler(ref.typ)
-  	//println("get Inst prop "+ref)
+  	//System.out.println("get Inst prop "+ref)
   	handler.propCache.getInstanceData(ref.instance) match
   	{
   		case a @Some(_) => a
   		case None =>
   	  {
   	    val rec=handler.getInstanceRecord(ref.instance)
-  	    //println("recpos "+rec.propPos +" recsize:"+rec.propSize)
+  	    //System.out.println("recpos "+rec.propPos +" recsize:"+rec.propSize)
   	    if (rec.propPos == 0 && rec.propLength==0) None
   	    else
   	    {
@@ -207,7 +217,7 @@ object StorageManager {
   def getReferencingLinks(ref:Reference):Option[ReferencingLinks] = {
   	val handler=getHandler(ref.typ)
   	val rec=handler.getInstanceRecord(ref.instance)
-  	    //println("recpos "+rec.propPos +" recsize:"+rec.propSize)
+  	    //System.out.println("recpos "+rec.propPos +" recsize:"+rec.propSize)
   	    if (rec.linkPos == 0 && rec.linkLength==0) None
   	    else
   	    {
@@ -231,7 +241,7 @@ object StorageManager {
   def getCollectingFuncData(ref:Reference):Option[CollFuncResultSet] = {
   	val handler=getHandler(ref.typ)
   	val rec=handler.getInstanceRecord(ref.instance)
-  	    //println(" collfunc recpos "+rec.collPos +" recsize:"+rec.collLength)
+  	    //System.out.println(" collfunc recpos "+rec.collPos +" recsize:"+rec.collLength)
   	    if (rec.collPos == 0 && rec.collLength==0) None
   	    else
   	    {
@@ -254,7 +264,7 @@ object StorageManager {
   {
   	if(!shuttedDown)
   	{
-  		println("Shutdown Storage")
+  		System.out.println("Shutdown Storage")
   		for (i <- ixHandlerList.valuesIterator) i.shutDown
   		dataFileHandler.shutDown
   		propFileHandler.shutDown
@@ -275,7 +285,7 @@ object StorageManager {
   	val currTrID=TransLogHandler.transID
   	val startLogPos=TransLogHandler.insertPos-1
   	var currLogPos=startLogPos
-  	println("startUNDO insPos:"+TransLogHandler.insertPos )
+  	System.out.println("startUNDO insPos:"+TransLogHandler.insertPos )
   	var currRec=TransLogHandler.readPosition(currLogPos)
   	while(currLogPos>0 && currRec.trID ==currTrID)
   	{
@@ -284,7 +294,7 @@ object StorageManager {
   		currLogPos-=1
   		currRec=TransLogHandler.readPosition(currLogPos)
   	}
-  	println()
+  	System.out.println()
   	TransLogHandler.undoLastStep(startLogPos-currLogPos)
   	TransDetailLogHandler.undoLastStep
   }

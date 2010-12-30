@@ -37,7 +37,7 @@ trait AbstractObjectClass {
 		
 	def inheritsFrom(otherClassID:Int):Boolean =
   {
-  	//println( " " +toString +" "+id+"InheritsFrom: "+ otherClassID)
+  	//System.out.println( " " +toString +" "+id+"InheritsFrom: "+ otherClassID)
   	superClassIDs.contains(otherClassID)
   }
 	
@@ -74,7 +74,7 @@ trait AbstractObjectClass {
 			ownCreateActions.foreach(a => createActions(a.name)=a)
 		  hasResolved=true
 		}
-		//Console.println("Resolve "+versNr+" "+superClasses+" "+vsuperFields)  
+		//Console.System.out.println("Resolve "+versNr+" "+superClasses+" "+vsuperFields)  
 	}	
 	
 	
@@ -96,6 +96,13 @@ trait AbstractObjectClass {
 	
 	override def toString = "Class "+id+" Fields:\n"+fields.mkString(",")+"\nPropFields:\n"+propFields.mkString("\n")+
 	"\nSuperclasses:"+ superClassIDs.mkString(",");	
+	
+	
+	def getNum_FirstHiddenPropFields:Int = {
+		for(i <-propFields.indices)
+			if(!propFields(i).hidden )return i
+		return propFields.size
+	}
 }
 
 

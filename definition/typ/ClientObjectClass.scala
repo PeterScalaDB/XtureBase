@@ -5,6 +5,7 @@ package definition.typ
 
 import definition.data._
 import scala.collection.immutable.IndexedSeq
+import client.comm.ClientSystemSettings
 
 
 /**
@@ -17,17 +18,21 @@ class ClientObjectClass (val name:String,val id:Int,val description:String,prote
 	 val shortFormat:InstFormat,val longFormat:InstFormat,val resultFormat:InstFormat)
 	 extends AbstractObjectClass
 {  
-   //println("Class "+name+" actions:"+actions.mkString(","))
+   //System.out.println("Class "+name+" actions:"+actions.mkString(","))
    
    def ownActions=theActions.iterator
    def ownCreateActions=theCreateActions.iterator
-   /*if(theCreateActions.size>0) {
-  	 println()
-  	 println("***** class :"+name+" createActions:"+theCreateActions.mkString)
-   }*/
-  
-  //TODO: check class Version when testing inheritance. InstanceProperties needs to store the class versions
-  	
+   
+   var enumFields:Seq[(Int,EnumDefinition)]= Seq.empty // position of enum fields
+   
+   override def resolveSuperFields()= {
+  	 super.resolveSuperFields
+  	 try {
+  	 enumFields=for(i<-fields.indices;val f=fields(i);if (f.typ ==DataType.EnumTyp )) 
+  		 yield(i,SystemSettings().enumByID(f.asInstanceOf[EnumFieldDefinition].enumID))
+  	 } catch { case e => System.err.println(e);}
+  	 //if(enumFields.size>0) println("class "+name+" enumFields:"+enumFields.mkString(","))
+   }
 		
 }
 

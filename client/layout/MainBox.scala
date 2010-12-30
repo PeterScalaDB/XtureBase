@@ -42,7 +42,7 @@ class MainBox extends Panel with ViewboxHolder {
 		
 	
   def replaceBox(oldBox:Viewbox,newBox:Viewbox) = {
-	  println("replace "+newBox)
+	  System.out.println("replace "+newBox)
 	  centerBox=newBox
 	  revalidate
 	  repaint

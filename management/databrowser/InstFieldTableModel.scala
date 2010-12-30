@@ -29,16 +29,16 @@ object InstFieldTableModel extends AbstractTableModel
   
   def setInstance(newInst:InstanceData) =
   {
-  	//println("instmodel set Instance "+newInst)
+  	//System.out.println("instmodel set Instance "+newInst)
   	instance=newInst  	
-  	//println("Set inst "+theVersion)
+  	//System.out.println("Set inst "+theVersion)
   	fireTableStructureChanged()
   }
 		
   def getRowCount():Int =
   {
      if(theClass==null) 0
-     else theClass.fields.size+ 1     
+     else theClass.fields.size+ 2     
   }
      
   override def isCellEditable(rowIndex:Int,columnIndex:Int) = (rowIndex>0) && (columnIndex==1)
@@ -55,15 +55,17 @@ object InstFieldTableModel extends AbstractTableModel
   		case 0 =>    	row match{
     		
     		case 0 => "Owner"
-    		case _ => theClass.fields(row-1).name    	    	
+    		case 1 => "SU-Owner"
+    		case _ => theClass.fields(row-2).name    	    	
       }
   		case 1 => if(instance==null) " " else  row match{
     		
     		case 0 => instance.owners.mkString(", ")
-    		case _ => if(row<=instance.fieldData.size) instance.fieldData(row-1).getTerm else " " 
+    		case 1 => instance.secondUseOwners .mkString(", ")
+    		case _ => if(row<=instance.fieldData.size) instance.fieldData(row-2).getTerm else " " 
     	}
-  		case 2 => if(instance==null || row<1) " " else { 
-  			instance.fieldValue(row-1).toString
+  		case 2 => if(instance==null || row<2) " " else { 
+  			instance.fieldValue(row-2).toString
   		}
   		case _ => "bla"
   	}
@@ -73,9 +75,9 @@ object InstFieldTableModel extends AbstractTableModel
   
   override def setValueAt(obj:Object,row:Int,column:Int) =
   {
-  	if((row>0)&&(column==1)&& instance!=null)
+  	if((row>1)&&(column==1)&& instance!=null)
   	{
-  		val f:Byte=(row-1).toByte  		
+  		val f:Byte=(row-2).toByte  		
   		
   		TransactionManager.doTransaction(0,ClientCommands.writeField.id.toShort,instance.ref,false,0, {	
   			TransactionManager.tryWriteInstanceField(instance.ref,f,StringParser.parse(obj.toString))

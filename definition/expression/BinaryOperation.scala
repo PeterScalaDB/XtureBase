@@ -10,7 +10,7 @@ import java.io.{DataInput,DataOutput}
  * 
  */
 case class BinaryOperation(left:Expression,operator:BinOperator,right:Expression) extends Expression {
-  //println("create BinOp "+left+":"+left.getType+" and "+right+":"+right.getType+" "+operator)
+  //System.out.println("create BinOp "+left+":"+left.getType+" and "+right+":"+right.getType+" "+operator)
   def getType(): DataType.Value = { DataType.BinOp  }
   
   
@@ -67,7 +67,7 @@ case class BinaryOperation(left:Expression,operator:BinOperator,right:Expression
     	val newLeft=left.replaceExpression(checker)
     	val newRight=right.replaceExpression(checker)
     	//if(newLeft!=left || newRight!=right) // operators were changed
-    		new BinaryOperation(newLeft,operator,newRight)
+    	new BinaryOperation(newLeft,operator,newRight)
     	//else this
     }
     else newMe // return replacement of me

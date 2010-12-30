@@ -9,17 +9,17 @@ import scala.swing.event._
 import definition.data._
 import javax.swing.ImageIcon
 import java.net.URL
+
+import definition.typ.SelectGroup
 /** manages the Layer panel
  * 
  */
 class LayerPanelController(viewController:GraphViewController) extends SelectListener {
 	
   	
-  val layerTable:Table=new Table() {
-		
+  val layerTable:Table=new Table() {		
   	var lastColumn:Int= -1
-  	var lastRow:Int= -1  	
-  	
+  	var lastRow:Int= -1  	  	
 		peer.setModel(viewController.layerModel)
 		autoResizeMode=Table.AutoResizeMode.Off
 		selection.intervalMode=Table.IntervalMode.Single
@@ -56,7 +56,7 @@ class LayerPanelController(viewController:GraphViewController) extends SelectLis
   		val v = model.getValueAt(
   			peer.convertRowIndexToModel(row), 
   			peer.convertColumnIndexToModel(col))
-  		//if(col<2) println("rendererComp col:"+col+" row:"+row+" v:"+v)
+  		//if(col<2) System.out.println("rendererComp col:"+col+" row:"+row+" v:"+v)
   		
   		
   			if (row >= viewController.layerModel .layerList .size) super.rendererComponent(sel,foc,row,col) 
@@ -102,7 +102,7 @@ class LayerPanelController(viewController:GraphViewController) extends SelectLis
   }
   
   // instances from other models
-  var selectedInstances:Seq[Referencable]=Seq.empty
+  var selectedInstances:Seq[SelectGroup[_<: Referencable]]=Seq.empty
   
  /*val addBut =new Button("Hinzufügen")
 	val removeBut =new Button("Entfernen")
@@ -119,18 +119,22 @@ class LayerPanelController(viewController:GraphViewController) extends SelectLis
 		
 	}*/
   
-  def selectionChanged(sender:SelectSender,instList:Seq[Referencable])= {
-		selectedInstances=instList
+  def selectionChanged [T <: Referencable](sender:SelectSender,groups:Seq[SelectGroup[T]])= {
+		selectedInstances=groups
 		viewController.layerModel.setCanLoadElements(canLoad)		
 	}
   
-  def canLoad= selectedInstances!=null &&(!selectedInstances.isEmpty) && selectedInstances.head.ref.typ == Layer.displayListTyp &&
-				 selectedInstances.head.isInstanceOf[InstanceData]&& !viewController.layerModel.containsRef(selectedInstances.head.ref)
+  def canLoad=  if (selectedInstances!=null &&(!selectedInstances.isEmpty)){
+  	val firstList=selectedInstances.first.children
+  	(!firstList.isEmpty) && firstList.head.ref.typ == Layer.displayListTyp &&
+  	firstList.head.isInstanceOf[InstanceData]&& !viewController.layerModel.containsRef(firstList.head.ref)
+  } else false
+				 
   
   def addLayer = {
-		//println("sel:"+selectedInstances+" ref:"+selectedInstances.head.ref+" "+Layer.displayListTyp)
+		//System.out.println("sel:"+selectedInstances+" ref:"+selectedInstances.head.ref+" "+Layer.displayListTyp)
 		if(canLoad) {	
-			for(aLayer <-selectedInstances;if (aLayer.ref.typ == Layer.displayListTyp && 
+			for(group <-selectedInstances;aLayer <-group.children;if (aLayer.ref.typ == Layer.displayListTyp && 
 					aLayer.isInstanceOf[InstanceData]&& !viewController.layerModel.containsRef(aLayer.ref) )) {
 			  val newLayer=Layer.createLayer(viewController,aLayer.asInstanceOf[InstanceData])
 			  viewController.layerModel.addLayer( newLayer)

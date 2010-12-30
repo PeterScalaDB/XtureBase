@@ -37,35 +37,35 @@ class ConstantTest extends JUnitSuite
   	
   	assertEquals(intc == stringc,false)
   	
-  	println(stringf+ " "+floatf+" "+intc.toString)
+  	System.out.println(stringf+ " "+floatf+" "+intc.toString)
   }
   
   @Test def binTest()=
   {
   	
   	val a=new BinaryOperation(intc,BinOperator.getOp('*'),floatc);
-  	//println(a+" "+a.getValue())
+  	//System.out.println(a+" "+a.getValue())
   	assertEquals(a.getValue,new IntConstant(199*1775))
   	val b=new BinaryOperation(floatc,BinOperator.getOp('+'),intc);
-  	//println(b+" "+b.getValue())
+  	//System.out.println(b+" "+b.getValue())
   	assertEquals(b.getValue,new DoubleConstant(1774.9901+199.0))
   	val c=new BinaryOperation(intc,BinOperator.getOp('*'),b)
-  	//println(c.getTerm)
+  	//System.out.println(c.getTerm)
   	val d=new BinaryOperation(a,BinOperator.getOp('+'),new BinaryOperation(intc,BinOperator.getOp('-'),fc))
   	val f=new BinaryOperation(d,BinOperator.getOp('*'),fr)
   	val g=new FunctionCall(None,"Sum",List(f,floatc))
   	
-  	println(g.getTerm)
+  	System.out.println(g.getTerm)
   	val dlist=g.getElementList[DoubleConstant](DataType.IntTyp,List[DoubleConstant](floatc))
-  	println(dlist)
+  	System.out.println(dlist)
   	
   	val rlist=g.getElementList[FieldReference](DataType.FieldRefTyp,List[FieldReference]())
-  	println(rlist)
-  	println("CacheValue: "+rlist.head.cachedValue)
+  	System.out.println(rlist)
+  	System.out.println("CacheValue: "+rlist.head.cachedValue)
   	
   	val blist=g.getElementList[FunctionCall](DataType.FunctionCall,List[FunctionCall]())
-  	println(blist)
-  	println("CacheValue: "+blist.head.cacheValue)
+  	System.out.println(blist)
+  	System.out.println("CacheValue: "+blist.head.cacheValue)
   }
   
   
@@ -75,7 +75,7 @@ class ConstantTest extends JUnitSuite
 		for (i <- testExpr)
 		{
 			val expr= StringParser.parse(i)
-			println( expr+" = "+expr.getTerm+" => "+expr.getValue)
+			System.out.println( expr+" = "+expr.getTerm+" => "+expr.getValue)
 		}	 
 		
 		assertEquals( StringParser.parse(testExpr.head).getValue,new IntConstant(6) )

@@ -11,6 +11,7 @@ import java.util.concurrent._
 import java.io._
 import scala.collection.immutable.IndexedSeq
 import javax.swing.SwingUtilities
+import client.dialog.DialogManager
 
 /** manages Queries and Subscriptions
  * 
@@ -31,10 +32,7 @@ object ClientQueryManager {
 	
 	type FactUpdateFunc[T<: Referencable]=(NotificationType.Value,IndexedSeq[T])=>Unit
 	
-	val errorListeners=new collection.mutable.HashSet[ErrorListener]()
-	
-	
-	
+	val errorListeners=new collection.mutable.HashSet[ErrorListener]()	
 	
 	trait Subscriber
 	case class SimpleSubscriber(func: UpdateFunc) extends Subscriber
@@ -69,13 +67,13 @@ object ClientQueryManager {
 		sock.registerCommandHandler(ServerCommands.lockForUndo )(lockForUndo)
 		sock.registerCommandHandler(ServerCommands.releaseUndoLock )(releaseUndoLock)
 		sock.registerCommandHandler(ServerCommands.sendUndoInformation )(sendUndoInformation)
+		sock.registerCommandHandler(ServerCommands.askEnquiry )(askEnquiry)
 	}
-	
 		
 		
 	def queryInstance(ref:Reference,propertyField:Byte):IndexedSeq[InstanceData] = 	{		
 		sock.sendData(ClientCommands.queryInstance ) {out =>			
-			//println("Sending Query request "+ref + " "+Thread.currentThread)
+			//System.out.println("Sending Query request "+ref + " "+Thread.currentThread)
 			ref.write(out)
 			out.writeByte(propertyField)
 		}
@@ -90,7 +88,7 @@ object ClientQueryManager {
 	def createSubscription(parentRef:Reference,propertyField:Byte)(updateFunc: UpdateFunc):Int = {		
 		sock.sendData(ClientCommands.startSubscription ) {out =>
 			newSubscriberQueue.add( SimpleSubscriber(updateFunc))
-			//println("adding subscription "+parentRef+ " "+Thread.currentThread)
+			//System.out.println("adding subscription "+parentRef+ " "+Thread.currentThread)
 			parentRef.write(out)
 			out.writeByte(propertyField)
 		}
@@ -102,7 +100,7 @@ object ClientQueryManager {
 	/*def createPosSubscription(parentRef:Reference,propertyField:Byte)(updateFunc: PosUpdateFunc):Int = {		
 		sock.sendData(ClientCommands.startSubscription ) {out =>
 			newSubscriberQueue.add( PositionSubscriber(updateFunc))
-			//println("adding subscription "+parentRef+ " "+Thread.currentThread)
+			//System.out.println("adding subscription "+parentRef+ " "+Thread.currentThread)
 			parentRef.write(out)
 			out.writeByte(propertyField)
 		}
@@ -117,7 +115,7 @@ object ClientQueryManager {
 	(updateFunc: FactUpdateFunc[T]):Int = {		
 		sock.sendData(ClientCommands.startSubscription ) {out =>
 			newSubscriberQueue.add( FactSubscriber(factory,updateFunc))
-			//println("adding subscription "+parentRef+ " "+Thread.currentThread)
+			//System.out.println("adding subscription "+parentRef+ " "+Thread.currentThread)
 			parentRef.write(out)
 			out.writeByte(propertyField)
 		}
@@ -173,7 +171,7 @@ object ClientQueryManager {
 			out.writeInt(subsID)			
 		}
 		if(subscriptionMap.containsKey(subsID)) subscriptionMap.remove(subsID)		
-		else println("ERROR: subscription "+subsID+" not found when removing")
+		else System.out.println("ERROR: subscription "+subsID+" not found when removing")
 	}
 	
 	
@@ -217,7 +215,7 @@ object ClientQueryManager {
 		   for(owner <-owners)
 		  	 owner.write(out)			
 		}
-		//println("create "+Thread.currentThread.getName)
+		//System.out.println("create "+Thread.currentThread.getName)
 		commandResultQueue.take() match {
 			case Some(const) => const.toInt
 			case None => throw new IllegalArgumentException("no instance ID returned when creating type "+classType)
@@ -247,12 +245,25 @@ object ClientQueryManager {
 		}
 	}
 	
+	def secondUseInstances(refList:Seq[Reference],fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int) = {
+		sock.sendData(ClientCommands.secondUseInstances  ) { out =>
+		  out.writeShort(refList.size)
+		  for(ref <-refList) ref.write(out)
+			fromOwner.write(out)
+			toOwner.write(out)
+			out.writeInt(atPos)
+		}
+		commandResultQueue.take() match {			
+			case Some(const) =>const.toInt
+			case None => throw new IllegalArgumentException("no instance ID returned when copying instances "+refList.mkString)
+		}
+	}
 	
 	
-	
-	def deleteInstance(ref:Reference) = {
+	def deleteInstance(ref:Reference,fromOwner:OwnerReference) = {
 		sock.sendData(ClientCommands.deleteInstance ) { out =>
 			ref.write(out)
+			fromOwner.write(out)
 		}
 		commandResultQueue.take() 
 	}
@@ -264,19 +275,20 @@ object ClientQueryManager {
 	 * @createAction is this a Create Action or Modification Action
 	 * 
 	 */
-	def executeAction(instList:Seq[Referencable],actionName:String,params:Seq[(String,Constant)])= {		
+	def executeAction(owner:OwnerReference,instList:Seq[Referencable],actionName:String,params:Seq[(String,Constant)])= {		
 		sock.sendData( ClientCommands.executeAction) { out =>
 			out.writeInt(instList.size)
 			instList foreach(_.ref.write(out))
 			out.writeUTF(actionName)
 			out.writeInt(params.size)
 			params foreach((x) => {out.writeUTF(x._1); x._2 .write(out)})
+			owner.write(out)
 		}
 		commandResultQueue.take() 	
 	}
 	
 	def executeCreateAction(parentList:Seq[Referencable],newType:Int,propField:Byte,actionName:String,params:Seq[(String,Constant)])= {
-		//println("execute create newType:" + newType)
+		//System.out.println("execute create newType:" + newType)
 		sock.sendData(ClientCommands.executeCreateAction) { out =>
 			out.writeInt(parentList.size)
 			parentList foreach(_.ref.write(out))
@@ -304,7 +316,7 @@ object ClientQueryManager {
 	
 	private def handleQueryResults(in:DataInputStream) = 	{
 		val data=readList(in)
-		//println("Handling Query result data size:"+data.size+ " "+Thread.currentThread)
+		//System.out.println("Handling Query result data size:"+data.size+ " "+Thread.currentThread)
 		
 		queryQueue.put(data)
 		
@@ -313,7 +325,7 @@ object ClientQueryManager {
 	
 	private def handleAcceptSubscription(in:DataInputStream) = {
 		val subsID:Int=in.readInt		
-		//println("Handling accept subs subsID:"+subsID)
+		//System.out.println("Handling accept subs subsID:"+subsID)
 		
 		val subs:Subscriber=newSubscriberQueue.take()			
 		subscriptionMap.put(subsID,subs)
@@ -346,23 +358,23 @@ object ClientQueryManager {
 				nt match {
 					case NotificationType.FieldChanged => {
 						val inst=InstanceData.readWithChildInfo(Reference(in),in)
-						//println(" field changed:"+inst)
+						//System.out.println(" field changed:"+inst)
 						runInPool(subscriber.func(NotificationType.FieldChanged,IndexedSeq(inst)))
 					}
 					case NotificationType.childAdded => {
 						//val atPos=in.readInt						
 						val inst=InstanceData.readWithChildInfo(Reference(in),in)
-						//println(" child added:"+inst)
+						//System.out.println(" child added:"+inst)
 						runInPool(subscriber.func(NotificationType.childAdded,IndexedSeq(inst)))
 					}
 					case NotificationType.instanceRemoved => {
 						val ref=Reference(in)
 						runInPool(subscriber.func(NotificationType.instanceRemoved,
-							IndexedSeq(new InstanceData(ref,IndexedSeq(),Array(),false)))) // empty instance
+							IndexedSeq(new InstanceData(ref,IndexedSeq(),Array(),Seq.empty,false)))) // empty instance
 					}
 					case NotificationType.sendData => {
 						val list=readList(in)
-						//println(" send Data:"+list)
+						//System.out.println(" send Data:"+list)
 						runInPool(subscriber.func(NotificationType.sendData,list))
 					}
 				}
@@ -393,14 +405,14 @@ object ClientQueryManager {
 				nt match {
 					case NotificationType.FieldChanged => {						
 						val inst=factSubs.factory.createObject(Reference(in),in)
-						//println(" field changed:"+inst)
+						//System.out.println(" field changed:"+inst)
 						runInPool(factSubs.func(NotificationType.FieldChanged,IndexedSeq(inst)))
 					}
 					case NotificationType.childAdded => {
 						
 						//val atPos=in.readInt
 						val inst=factSubs.factory.createObject(Reference(in),in)
-						//println(" child added :"+inst)
+						//System.out.println(" child added :"+inst)
 						runInPool(factSubs.func(NotificationType.childAdded,IndexedSeq(inst)))
 					}
 					case NotificationType.instanceRemoved => {
@@ -410,7 +422,7 @@ object ClientQueryManager {
 					}
 					case NotificationType.sendData => {						
 						val list=readListWithFactory(in,factSubs.factory)
-						//println(" send Data:"+list)
+						//System.out.println(" send Data:"+list)
 						runInPool(factSubs.func(NotificationType.sendData,list))
 					}
 				}
@@ -430,11 +442,28 @@ object ClientQueryManager {
 			val result:Option[Constant]= if(in.readBoolean) Some(Expression.readConstant(in))
 																 else None
       printErrorMessage(" ")																 
-		  //println("command Response "+result+" "+Thread.currentThread)
+		  //System.out.println("command Response "+result+" "+Thread.currentThread)
 		
 		  commandResultQueue.put(result)
 		}
 	}
+	
+	def askEnquiry(in:DataInputStream ) = {
+		ParamQuestion.fromXML(scala.xml.XML.loadString (in.readUTF)) match {
+			case Some(question)=> DialogManager.startEnquiryDialog(question)
+			case _ => 
+		}
+		
+		
+	}
+	
+	def answerEnquiry(params:Seq[(String,Constant)])= {
+		sock.sendData(ClientCommands.answerEnquiry) { out =>
+			out.writeInt(params.size)
+			params foreach((x) => {out.writeUTF(x._1); x._2 .write(out)})
+		}
+	}
+	
 	
 	def registerSetupListener(listener:Function0[Unit]) {
 		if(isSetup) listener() // call listener instantly when types are already setup
@@ -486,24 +515,24 @@ object ClientQueryManager {
 	
 	private def lockForUndo(in:DataInputStream ) = {
 		val lockUser=in.readUTF
-		println("LOCK FOR UNDO by User "+lockUser)
+		System.out.println("LOCK FOR UNDO by User "+lockUser)
 	}
 	
 	private def releaseUndoLock(in:DataInputStream ) = {
-		println("UNDO LOCK RELESED")
+		System.out.println("UNDO LOCK RELESED")
 	}
 	
 	private def sendUndoInformation(in:DataInputStream ) = {		
 		val stepListSize=in.readInt
-		//println("Sending Undo Information "+stepListSize)
+		//System.out.println("Sending Undo Information "+stepListSize)
 		val stepList=collection.mutable.ArrayBuffer[TransStepData]()
 		for(i <-0 until stepListSize) {
 			val newElem=TransStepData.read(in) 
 			stepList+= newElem
-			//println(newElem.toString)
+			//System.out.println(newElem.toString)
 		}		
 		if(stepListReader!=null) stepListReader.loadStepList(stepList)
-		//println("send ready ")
+		//System.out.println("send ready ")
 			
 	}
 	
@@ -532,5 +561,6 @@ object ClientQueryManager {
 	def registerErrorListener(newListener:ErrorListener) = errorListeners += newListener
 	
 	def printErrorMessage(message:String) = errorListeners foreach (_.printError( message))
+	
 	
 }

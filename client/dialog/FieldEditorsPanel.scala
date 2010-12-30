@@ -15,7 +15,8 @@ import javax.swing.border._
  */
 class FieldEditorsPanel extends BorderPanel with SelectListener {
 	
-	var instList:Seq[Referencable] = Seq.empty
+	//var instList:Seq[Referencable] = Seq.empty
+	var groupList:Seq[SelectGroup[_<:Referencable]]= _
 	var commonTyp:Int = -1
 	var currentEditors=collection.mutable.ArrayBuffer[FieldEditor]()
 	
@@ -32,10 +33,10 @@ class FieldEditorsPanel extends BorderPanel with SelectListener {
 	add (label,BorderPanel.Position.North)
 	add (childPanel,BorderPanel.Position.Center)
 	
-	def selectionChanged(sender:SelectSender,ninstList:Seq[Referencable]) = {
-		instList=ninstList
-		val newCommonTyp=AllClasses.get.getCommonClass(instList)
-		//println("new common Typ:"+newCommonTyp)
+	def selectionChanged [T <: Referencable](sender:SelectSender,groups:Seq[SelectGroup[T]]) = {
+		groupList=groups.asInstanceOf[Seq[SelectGroup[_<:Referencable]]]
+		val newCommonTyp=AllClasses.get.getCommonClassForGroups(groupList)
+		//System.out.println("new common Typ:"+newCommonTyp)
 		if(newCommonTyp!=commonTyp) { // type was changed
 			childPanel.contents.clear
 			currentEditors.clear
@@ -43,11 +44,12 @@ class FieldEditorsPanel extends BorderPanel with SelectListener {
 			}
 			commonTyp=newCommonTyp
 			
-			if(newCommonTyp!= -1) {
+			if(newCommonTyp> 0) {
+				//System.out.println("fieldEditorPanel sel changed "+groups+" "+sender+" commonTyp:"+newCommonTyp)
 				val editorNames=AllClasses.get.getClassByID(newCommonTyp).fieldEditors
 				for(aName <-editorNames){
 					val editor=EditorFactory.getEditor(aName)
-					//println("editor:"+editor)
+					//System.out.println("editor:"+editor)
 					childPanel.contents+=editor.getPanel
 					currentEditors+=editor					
 				}					
@@ -61,7 +63,7 @@ class FieldEditorsPanel extends BorderPanel with SelectListener {
 	
 	def notifyEditors:Unit = {
 		for(editor <-currentEditors) {
-			editor.setData(instList)
+			editor.setData(groupList)
 		}
 	}
 	

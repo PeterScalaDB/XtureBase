@@ -21,7 +21,8 @@ import javax.swing.border._
  * @param allowedClass what classes are allowed in this property field
  */
 class PropertyModel(val mainController:DataViewController) {
-	var propertyField:Byte=_
+	//var propertyField:Byte=_
+	var ownerRef:OwnerReference = _
 	var loaded=false
 	var subscriptionID= -1
 	var allowedClass:Int= _	
@@ -64,34 +65,40 @@ class PropertyModel(val mainController:DataViewController) {
 		if(loaded) shutDown()
 		selectRef=selRef
 		allowedClass=nallowedClass
-		propertyField=fieldToLoad
+		ownerRef=new OwnerReference(fieldToLoad,mainController.ref)		
 		isFirstPropField=nfirstPropField
 		titleLabel.text=" ("+fieldToLoad+") "+fieldName+(if(allowedClass==0) "" else  " erlaubt:"+ 
 		AllClasses.get.getClassByID(allowedClass).name)
 		titleLabel.visible= !onlyPropField
 		titleLabel.horizontalAlignment=Alignment.Left
 		if(subscriptionID<0)
-			subscriptionID=ClientQueryManager.createSubscription(mainController.ref,propertyField)(callBack) 
+			subscriptionID=ClientQueryManager.createSubscription(mainController.ref,fieldToLoad)(callBack) 
 		else { // subscription already there
-			ClientQueryManager.changeSubscription(subscriptionID,mainController.ref,propertyField)
+			ClientQueryManager.changeSubscription(subscriptionID,mainController.ref,fieldToLoad)
 		}		
 		loaded=true
 	}
-	def getPropFieldDefinition= mainController.mainClass.propFields (propertyField)
 	
+	def getPropFieldDefinition= mainController.mainClass.propFields (ownerRef.ownerField )
+	
+	def isEmpty:Boolean= {
+		for(m <-tableModMap.valuesIterator)
+			if(!m.isEmpty) return false
+		return true
+	}
 	
 	def callBack(notType:NotificationType.Value,data: IndexedSeq[InstanceData]) = 
 		ClientQueryManager.runSw  { listLock.synchronized{		
-		//println("Proberty modification :"+notType+ " "+(if(data.isEmpty)" [Empty] "else   data.first.ref)+", ... "+	
+		//System.out.println("Proberty modification :"+notType+ " "+(if(data.isEmpty)" [Empty] "else   data.first.ref)+", ... "+	
 		//		 "subsID:"+subscriptionID+ " ** "+ Thread.currentThread.getName)
-		//println()				
+		//System.out.println()				
 			notType match {
 				case NotificationType.sendData => {
-					//println("send data field:"+propertyField+" size:"+data.size)
+					//System.out.println("send data field:"+propertyField+" size:"+data.size)
 					if(data.size==0) {
 						if(isFirstPropField){
 							vGlue.requestFocusInWindow						
-							focusGained
+							//focusGained
 						}
 						vGlue.preferredSize=vGlueMaxSize
 						vGlue.revalidate
@@ -99,21 +106,30 @@ class PropertyModel(val mainController:DataViewController) {
 					else {
 						vGlue.preferredSize=vGlueMinSize
 						val grouped:Map[Int,Seq[InstanceData]]=data.view.groupBy(_.ref.typ)
+						var firstTable:Table=null
 						for((i,data) <-grouped.iterator) {
 							val mod=if(tableModMap.contains(i)) tableModMap(i) else createTableModel(i)
+							if(firstTable==null) firstTable=mod.table
 							mod.setDataList(data,selectRef,!isLoading)
-						}	
+						}						
+						if(selectRef==None&&isFirstPropField&&firstTable!=null) {
+							println("select first table ")
+							firstTable.requestFocusInWindow
+							firstTable.peer.setColumnSelectionInterval(1,1)
+							firstTable.peer.setRowSelectionInterval(0,0)							
+							firstTable.repaint
+						}							
 					}
 				}
 				case NotificationType.childAdded => {
-					//println("child added:"+data)
+					//System.out.println("child added:"+data)
 					val typ=data(0).ref.typ
 					val mod = if(tableModMap.contains(typ)) tableModMap(typ)
 					else createTableModel(typ)					
 					mod.addInstance(data(0))
 				}
 				case NotificationType.FieldChanged => {
-					//println("field added:"+data)
+					//System.out.println("field added:"+data)
 					val typ=data(0).ref.typ
 					if(tableModMap.contains(typ))
 						tableModMap(typ).changeInstance(data(0))
@@ -156,9 +172,9 @@ class PropertyModel(val mainController:DataViewController) {
 		
 	}
 	
-	def getOwnerRef = new OwnerReference(propertyField,mainController.ref)
+	def getOwnerRef = new OwnerReference(ownerRef.ownerField ,mainController.ref)
 	
-	def focusGained = mainController.containerFocused(propertyField)
+	def focusGained = mainController.containerFocused(ownerRef.ownerField )
 	
 	def shutDown() = listLock.synchronized{
 		ClientQueryManager.pauseSubscription(subscriptionID)
@@ -171,7 +187,7 @@ class PropertyModel(val mainController:DataViewController) {
 	
 	
 	def deselect(selectedType:Int) = listLock.synchronized {
-		//println("des")
+		//System.out.println("des")
 		for(m <-tableModMap.valuesIterator;if(m.typ!=selectedType)) m.deselect()
 	}
 	
@@ -186,22 +202,26 @@ class PropertyModel(val mainController:DataViewController) {
 	}*/
 	
 	class ClickComp(propMod:PropertyModel) extends Component {
-		val prefSiz=new Dimension(Short.MaxValue,Short.MaxValue)		
-		opaque=true
-		background=Color.yellow
+		val prefSiz=new Dimension(Short.MaxValue,Short.MaxValue)
+		val standBorder=BorderFactory.createLineBorder(Color.lightGray)
+		val selectBorder=BorderFactory.createLineBorder(Color.blue)
+		//opaque=true
+		//background=Color.yellow
 		focusable=true	
 		peer.setTransferHandler(new PropAreaTransferHandler(propMod))
 		maximumSize=prefSiz
 		
 		
 		//peer.setDropMode(DropMode.ON_OR_INSERT_ROWS)
-		listenTo(mouse.clicks)
+		listenTo(mouse.clicks,this)
 		reactions+= {			
 			case e:MouseReleased => {				
-				//println("mouseclick "+peer.isFocusOwner+" "+size)
+				//System.out.println("mouseclick "+peer.isFocusOwner+" "+size)
 				requestFocus
 				focusGained
 			}
+			case e:FocusGained => border=selectBorder;repaint
+			case e:FocusLost =>border=standBorder;repaint
 		//preferredSize=prefSiz	
 	}
 }

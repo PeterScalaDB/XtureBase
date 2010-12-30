@@ -26,20 +26,20 @@ class FunctionTest  extends JUnitSuite  {
 	
 	@Test def funcTest():Unit = {
 		assert(FunctionManager.get.getFunctionValue(None,"max",List(DoubleConstant(144),DoubleConstant(567)))==DoubleConstant(567))
-		println(FunctionManager.get.getFunctionValue(None,"sin",List(DoubleConstant(0.5) )) )
-		println(new FunctionCall(None,"sin",List(DoubleConstant(math.Pi/2))).getValue)
+		System.out.println(FunctionManager.get.getFunctionValue(None,"sin",List(DoubleConstant(0.5) )) )
+		System.out.println(new FunctionCall(None,"sin",List(DoubleConstant(math.Pi/2))).getValue)
 	}
 	
 	@Test def collFuncTest():Unit = {
 	  val myString="12 + #doubleSum(1;2;3) * (#f15 + #t4i2f9) - #i12f18 "
 	  val expr=StringParser.parse(myString)
-	  println(expr +  " = " + expr.getTerm)	  
+	  System.out.println(expr +  " = " + expr.getTerm)	  
 	  assert(true)
 	}
 	
 	@Test def moduleTest():Unit = {
 		val inst=StorageManager.getInstanceData(Reference(3,1))
-		AllClasses.get.getClassByID(3).actions.head.asInstanceOf[ActionImpl].func(inst,IndexedSeq(("Param1",StringConstant("Hallo"))))
+		AllClasses.get.getClassByID(3).actions.head.asInstanceOf[ActionImpl].func(null,inst,IndexedSeq(("Param1",StringConstant("Hallo"))))
 	}
   
 }

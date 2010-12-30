@@ -104,7 +104,7 @@ class PathController (val model:PathModel, val view:ListView[InstanceData],val l
 		}
 		if (updating) {			
 			if(newPos!=model.getSize-1) {
-				println("wrong selection")				
+				System.out.println("wrong selection")				
 				//view.selectIndices(model.getSize-1)			
 			}
 			oldIndex=newPos
@@ -122,11 +122,11 @@ class PathController (val model:PathModel, val view:ListView[InstanceData],val l
 	}
 	
 	def selectLastLine():Unit = {
-		//println("select LL size:"+model.getSize+" subsID:"+model.subsID+" "+updating+ " "+Thread.currentThread)
+		//System.out.println("select LL size:"+model.getSize+" subsID:"+model.subsID+" "+updating+ " "+Thread.currentThread)
 		if(updating) {
  		  SwingUtilities.invokeLater(new Runnable {
 				def run () = {
-					 //println("Size is:"+model.getSize)
+					 //System.out.println("Size is:"+model.getSize)
 					view.selectIndices(model.getSize-1)
 					
 					}	})		

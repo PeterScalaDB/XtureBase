@@ -54,6 +54,17 @@ trait Expression
 	 */
 	def replaceExpression(checker:(Expression) => Expression): Expression = 
 		checker(this)
+		
+	
+		def foreach(f:(Expression)=>Unit):Unit = {
+		f(this)
+		for(i<-0 until getChildCount) {
+			//println("Foreach sub:"+getChildNr(i))
+			getChildNr(i).foreach(f)
+		}
+	}
+	
+	
 }
 
 trait NullConstant extends Expression  {
@@ -115,6 +126,7 @@ object Expression
 	    case DataType.VectorTyp => NullVECTOR
 	    case DataType.CurrencyTyp => NullCURRENCY
 	    case DataType.undefined => EMPTY_EX
+	    case DataType.EnumTyp => NullINT
 		}
 	}
 }

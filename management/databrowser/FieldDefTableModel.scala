@@ -34,15 +34,16 @@ class FieldDefTableModel(showLastLine:Boolean) extends ActivableAbstractTableMod
   
   def getRowCount(): Int = fieldDefList.size+( if(showLastLine)1 else 0)
 
-  def getColumnCount(): Int = { 7 }
+  def getColumnCount(): Int = { 8 }
   
     
   override def getColumnClass(col:Int):Class[_] = {
   	col match {  
   		case 0 => classOf[String]
   		case 1 => classOf[DTWrap]
-  		case 2 => classOf[Boolean]
+  		case 2 => classOf[EnumDefinition]
   		case 3 => classOf[Boolean]
+  		case 4 => classOf[Boolean]
   		case _ => classOf[String]
   	}
   }
@@ -56,21 +57,25 @@ class FieldDefTableModel(showLastLine:Boolean) extends ActivableAbstractTableMod
   def getValueAt(row: Int, column: Int): Object = {
   	if(row>=fieldDefList.size) null
   	else {
-  		if(column<2) {
+  		if(column<3) {
   		 val fd=fieldDefList(row)  		 
   		 column match {
   			 case 0 => fd.name 
-  			 case 1 => DataType.wrapMap(fd.typ).asInstanceOf[AnyRef]  			 
+  			 case 1 => DataType.wrapMap(fd.typ).asInstanceOf[AnyRef]
+  			 case 2 => fd match {
+  				 case f:EnumFieldDefinition => SystemSettings().enumByID( f.enumID)
+  				 case _ => NOENUM
+  			 }
   		 }
   		}
   		else {
   			val fs=fieldSettingList(row)
   			column match {
-  				case 2 => fs.readOnly .asInstanceOf[AnyRef]
-  				case 3 => fs.showFormula .asInstanceOf[AnyRef]
-  				case 4 => fs.editor
-  				case 5 => fs.startValue.getTerm
-  				case 6 => fs.formString
+  				case 3 => fs.readOnly .asInstanceOf[AnyRef]
+  				case 4 => fs.showFormula .asInstanceOf[AnyRef]
+  				case 5 => fs.editor
+  				case 6 => fs.startValue.getTerm
+  				case 7 => fs.formString
   				case _ => null
   			}
   		}
@@ -80,17 +85,22 @@ class FieldDefTableModel(showLastLine:Boolean) extends ActivableAbstractTableMod
   override def setValueAt(value:Object,row:Int,column:Int):Unit= {  	
   	if(row==fieldDefList.size&&showLastLine) {
   		// adding field  		
-  		val newField = FieldDefinition("",DataType.undefined )
+  		val newField =new FieldDefinition("",DataType.undefined )
   		fieldDefList=fieldDefList:+newField
   		fieldSettingList=fieldSettingList:+new FieldSetting(fieldDefList.size-1)
   	}  	
-  	if(column<2 && (!_isCreating || !showLastLine))return
-  	if(column<2) {
-  	  var field:FieldDefinition=fieldDefList(row)  	  
+  	if(column<3 && (  !showLastLine))return
+  	if(column==1 && !_isCreating) return
+  	if(column<3) {
+  	  var field:FieldDefinition=fieldDefList(row) 
+  	  //println("Mod set value:"+value+" col:"+column)
   	  fieldDefList=MainWindow.updateSeq(fieldDefList,row,
-  	  	if(column==0) field.setName(value.toString)
-  	  	else field.setType(value.asInstanceOf[DTWrap].typ)
-  	  	)  	  	  
+  	  	column match {
+  	  	case 0 =>field.setName(value.toString)
+  	  	case 1 => field.setType(value.asInstanceOf[DTWrap].typ)
+  	  	case _ =>field.setEnumID(value.asInstanceOf[EnumDefinition].id) 
+  	  })
+  	  	  	  	  
   	}
   	else {
   		val fs= {
@@ -103,16 +113,16 @@ class FieldDefTableModel(showLastLine:Boolean) extends ActivableAbstractTableMod
   			else w
   		}
   		column match {
-  	    case 2 => fs.readOnly=value.asInstanceOf[Boolean].booleanValue
-  	    case 3 => fs.showFormula=value.asInstanceOf[Boolean].booleanValue
-  	    case 4 => fs.editor=value.toString
-  	    case 5 => fs.startValue=StringParser.parse(value.toString)
-  	    case 6 => fs.formString=value.toString
+  	    case 3 => fs.readOnly=value.asInstanceOf[Boolean].booleanValue
+  	    case 4 => fs.showFormula=value.asInstanceOf[Boolean].booleanValue
+  	    case 5 => fs.editor=value.toString
+  	    case 6 => fs.startValue=StringParser.parse(value.toString)
+  	    case 7 => fs.formString=value.toString
   	    case _ => null		
   		}
   	}
   	isDirty=true 
-  	println("set Value ready "+fieldDefList.mkString(","))
+  	//System.out.println("set Value ready "+fieldDefList.mkString(","))
   	fireTableDataChanged
   }
 

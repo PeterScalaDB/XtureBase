@@ -19,7 +19,7 @@ class ClassIndexHandler(val theClass:ServerObjectClass)
 	val theFile= new RandomAccessFile(fileName,"rwd") 
 	final val recordSize=8*4+4*5
 	var numRecords:Int=(theFile.length/recordSize).toInt
-	//println("Typ: "+theClass.id+" numRecords:"+numRecords)
+	//System.out.println("Typ: "+theClass.id+" numRecords:"+numRecords)
 	val firstID= if(numRecords>0) readIxInst(0) else 0
 	var lastID:Int= if(numRecords>0) readIxInst(numRecords-1) else 0
 	
@@ -154,7 +154,7 @@ class ClassIndexHandler(val theClass:ServerObjectClass)
 		
 		theFile.seek(findIxRecord(startInst)*recordSize)
 		theFile.read(bulkReadBuffer,0,recordSize*(endInst-startInst+1).toInt)
-		//println("buffer read "+(endInst-startInst+1).toInt)
+		//System.out.println("buffer read "+(endInst-startInst+1).toInt)
 		//inBufferStream.reset
 		for(i<-startInst to endInst;val offset=(i-startInst).toInt*recordSize+4) 			
 			yield	dataFileHandler.readWithBool(Reference(theClass.id,i),getLong(bulkReadBuffer,offset),
@@ -169,7 +169,7 @@ class ClassIndexHandler(val theClass:ServerObjectClass)
 		
 		theFile.seek(findIxRecord(startInst)*recordSize)
 		theFile.read(bulkReadBuffer,0,recordSize*(endInst-startInst+1).toInt)
-		//println("buffer push "+(endInst-startInst+1).toInt)
+		//System.out.println("buffer push "+(endInst-startInst+1).toInt)
 		//inBufferStream.reset
 		for(i<-startInst to endInst){
 			val offset=(i-startInst).toInt*recordSize+4
@@ -272,15 +272,15 @@ class ClassIndexHandler(val theClass:ServerObjectClass)
 	// reads the Instance # at the given position 
 	private def readIxInst(pos:Int) =
 	{
-		//println("readIxInst "+counter)
+		//System.out.println("readIxInst "+counter)
 		//counter+=1
 		theFile.seek(pos*recordSize)
 		theFile.readInt
 	}
 	
 	def printCaches = {
-		println(instCache)
-		println(propCache)
+		System.out.println(instCache)
+		System.out.println(propCache)
 	}
 }
 

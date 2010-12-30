@@ -12,13 +12,13 @@ class NewElemLayer(ncontroller:GraphViewController) extends Layer	(ncontroller,n
   elemList=myList
   
   def addTempElement(elem:GraphElem) ={
-  	//println("elemList adding element "+elem)
+  	//System.out.println("elemList adding element "+elem)
   	elemList= (myList += elem)
   	controller.graphElemAdded(this,elem)  	
   }
   
   override def shutDown= {
-  	//println("elemList clear")
+  	//System.out.println("elemList clear")
   	//Thread.dumpStack
   	myList.clear
   	//controller.layerChanged(this)  	

@@ -20,7 +20,7 @@ class InstanceRenderer(theClass:AbstractObjectClass) extends Label {
 		override def invalidate() = {}
 	}
 	
-	val alternateColor=new Color(250,251,254)
+	
 	val m=new javax.swing. table.DefaultTableCellRenderer
 	val linkColor=new Color(0,150,0)
 	val nofocusBorder=UIManager.getBorder("Table.cellNoFocusBorder")
@@ -29,16 +29,18 @@ class InstanceRenderer(theClass:AbstractObjectClass) extends Label {
 	val focusBackground = UIManager.getColor("Table.focusCellBackground");
 	
 	def config(t:Table, isSelected: Boolean, focused: Boolean, expression: Expression,row:Int, col: Int) :Unit= {
+		font=t.font
 		if (focused)  border= focusBorder
 		else border=nofocusBorder
 		
   	background=if(isSelected)  t.selectionBackground 
-  	  else  if (row % 2 == 0)alternateColor 
+  	  else  if (row % 2 == 0)InstanceRenderer.alternateColor 
   	  			else Color.white
 		
 		//print("ex:"+expression+" row:"+row+" col:"+col)
   	if(expression== null || expression.isNullConstant) {
-  		text=""  		
+  		if(theClass.fields (col-1).typ ==DataType.BoolTyp)text= "\u25cc"
+  		else text=""  		
   	}
   	else {
   		val fieldFormat=theClass.fieldSetting(col-1)
@@ -64,7 +66,7 @@ class InstanceRenderer(theClass:AbstractObjectClass) extends Label {
   				}
   				case BoolTyp => {
   					horizontalAlignment=Alignment.Right
-  					value.toBoolean.toString  				
+  					if(value.toBoolean) "\u221A" else "\u25a1"  				
   				}
   				case StringTyp => {
   					horizontalAlignment=Alignment.Left
@@ -94,6 +96,9 @@ class InstanceRenderer(theClass:AbstractObjectClass) extends Label {
   			}
   		}
   	}  	  
-	}	
-	
+	}		
+}
+
+object InstanceRenderer {	
+	val alternateColor=new Color(250,251,254)
 }

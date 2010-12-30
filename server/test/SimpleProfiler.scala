@@ -26,7 +26,7 @@ object SimpleProfiler {
   
   def finish(label:String) = if(dprint) {
   	measure(label)
-  	println("= "+(lastTime-startTime))
+  	System.out.println("= "+(lastTime-startTime))
   }
   	
   

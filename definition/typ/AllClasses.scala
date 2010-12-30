@@ -9,11 +9,9 @@ import collection.mutable.LinkedHashSet
 /**
  * Contains a list of all current classes
  */
-abstract class AllClasses [B <:AbstractObjectClass] (node: scala.xml.Node)  {
-	
+abstract class AllClasses [B <:AbstractObjectClass] (node: scala.xml.Node)  {	
 		
-  var classList:Map[Int,B]=  fromXML(node)
-  
+  var classList:Map[Int,B]=  fromXML(node)  
   
   // adds a new class to the list
   def addClass(cl:B)= 
@@ -40,7 +38,7 @@ abstract class AllClasses [B <:AbstractObjectClass] (node: scala.xml.Node)  {
   def resolveFields()=
   	 for(cl <-classList.valuesIterator){
   		 cl.resolveSuperFields()
-  		 println(cl.name+" "+cl.superClassIDs.mkString(","))
+  		 //System.out.println(cl.name+" "+cl.superClassIDs.mkString(","))
   }
   	
   /** gets the most common class that all classes inherit from
@@ -67,6 +65,27 @@ abstract class AllClasses [B <:AbstractObjectClass] (node: scala.xml.Node)  {
   	}
   	aClassID
   }
+  
+  def getCommonClassForGroups(groupList:Seq[SelectGroup[_<:Referencable]]):Int = {
+  	if(groupList==null || groupList.isEmpty) return -1
+  	if(groupList.size==1&&groupList.first.children.size==1 ) return groupList.first.children .first.ref.typ 
+  	var aClassID= -2
+  	var superClasses:LinkedHashSet[Int]=null
+  	for(group <-groupList)
+  	for(inst <-group.children) {
+  		if(aClassID== -2){
+  			aClassID=inst.ref.typ
+  			superClasses=getClassByID(aClassID).superClassIDs
+  		}
+  		else if(inst.ref.typ!=aClassID) {
+  		  val otherSuperClasses=getClassByID(inst.ref.typ).superClassIDs
+  		  superClasses=superClasses intersect otherSuperClasses
+  		  if(superClasses.isEmpty) return -1
+  		  aClassID=superClasses.last
+  		}
+  	}
+  	aClassID
+  }
 }
 
 
@@ -78,7 +97,7 @@ class ClientClasses (node:scala.xml.Node) extends AllClasses [AbstractObjectClas
   }
 }
 
-
+case class SelectGroup[T <: Referencable](var parent:OwnerReference,var children:Seq[T]) 
 
 object AllClasses  {	
 	var classObj:AllClasses[_ <: AbstractObjectClass] = _

@@ -24,9 +24,9 @@ trait ActionPanListener {
 	 * @param actionName name of the action to start
 	 * @param question set of questions and parameters
 	 * @param createType create action of given Type
-	 * @param actionInst
+	 * @param actionInst the instances to do the action with	 
 	 */	
-	def startActionDialog(actionName:String,question:ParamQuestion,actionInst:Seq[Referencable],createType:Int)
+	def startActionDialog(actionName:String,question:ParamQuestion,groupList:Seq[SelectGroup[_<:Referencable]],createType:Int)
 	//def startNewDialog(actonName:String,question:ParamQuestion,func:(Seq[(String,Constant)])=>Unit)
 }
 
@@ -35,36 +35,23 @@ class AbstractActionPanel extends BoxPanel(scala.swing.Orientation.Vertical)  {
 	val buttonList= new ArrayBuffer[ActionButton]()
 	var usedButtons:Int= _
 	var lastClass:Int= _
-	var buttonSize=new Dimension(110,30)
-	var nullSize=new Dimension(0,0)
-	var instList:Seq[Referencable] = _
+	var buttonSize=new Dimension(130,30)
+	var nullSize=new Dimension(0,0)	
+	
 	border=BorderFactory.createEtchedBorder(EtchedBorder.LOWERED)
 
 	var listenerSet=collection.mutable.HashSet[ActionPanListener]()
 	xLayoutAlignment=0.5d
-  yLayoutAlignment=0.5d
-	
-	reactions += {
-		case ButtonClicked(e:ActionButton) => if(instList!=null){			
-			if (e.theAction.question ==None ) {
-				//println("Execute action " +e.text)
-				if(e.newTypeID>0) ClientQueryManager.executeCreateAction(instList,e.newTypeID,e.propField,e.theAction.name,Seq())
-				else ClientQueryManager.executeAction(instList,e.text,Seq())
-			}
-			else listenerSet foreach (_.startActionDialog(e.text,e.theAction.question.get,instList,e.newTypeID))
-		}	
-	}  
+  yLayoutAlignment=0.5d	
   
   def hideActions = {
   	visible=false
-  }
-	
+  }	
 	
 	def shutDown() = {
 		contents.clear()		
 		usedButtons=0		
-	}
-	
+	}	
 	
 	def getButton(theAction:AbstractAction,buttonLabel:String =""):ActionButton = {
 		val retButton= if(buttonList.size>usedButtons) buttonList(usedButtons)
@@ -94,19 +81,23 @@ class AbstractActionPanel extends BoxPanel(scala.swing.Orientation.Vertical)  {
 		maximumSize=buttonSize
 		focusable=false
 		xLayoutAlignment=0.5d
+		margin=new Insets(0,0,0,0)
 	}  
 }
 
 class ActionPanel extends AbstractActionPanel with SelectListener {
 	var lastSender:SelectSender= _
+	var groupList:Seq[SelectGroup[_<:Referencable]]= _
 	
-	def selectionChanged(sender:SelectSender,ninstList:Seq[Referencable]) = {
-		//println("select "+instList)
+	
+	def selectionChanged [T <: Referencable](sender:SelectSender,groups:Seq[SelectGroup[T]]) = {
+		//System.out.println("select "+instList)
 		if(lastSender!=null&&lastSender!=sender)lastSender.deselect(false)
-		instList=ninstList
-		lastSender=sender
-		if(instList==null || instList.isEmpty || instList.first==null) hideActions
-		else setClass(instList.first.ref.typ)
+		groupList=groups
+		lastSender=sender		
+		
+		if(groupList==null || groupList.isEmpty || groupList.first.children.isEmpty) hideActions
+		else setClass(groupList.first.children.first.ref.typ)
 	}	
 	
 	def setClass(classID:Int):Unit = {
@@ -114,11 +105,23 @@ class ActionPanel extends AbstractActionPanel with SelectListener {
 		if (classID==lastClass) return // keep the actions 
 		shutDown()   	
 		val theClass = AllClasses.get.getClassByID(classID)  	
-		//println("class "+classID+" num:"+theClass.getActionCount)
+		//System.out.println("class "+classID+" num:"+theClass.getActionCount)
 		for(a <-theClass.actions.valuesIterator)
 			contents += getButton(a) 
 		revalidate
 		repaint
 	}
+	
+	reactions += {
+		case ButtonClicked(e:ActionButton) => if(groupList!=null){			
+			if (e.theAction.question ==None ) {
+				//System.out.println("Execute action " +e.text)
+				//if(e.newTypeID>0) for(group<-groupList) ClientQueryManager.executeCreateAction(group.children,e.newTypeID,e.propField,e.theAction.name,Seq())
+				listenerSet foreach (_.startActionDialog("",null,Nil,0)) 
+				for(group<-groupList)ClientQueryManager.executeAction(group.parent,group.children,e.text,Seq())
+			}
+			else listenerSet foreach (_.startActionDialog(e.text,e.theAction.question.get,groupList,e.newTypeID))
+		}	
+	}  
 }
 

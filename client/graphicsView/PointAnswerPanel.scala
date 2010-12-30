@@ -55,32 +55,20 @@ class PointAnswerPanel extends AnswerPanel with PointClickListener {
   		}  		
   	}
   	case ButtonClicked(`dxBut`)=> {
-  		textLabel.text="dx-Wert:"
-  		textLabel.visible=true
-  		textEdit.visible=true 
-  		textEdit.selectAll
-  		textEdit.requestFocusInWindow
+  		initTextEdit("dx-Wert:")  		
   		editingBut=dxBut
   	}
   	case ButtonClicked(`dyBut`)=> {
-  		textLabel.text="dy-Wert:"
-  		textLabel.visible=true
-  		textEdit.visible=true  
-  		textEdit.selectAll
-  		textEdit.requestFocusInWindow
+  		initTextEdit("dy-Wert:")  		
   		editingBut=dyBut
   	}
   	case ButtonClicked(`globalBut`)=> {
-  		textLabel.text="Koordinate: x ; y "
-  		textLabel.visible=true
-  		textEdit.visible=true  
-  		textEdit.selectAll
-  		textEdit.requestFocusInWindow
+  		initTextEdit("Koordinate: x ; y ")
   		editingBut=globalBut
   	}
   	
   	case EditDone(`textEdit`) => {
-  		println("edit done "+editingBut)
+  		System.out.println("edit done "+editingBut)
   		if(textEdit.visible) {
   			textLabel.visible=false
   			textEdit.visible=false
@@ -99,8 +87,15 @@ class PointAnswerPanel extends AnswerPanel with PointClickListener {
   				}
   			}
   		}  		
-  	}
-  	
+  	}  	
+  }
+  
+  def initTextEdit(labelText:String)= {
+  	textLabel.text=labelText
+  	textLabel.visible=true
+  	textEdit.visible=true  
+  	textEdit.selectAll
+  	textEdit.requestFocusInWindow
   }
   
   def getTextEditDouble = textEdit.text.trim.replace(',','.').toDouble
@@ -108,9 +103,9 @@ class PointAnswerPanel extends AnswerPanel with PointClickListener {
   override def loadParamAnswer(answerDesc:ParamAnswerDefinition) = {
   	super.loadParamAnswer(answerDesc)
   	active=true
-  	println("set Active "+answerDesc.name)
+  	System.out.println("set Active "+answerDesc.name)
   	if(PointAnswerPanel.currentViewController!=null) {
-  		println("AnswerPanel constraint:"+answerDesc.constraint)
+  		System.out.println("AnswerPanel constraint:"+answerDesc.constraint)
   		if(answerDesc.constraint.length>3 && answerDesc.constraint.substring(0,3) =="LT_") {
   			val func=answerDesc.constraint.substring(3,answerDesc.constraint.size) match {
   				case "Line" => lineFactoryFunc _
@@ -129,12 +124,12 @@ class PointAnswerPanel extends AnswerPanel with PointClickListener {
   }
   
   def lineFactoryFunc (p1:VectorConstant,p2:VectorConstant):GraphElem = {
-  	println("processing factory "+p1+" "+p2)
+  	System.out.println("processing factory "+p1+" "+p2)
   	new LineElement(null,0,10,0,p1,p2) 
   }
   
   override def reset()= {
-  	println("pointpanel reset "+active)
+  	System.out.println("pointpanel reset "+active)
   	super.reset
   	bracketBut.selected=false
   	if(active) {
@@ -146,13 +141,14 @@ class PointAnswerPanel extends AnswerPanel with PointClickListener {
   }
   
   def pointClicked(point:VectorConstant) = {
-  	println("point answer "+point)
+  	System.out.println("point answer "+point)
   	func(ansParm,point)
   }
+  
+  def setFocus()={}
 }
 
 object PointAnswerPanel {
-	var currentViewController:GraphViewController=_
-	
+	var currentViewController:GraphViewController=_	
 	
 }

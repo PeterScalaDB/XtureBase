@@ -24,7 +24,7 @@ class LineStyleEditor extends FieldEditor {
 	val fieldNr=1.toByte
 	val allowedClasses=List(40,41)
 	
-	var dataList:Seq[Referencable]=Seq.empty	
+	var dataList:Seq[SelectGroup[_ <:Referencable]]=Seq.empty	
 	
 	
 	var selfSelected=false
@@ -34,14 +34,15 @@ class LineStyleEditor extends FieldEditor {
 		contents +=combo
 		preferredSize=new Dimension(70,32)
 		listenTo(combo.selection)
+		
 		reactions+={
 			case e:SelectionChanged=> if(selfSelected) selfSelected=false
 			else if(combo.selection.index> -1){
 				val dat:Double=combo.selection.item									
 				val lineWidth:Int=(dat*100).toInt
-				println("change width:"+ lineWidth+" in "+dataList.mkString)
+				System.out.println("change width:"+ lineWidth+" in "+dataList.mkString)
 				if(dataList!=null){
-					val sendList=dataList.filter(inst =>allowedClasses.contains(inst.ref.typ ))
+					val sendList=dataList.flatMap(_.children.filter(inst =>allowedClasses.contains(inst.ref.typ )))
 					if(!sendList.isEmpty)
 						ClientQueryManager.writeInstancesField(sendList,fieldNr,new IntConstant(lineWidth))
 				}				
@@ -51,12 +52,13 @@ class LineStyleEditor extends FieldEditor {
 	}
 	
   def getPanel:Panel=panel
-	def setData(data:Seq[Referencable])= {
+  
+	def setData(data:Seq[SelectGroup[_ <: Referencable]])= {
     dataList=data
     if(data!=null) {
       var lineWidth:Int= -2
-      if(!data.isEmpty && data.first.isInstanceOf[GraphElem]) 
-      	for(el <-data;if(el.isInstanceOf[LinearElement])) {
+      if(!data.isEmpty && !data.first.children.isEmpty && data.first.children.first.isInstanceOf[GraphElem]) 
+      	for(group <-data;el <-group.children;if(el.isInstanceOf[LinearElement])) {
       		val d=el.asInstanceOf[LinearElement]
       		if(lineWidth!= -1) {
       		  if(lineWidth== -2)lineWidth=d.lineWidth 
