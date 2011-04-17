@@ -29,7 +29,8 @@ abstract class AllClasses [B <:AbstractObjectClass] (node: scala.xml.Node)  {
   def getClassIDByName(aname:String):Int = getClassByName(aname).get.id
   
   // find a class by class ID
-  def getClassByID(aId:Int )= classList(aId)     
+  def getClassByID(aId:Int )=if(classList.contains(aId)) classList(aId)
+  else throw new IllegalArgumentException("getClassByID: ID "+aId+" not found")
   
   
   def fromXML(node: scala.xml.Node):Map[Int,B]

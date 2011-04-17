@@ -3,8 +3,7 @@
  */
 package client.dialog
 import java.awt.{KeyboardFocusManager,Dimension}
-import java.beans._ 
-
+import java.beans._
 import scala.swing.{BorderPanel,BoxPanel,Label}
 import scala.swing.event._
 import javax.swing._
@@ -13,6 +12,7 @@ import definition.typ._
 import definition.expression.Constant
 import definition.data.{Reference,Referencable}
 import client.comm.ClientQueryManager
+import scala.collection.mutable.ArrayBuffer
 
 /** area where "New panels" are placed
  * 
@@ -25,6 +25,7 @@ object NewPanelArea extends AbstractActionPanel with ContainerFocusListener {
   private var lastSuperInstRef:Reference=null
   private var lastPropField:Int= -1  
 	private var selGroup=new SelectGroup[Referencable](null,Seq[Referencable]())
+	val buttonList=new ArrayBuffer[MenuButton]()
 	
 	def containerFocused(superInst:Referencable, propField:Int,containerName:String=""):Unit = {  	
   	//System.out.println("lastContainer:"+lastContainer+" lastSuperInst:"+lastSuperInstRef+")
@@ -40,12 +41,13 @@ object NewPanelArea extends AbstractActionPanel with ContainerFocusListener {
   		//System.out.println("setup class:"+theClass.name)
   		if(!propF.createChildDefs.isEmpty) {			
   			for(childDef <-propF.createChildDefs;if (childDef.editorName==containerName)) {
-  				val b = if(childDef.actionName =="*") getButton(dummyAction,childDef.childName)//childDef.childClassName
+  				val b = if(childDef.actionName =="*") getButton(dummyAction,childDef.childName,()=>{new MenuButton})//childDef.childClassName
   				else getButton(childDef.action,"")
   				//System.out.println("childDef:"+childDef)
   				b.newTypeID=childDef.childClassID
   				b.propField=propField.toByte
-  				contents+=b
+  				if(b.isInstanceOf[MenuButton]) buttonList+=b.asInstanceOf[MenuButton]
+  				else contents+=b
   			}
   		}
   		revalidate
@@ -56,14 +58,18 @@ object NewPanelArea extends AbstractActionPanel with ContainerFocusListener {
   	if(superInst.ref!=lastSuperInstRef){
   		selGroup.children= List(superInst)
   		lastSuperInstRef=superInst.ref
-  	}
-				
+  	}				
 	}
+  
+  override def shutDown= {
+  	super.shutDown
+  	buttonList.clear()
+  }
   
   val dummyAction=new ActionDescription("*",None,true)	
   
   reactions += {
-		case ButtonClicked(e:ActionButton) => if(!selGroup.children.isEmpty){			
+		case ButtonClicked(e:ButtonKind) => if(!selGroup.children.isEmpty){			
 			if (e.theAction.question ==None ) {
 				//System.out.println("Execute action " +e.text)
 				if(e.newTypeID>0) {

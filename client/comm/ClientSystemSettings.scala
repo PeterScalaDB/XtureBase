@@ -25,6 +25,7 @@ class ClientSystemSettings(in:DataInput) extends SystemSettings {
 	
 	println("system types:"+_systemTypes.mkString(","))
 	println("Enums:"+enums.mkString("| "))
+	println("ClientSettings:"+clientSettingsMap.mkString("| "))
 	
 	def getCustomSettings(folderName:String):IndexedSeq[Reference]= IndexedSeq.empty
 	

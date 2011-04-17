@@ -5,6 +5,7 @@ package definition.typ
 
 import definition.data._
 import collection.mutable.{HashMap,ArrayBuffer,LinkedHashMap,LinkedHashSet}
+import definition.typ.form.FormBox
 
 
 /**
@@ -34,10 +35,15 @@ trait AbstractObjectClass {
 	def shortFormat:InstFormat
 	def longFormat:InstFormat
 	def resultFormat:InstFormat
+	
+	def formBox:Option[FormBox]
+	
+	lazy val propFieldIndices=propFields.indices.map(x=>(propFields(x).name -> x )).toMap
 		
 	def inheritsFrom(otherClassID:Int):Boolean =
   {
-  	//System.out.println( " " +toString +" "+id+"InheritsFrom: "+ otherClassID)
+  	//System.out.println( name +" "+id+"InheritsFrom: "+ otherClassID)
+  	//println(superClassIDs.mkString(","))
   	superClassIDs.contains(otherClassID)
   }
 	
@@ -72,10 +78,12 @@ trait AbstractObjectClass {
 			propFields ++=ownPropFields
 			ownActions.foreach(a => actions(a.name)=a)	
 			ownCreateActions.foreach(a => createActions(a.name)=a)
+			
 		  hasResolved=true
 		}
 		//Console.System.out.println("Resolve "+versNr+" "+superClasses+" "+vsuperFields)  
 	}	
+	
 	
 	
 	def copySuperClassFields(superClass:AbstractObjectClass) = {
@@ -103,6 +111,13 @@ trait AbstractObjectClass {
 			if(!propFields(i).hidden )return i
 		return propFields.size
 	}
+	
+	def getPropFieldByName(name:String):Option[PropertyFieldDefinition]= {
+		//if (propFieldIndices.contains(name)) Some(propFields(propFieldIndices(name)))
+		//else None
+		propFieldIndices.get(name) map (propFields(_))
+	}
+	
 }
 
 

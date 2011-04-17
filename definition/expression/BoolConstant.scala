@@ -29,4 +29,6 @@ case class BoolConstant(val v:Boolean) extends Constant {
   	file.writeByte(DataType.BoolTyp.id)
   	file.writeBoolean(v) }
   def getNative= v
+  
+  override def toString=getTerm
 }

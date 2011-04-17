@@ -9,28 +9,22 @@ import server.storage.StorageManager
 import transaction.handling.SessionManager
 import definition.typ.{SystemSettings,DataType}
 import definition.expression.{StringConstant,Expression}
-//import java.awt.Rectangle
 import java.awt.geom.Rectangle2D
 import java.awt.font.{LineBreakMeasurer}
 import java.text.AttributedString
+import definition.typ.HorAlign
 
 /**
  * 
  */
-object SizeType extends Enumeration {
+/*object SizeType extends Enumeration {
 	val Fixed=Value("Fixed")
 	val MaxOfMin=Value("MaxOfMin")
 	val MinOfMax=Value("MinOfMax")
 	val SumOfMax=Value("SumOfMax")
 	val SumOfMin=Value("SumOfMin")
-}
+}*/
 
-object HorAlign extends Enumeration {
-	val Left=Value("Left")
-	val Right=Value("Right")
-	val Center=Value("Center")
-	val Block=Value("Block")
-}
 
 
 trait StampElement {
@@ -198,12 +192,12 @@ class StampText (form:FormDescription,val text:Expression,val mWidth:Float,val m
 
 
 
-class StampBox(form:FormDescription,val horOrient:Boolean,val widthSetting:SizeType.Value,val width:Float,val heightSetting:SizeType.Value,val height:Float,
+class StampBox(form:FormDescription,val horOrient:Boolean,/*val widthSetting:SizeType.Value,*/val width:Float/*,val heightSetting:SizeType.Value*/,val height:Float,
 	val gap:Double, val frontChildren:Seq[StampElement],val centerChildren:Seq[StampElement],
 	val bottomChildren:Seq[StampElement]) extends StampElement {
 	
 	def this(form:FormDescription,data:InstanceData)= {
-		this(form,data.fieldValue(0).toBoolean,SizeType(data.fieldValue(1).toInt),data.fieldValue(2).toFloat,SizeType(data.fieldValue(3).toInt),
+		this(form,data.fieldValue(0).toBoolean,/*SizeType(data.fieldValue(1).toInt),*/data.fieldValue(2).toFloat,/*SizeType(data.fieldValue(3).toInt),*/
 			data.fieldValue(4).toFloat,data.fieldValue(5).toDouble,StampElement.readChildren(form,data.ref,0),StampElement.readChildren(form,data.ref,1),
 			StampElement.readChildren(form,data.ref,2))
 			inst=data.ref
@@ -351,18 +345,18 @@ class StampBox(form:FormDescription,val horOrient:Boolean,val widthSetting:SizeT
 }
 
 
-case class Stamp(form:FormDescription,val forType:Int,val name:String,nhorOrient:Boolean,nwidthSetting:SizeType.Value,nwidth:Float,nheightSetting:SizeType.Value,nheight:Float,
+case class Stamp(form:FormDescription,val forType:Int,val name:String,nhorOrient:Boolean,/*nwidthSetting:SizeType.Value,*/nwidth:Float,/*nheightSetting:SizeType.Value,*/nheight:Float,
 	ngap:Double,nfrontChildren:Seq[StampElement],ncenterChildren:Seq[StampElement],nbottomChildren:Seq[StampElement]) 
-	extends StampBox(form,nhorOrient,nwidthSetting,nwidth,nheightSetting,nheight,ngap,nfrontChildren,ncenterChildren,nbottomChildren) {
+	extends StampBox(form,nhorOrient,/*nwidthSetting,*/nwidth,/*nheightSetting,*/nheight,ngap,nfrontChildren,ncenterChildren,nbottomChildren) {
   
 	def this(form:FormDescription,data:InstanceData )= {
-		this(form,data.fieldValue(6).toInt,data.fieldValue(7).toString,data.fieldValue(0).toBoolean,SizeType(data.fieldValue(1).toInt),data.fieldValue(2).toFloat,SizeType(data.fieldValue(3).toInt),
+		this(form,data.fieldValue(6).toInt,data.fieldValue(7).toString,data.fieldValue(0).toBoolean,/*SizeType(data.fieldValue(1).toInt),*/data.fieldValue(2).toFloat,/*SizeType(data.fieldValue(3).toInt),*/
 			data.fieldValue(4).toFloat,data.fieldValue(5).toDouble,StampElement.readChildren(form,data.ref,0),StampElement.readChildren(form,data.ref,1),
 			StampElement.readChildren(form,data.ref,2))
 			inst=data.ref
 	}
 	
-	override def toString= "Stamp "+name+" for Type:"+forType+" horOrient:"+horOrient+" wSet:"+widthSetting+" w:"+width+" hSet:"+heightSetting+
+	override def toString= "Stamp "+name+" for Type:"+forType+" horOrient:"+horOrient/*+" wSet:"+widthSetting*/+" w:"+width/*+" hSet:"+heightSetting*/+
 	" h:"+height+"\nFrontChildren:"+frontChildren.mkString("\n")+"\nCenterChildren:"+centerChildren.mkString("\n")+
 	"\nBottomChildren:"+bottomChildren.mkString("\n")
 }

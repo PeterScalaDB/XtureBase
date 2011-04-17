@@ -34,6 +34,11 @@ object DataViewPanel extends BorderPanel
 		selection.intervalMode=Table.IntervalMode.Single
 	}
 	
+	val refTable=new Table(){
+		model=RefLinksTableModel
+		selection.intervalMode=Table.IntervalMode.Single
+	}
+	
 	val collFuncTable=new Table()
 	{
 		model=CollFuncTableModel
@@ -94,10 +99,15 @@ object DataViewPanel extends BorderPanel
 				preferredSize=new Dimension(200,150)
 				add (new Label("CollFunc Data"),BorderPanel.Position.North)
 				add (new ScrollPane(){
-				viewportView=collFuncTable
-				preferredSize=new Dimension(200,100)
-			},BorderPanel.Position.Center)
+					viewportView=collFuncTable
+					preferredSize=new Dimension(200,100)
+				},BorderPanel.Position.Center)
 			},BorderPanel.Position.South)
+			add(new ScrollPane(){
+					viewportView=refTable
+					preferredSize=new Dimension(200,100)
+				},BorderPanel.Position.South)
+			
 		},BorderPanel.Position.South)
 		
 	},BorderPanel.Position.Center)
@@ -118,6 +128,10 @@ object DataViewPanel extends BorderPanel
 		    InstFieldTableModel.setInstance(i)
 		    InstPropTableModel.setPropData(StorageManager.getInstanceProperties(r))
 		    CollFuncTableModel.setCollData(StorageManager.getCollectingFuncData(r))
+		    RefLinksTableModel.setRefData(StorageManager.getReferencingLinks(r) match {
+		    	case Some(rData)=> rData.links .toSeq
+		    	case None =>Seq.empty
+		    })
 			} 
 		}
 	}

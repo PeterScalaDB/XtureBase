@@ -24,6 +24,13 @@ class StringParser extends JavaTokenParsers {
     
   /*def fieldReference: Parser[String] =
   	"""[#]([tT]\d+)?([iI]\d+)?[fF]\d+""".r*/
+  
+  def comp: Parser[Expression] =
+  	    (expr ~ "=" ~expr) ^^ {case lhs~equ~rhs => BinaryOperation(lhs,BinOperator.getOp('='),rhs)} |
+  	    (expr ~ "<" ~expr) ^^ {case lhs~equ~rhs => BinaryOperation(lhs,BinOperator.getOp('<'),rhs)} |
+  	    (expr ~ ">" ~expr) ^^ {case lhs~equ~rhs => BinaryOperation(lhs,BinOperator.getOp('>'),rhs)} |
+		    expr
+	
 	
   def expr: Parser[Expression] =
         (term ~ "+" ~ expr) ^^ { case lhs~plus~rhs => BinaryOperation( lhs,BinOperator.getOp('+'), rhs) } |
@@ -51,15 +58,19 @@ class StringParser extends JavaTokenParsers {
         ("[#][fF]".r~> intNumber ) ^^ {
         	case field => new FieldReference(None,None,field.toByte) 
         } |failure("wrong Fieldref")
-
+  
+  def parentFieldRef:Parser[Expression]= ("[#][Pp]".r ~> intNumber ~("[Ff]".r ~>intNumber)) ^^ {
+        	case ownerIx~fieldNr => new ParentFieldRef(ownerIx.toByte,fieldNr.toByte)
+        }
+        
   def elem : Parser[Expression] =  	   
   	   doubleNumber ^^ {y => DoubleConstant(y.replace(',','.').toDouble) } |
        intNumber ^^ {x => IntConstant(x.toInt)}      |
-        "(" ~> expr <~ ")" | currValue| fieldRef | function | collFunction | vector | failure("Unknown Factor-Element")
+        "(" ~> comp <~ ")" | currValue| fieldRef | function | collFunction | parentFieldRef | vector | failure("Unknown Factor-Element")
        
 	def paramList:Parser[List[Expression]] =
-		 ((expr ~ ";" ~ expr) ^^ {  case ex~ semi~ list => List(ex,list) }) |
-		 (expr ^^ {case ex => List(ex)})
+		 ((comp ~ rep(";" ~> comp)) ^^ {  case ex~ list => ex::list.map(_.asInstanceOf[Expression]) }) |
+		 (comp ^^ {case ex => List(ex)})
 		 
 	def currValue: Parser[Expression] = 
 		(doubleNumber ~ currencySymbols) ^^ {case a ~ c=> CurrencyConstant(Math.round(a.replace(',','.').toDouble*100L))}	 
@@ -81,7 +92,7 @@ object StringParser extends StringParser
 {
 	def parse(text : String,expectedType:DataType.Value=DataType.undefined):Expression = {
 		if(text.length==0) return Expression.generateNullConstant(expectedType) 
-		val result=parseAll(expr, text)
+		val result=parseAll(comp, text)
 		result match {
             case Success(x, _) => return x
             case NoSuccess(err, next) => {

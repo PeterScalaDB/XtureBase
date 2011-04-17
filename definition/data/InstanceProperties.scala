@@ -53,7 +53,7 @@ class InstanceProperties(override val ref:Reference, val propertyFields:Array [P
 		return false
 	}
 	
-	   
+	override def toString = "InstProp" +ref.toString+" "+propertyFields.mkString(",")
 }
 
 

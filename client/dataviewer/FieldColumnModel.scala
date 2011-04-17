@@ -18,5 +18,11 @@ class FieldColumnModel extends DefaultTableColumnModel {
 		if(editor!=null)nc.setCellEditor(editor)
 		addColumn(nc)
 	}
+  
+  def getColumnByModelIndex(modelIndex:Int):TableColumn = {
+  	for(i <-0 until tableColumns.size;val col=tableColumns.get(i))
+  		if(col.getModelIndex==modelIndex) return col
+  	throw new IllegalArgumentException("cant find column with modelindex: "+modelIndex)
+  } 
 
 }

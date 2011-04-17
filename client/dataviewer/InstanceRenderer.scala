@@ -59,7 +59,7 @@ class InstanceRenderer(theClass:AbstractObjectClass) extends Label {
   					horizontalAlignment=Alignment.Right  				
   					value.toLong.toString 
   				}
-  				case DoubleTyp|CurrencyTyp => {
+  				case DoubleTyp => {
   					horizontalAlignment=Alignment.Right
   					if(fieldFormat.formString .length>0) fieldFormat.formString .format(value.toDouble)
   					else value.toDouble.toString  				
@@ -77,6 +77,10 @@ class InstanceRenderer(theClass:AbstractObjectClass) extends Label {
   					horizontalAlignment=Alignment.Left
   					value.toVector.shortToString  				
   				}
+  				case CurrencyTyp => {
+  					horizontalAlignment=Alignment.Right
+  					"%.2f ".format(value.toDouble)+CurrencyConstant.currencySign  					  					
+  				}
   				case _ => {
   					horizontalAlignment=Alignment.Center
   					value.toString  				
@@ -85,7 +89,7 @@ class InstanceRenderer(theClass:AbstractObjectClass) extends Label {
   			foreground= if(isSelected) t.selectionForeground
   			else expression.getType match {  			
   				case BinOp |CollFunctionCall |FunctionCall => Color.blue
-  				case FieldRefTyp => linkColor
+  				case FieldRefTyp|ParentRefTyp => linkColor
   				case _ => Color.black  			
   			}
   		}

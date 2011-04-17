@@ -13,10 +13,7 @@ import javax.swing.JComboBox
  * 
  */
 object TableHeaderMap {
-  val theMap=collection.mutable.HashMap[Int,MyColumnModel]()
-  
-  
-  
+  val theMap=collection.mutable.HashMap[Int,MyColumnModel]() 
   
   ClientQueryManager.registerStoreSettingsListener(() => {
   	for(entry <-theMap)

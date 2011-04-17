@@ -37,7 +37,7 @@ class PathController (val model:PathModel, val view:ListView[InstanceData],val l
 			//firstLabel.opaque=true       
   	  firstLabel.text=getLabelText(a,index)
   	  firstLabel.horizontalAlignment=Alignment.Left
-  	  resultLabel.text=a.resultString
+  	  resultLabel.text=if (a!=null)a.resultString else ""
 		}
 	}
 	

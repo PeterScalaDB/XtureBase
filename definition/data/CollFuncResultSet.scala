@@ -105,8 +105,8 @@ class CollFuncResultSet(override val ref:Reference,
 	  * @return tuple: (a new version of the set containing the new call, the new result value)
 	  */
 	 def addCollCall(newCall :CollectingFuncCall,pFieldNr:Byte) : (CollFuncResultSet,Constant) = {
-		 if (!StorageFuncMan.collFuncList.contains(newCall.name)) throw new IllegalArgumentException("CollFunction "+newCall.name+ " not defined !")
-		 val func = StorageFuncMan.collFuncList(newCall.name)
+		 if (!CommonFuncMan.collFuncList.contains(newCall.name)) throw new IllegalArgumentException("CollFunction "+newCall.name+ " not defined !")
+		 val func = CommonFuncMan.collFuncList(newCall.name)
 		  func match {
 			 case s: SingleCollFunction => {
 				 val result= new SingleCollFuncResult(newCall.name,newCall.childType,newCall.childField,pFieldNr,
@@ -179,7 +179,7 @@ class CollFuncResultSet(override val ref:Reference,
 	 * @return a tuple: (the new State of the FuncResult,the new result)
 	 */
 	def childChanged(fRes:CollFuncResult,childRef:Reference,oldValue:Constant,newValue:Constant):(CollFuncResult,Constant) = {
-		val func = StorageFuncMan.collFuncList(fRes.funcName)
+		val func = CommonFuncMan.collFuncList(fRes.funcName)
 		
 		  func match {
 			 case s: SingleCollFunction => {
@@ -204,7 +204,7 @@ class CollFuncResultSet(override val ref:Reference,
 	
 	
 	def childDeleted(fRes:CollFuncResult,childRef:Reference,oldValue:Constant):(CollFuncResult,Constant) = {
-		val func = StorageFuncMan.collFuncList(fRes.funcName)
+		val func = CommonFuncMan.collFuncList(fRes.funcName)
 		func match {
 			 case s: SingleCollFunction => {
 				  val newResultValue= s.childRemoved(fRes.asInstanceOf[SingleCollFuncResult].resultValue , 

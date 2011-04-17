@@ -12,7 +12,7 @@ import definition.typ._
  * 
  */
 class InstanceData (override val ref:Reference,	val fieldData:IndexedSeq[Expression],	 									
-	val owners:Array[OwnerReference]=Array(),val secondUseOwners:Seq[OwnerReference]=Seq.empty,val hasChildren:Boolean) extends Referencable
+	val owners:Array[OwnerReference]=Array(),val secondUseOwners:Seq[OwnerReference]=Seq.empty,val hasChildren:Boolean=false) extends Referencable
 	{	
 	lazy val fieldValue:Seq[Constant]=regenFieldCache
 	
@@ -153,6 +153,10 @@ class InstanceData (override val ref:Reference,	val fieldData:IndexedSeq[Express
 		fieldValuesCache(index)
 	}*/
 
+	/** creates a list of current Values of all fields
+	 * 
+	 * @return list of current constant values of all fields
+	 */
 	def regenFieldCache:Seq[Constant] = for(index<-0 until fieldData.size)yield {					  
 			val fieldType = theClass.fields(index).typ
 			val result=fieldData(index).getValue

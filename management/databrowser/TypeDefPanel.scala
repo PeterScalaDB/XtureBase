@@ -40,6 +40,7 @@ object TypeDefPanel extends ScrollPane {
 	val removeSuperClassBut= new Button("< remove ")
 	val disableComps=List(idEdit,addSuperClassBut,removeSuperClassBut)	
 	val saveBut=new Button("Save changes")
+	val formEditBut=new Button("Form-Designer")
 	val inheritedFieldMod=new FieldDefTableModel(false)
 	val ownFieldMod=new FieldDefTableModel(true)
 	val typeVect=new java.util.Vector[DTWrap](DataType.wrappedValues)  	
@@ -49,6 +50,7 @@ object TypeDefPanel extends ScrollPane {
 	println("enums :"+enumVect.mkString(" + "))
 	val enumCombo=new JComboBox(enumVect)
 	val enumEditor=new ComboBoxEditor(enumCombo)
+	val formEditDialog=new FormDesignerDialog(management.databrowser.MainWindow.top)
 	
 	val fieldColMod=new FieldColumnModel{
     	createColumn(0,"Name",110)
@@ -252,14 +254,15 @@ object TypeDefPanel extends ScrollPane {
 	val actionPan=new BoxPanel(Orientation.Horizontal) {
 		border=BorderFactory.createEmptyBorder(10,5,10,5)
 		val checkBut=new Button("Check out")
-		contents+=saveBut+=checkBut+=Swing.HGlue
-		listenTo(saveBut,checkBut)
+		contents+=saveBut+=checkBut+=formEditBut+=Swing.HGlue
+		listenTo(saveBut,checkBut,formEditBut)
 		reactions+= {
 			case ButtonClicked(`saveBut`) => safeClass
 			case ButtonClicked(`checkBut`) => {
 				updateClassInfo
 				System.out.println(theClass.saveToXML.mkString("\n"))
 			}
+			case ButtonClicked(`formEditBut`)=> showFormDesigner
 		}
 	}
 	
@@ -267,11 +270,18 @@ object TypeDefPanel extends ScrollPane {
 	
 	def safeClass = {
 		updateClassInfo
-		if(isCreating) {
-			SessionManager.scl .classList=SessionManager.scl.classList+(theClass.id -> theClass)
-			MainWindow.generateDataList
-		}			
+		//if(isCreating) {
+		SessionManager.scl .classList=SessionManager.scl.classList+(theClass.id -> theClass)
+		MainWindow.generateDataList
+		//}			
 		scala.xml.XML.save(FSPaths.configDir+"types.xml",SessionManager.scl.saveToXML,"UTF-8",true,null)
+		
+	}
+	
+	def showFormDesigner = {
+		formEditDialog.setLocationRelativeTo(formatStringPan)
+		formEditDialog.title="Form-Designer for "+theClass.name
+		formEditDialog.showDialog(theClass.formBox )
 		
 	}
 	

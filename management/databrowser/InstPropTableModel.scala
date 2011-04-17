@@ -16,7 +16,7 @@ import transaction.handling._
 object InstPropTableModel extends AbstractTableModel {
 	
 	var theClass:AbstractObjectClass=null	
-	var propData:Option[InstanceProperties]=None
+	private var propData:Option[InstanceProperties]=None
 	
 	
 	def setClass(newClass:AbstractObjectClass) = 
@@ -29,7 +29,7 @@ object InstPropTableModel extends AbstractTableModel {
 	def setPropData(nprop:Option[InstanceProperties])
 	{		
 		propData=nprop
-		//System.out.println("propData "+propData)
+		//System.out.println(" set propData "+propData)
 		
   	//System.out.println("Set inst "+theVersion)
   	fireTableStructureChanged()
@@ -57,7 +57,11 @@ object InstPropTableModel extends AbstractTableModel {
     else
     {	    	
     	 propData match{
-    		 case Some(a) => a.propertyFields(row)
+    		 case Some(a) =>{
+    			 if(row<a.propertyFields.size)
+    			 a.propertyFields(row)
+    			 else "Psize:"+a.propertyFields.size
+    		 }
     		 case _ => " "
     	 }
     }

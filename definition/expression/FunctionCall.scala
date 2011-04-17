@@ -18,18 +18,22 @@ case class FunctionCall(module:Option[String],name:String,params:List[Expression
 
   def getValue(): Constant = 
   { 
-  	if(cacheValue==null) {
+  	/*if(cacheValue==null) {
   		val paramValues:List[Constant] = for (param <-params) yield param.getValue
-  		cacheValue=FunctionManager.get.getFunctionValue(module,name,paramValues)
+  		if(FunctionManager.get==null) println("No FunctionManager defined !")
+  		cacheValue=if(FunctionManager.get==null) EMPTY_EX else FunctionManager.get.getFunctionValue(module,name,paramValues)
   		cacheValue 
   	}
-  	cacheValue
+  	cacheValue*/
+  	val paramValues:List[Constant] = for (param <-params) yield param.getValue
+  	if(FunctionManager.get==null) println("No FunctionManager defined !")
+  	if(FunctionManager.get==null) EMPTY_EX else FunctionManager.get.getFunctionValue(module,name,paramValues)
   }
   
   //TODO: make special read/write methods that store the cached value, for sending
   // terms via network
 
-  def createCopy(): Expression = { new FunctionCall(module,name,params) }
+  def createCopy(): Expression = { new FunctionCall(module,name,params.map(_.createCopy)) }
 
   def getChildCount(): Int = { params.size }
 

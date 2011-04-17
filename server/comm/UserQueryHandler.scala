@@ -152,7 +152,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	
 	
 	def notifyInstanceChanged(subs:SubscriptionInfo,data:InstanceData) = {
-		//System.out.println("Notify instance changed "+subs+" changedInst:"+data.ref)
+		System.out.println("Notify instance changed "+subs+" changedInst:"+data.ref+" "+data)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 			out.writeInt(subs.id )
 			out.writeInt(NotificationType.FieldChanged.id)
@@ -170,7 +170,7 @@ class UserQueryHandler(userSocket: UserSocket) {
 	}*/
 	
 	def notifyInstanceAdded(subs:SubscriptionInfo,data:InstanceData) = {
-		//System.out.println("Notify added "+subs+" "+data.ref)
+		System.out.println("Notify instance added "+subs+" "+data.ref+" "+data)
 		userSocket.sendData(ServerCommands.sendSubscriptionNotification ) { out =>
 		out.writeInt(subs.id)
 		out.writeInt(NotificationType.childAdded.id )
@@ -222,11 +222,11 @@ class UserQueryHandler(userSocket: UserSocket) {
 					case Some(props) => { 
 						val childRefs=props.propertyFields(propertyField).propertyList	
 						//System.out.println("send Children:"+childRefs.map(_.sToString+","))
-						// get all Data before starting to write
-						out.writeInt(childRefs.size)
+						// get all Data before starting to write						
 						if(childRefs.size<10)
 						{							
 						  val instList= getInstances(childRefs)
+						  out.writeInt(childRefs.size) // only write size after all children are found
 						  //System.out.println("readlist "+instList)
 						  for(i <-childRefs.indices)
 						  {
@@ -234,13 +234,16 @@ class UserQueryHandler(userSocket: UserSocket) {
 						  	instList(i).writeWithChildInfo(out)
 						  }	
 						}
-						else pushInstances(childRefs,out)					
+						else {
+							out.writeInt(childRefs.size) // ab bit risky if one child does not exist
+							pushInstances(childRefs,out)					
+						}
 					}
 					case None => out.writeInt(0) 
 				}
 			}
 			catch {
-				case e: Exception => System.err.println(e); out.writeInt(0)
+				case e: Exception => System.err.println(e);e.printStackTrace; out.writeInt(0)
 			}
 	}
 	

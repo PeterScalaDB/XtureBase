@@ -6,7 +6,6 @@ import client.comm._
 import collection.generic.{GenericCompanion}
 import definition.data._
 import definition.expression._
-
 import definition.typ._
 import javax.swing._
 import javax.swing.event._
@@ -17,13 +16,15 @@ import scala.swing._
 import scala.swing.event._
 import javax.swing.BorderFactory
 import javax.swing.border._
+import sidePanel._
+import client.dataviewer.sidePanel.ControllerContainer
 
 
 
 /** table model for a table showing instances of a certain type
  * 
  */
-class TypeTableModel(val typ:Int,val propMod:PropertyModel) extends AbstractTableModel {
+class TypeTableModel(val typ:Int,val propMod:PropertyModel) extends AbstractTableModel with ControllerContainer {
 	val objClass=AllClasses.get.getClassByID(typ).asInstanceOf[ClientObjectClass]
 	var dataList:Seq[InstanceData]= Seq.empty
 	val tableFont=new Font("Arial",0,13)
@@ -53,6 +54,21 @@ class TypeTableModel(val typ:Int,val propMod:PropertyModel) extends AbstractTabl
 	
 	var editActionNotDone:java.awt.event.ActionEvent=null
 	var oldEnterAction:javax.swing.Action=null
+	
+	val sideBarPanel=new BoxPanel(Orientation.Vertical)
+	
+	
+	lazy val emptyHeaderPanel=new BoxPanel(Orientation.Horizontal ) {
+		reactions += {
+			case ButtonClicked(e) => openSideBarController(e.text)
+		}
+	}
+	
+	lazy val sideControllerList=SPControllerList.generateList(objClass)
+	
+	var currentSideBarController:Option[SidePanelController]=None
+	
+	
 	
 	classLabel.horizontalAlignment=Alignment.Left
 	classLabel.xLayoutAlignment=0d
@@ -237,14 +253,14 @@ class TypeTableModel(val typ:Int,val propMod:PropertyModel) extends AbstractTabl
 	
 	
 	
-	
-	val scroller= new BoxPanel(Orientation.Vertical) {
-		border=BorderFactory.createLineBorder(Color.gray,1)
+	val leftPanel= new Panel with SequentialContainer.Wrapper {
+		//border=BorderFactory.createLineBorder(Color.cyan,2)
+    yLayoutAlignment=0d
 		val viewportWrapper=new  Component with Container {	
 			xLayoutAlignment=0d
 			override lazy val peer=new JViewport with SuperMixin{
 				override def getPreferredSize = getView.getPreferredSize
-				override def getMaximumSize=new Dimension(Short.MaxValue,getView.getPreferredSize.height)
+				override def getMaximumSize = getView.getPreferredSize
 			}
 			peer.setView(table.peer)
 			def contents=List(table)
@@ -257,9 +273,133 @@ class TypeTableModel(val typ:Int,val propMod:PropertyModel) extends AbstractTabl
 		contents+=classLabel
 		//contents+=Swing.VStrut(4)
 		contents+=headerWrapper
-		contents+=viewportWrapper				
-		minimumSize=new Dimension(0,0)
+		contents+=viewportWrapper	
+		
+		//override def maximumSize=new Dimension(400,preferredSize.height)
+		//override def preferredSize=new Dimension(400,table.preferredSize.height+classLabel.preferredSize.height+headerWrapper.preferredSize.height)
+		override lazy val peer = {
+			val p = new javax.swing.JPanel with SuperMixin {
+				override def getPreferredSize=new Dimension(table.preferredSize.width,table.preferredSize.height+classLabel.preferredSize.height+headerWrapper.preferredSize.height)
+				override def getMaximumSize=getPreferredSize
+			}
+			val l = new javax.swing.BoxLayout(p, Orientation.Vertical.id)
+			p.setLayout(l)    
+			p
+		}
 	}
+	
+	val scroller= new BoxPanel(Orientation.Horizontal){	
+		//border=BorderFactory.createLineBorder(Color.yellow,3)
+		contents+=leftPanel
+		sideBarPanel.yLayoutAlignment=0d
+		sideBarPanel.maximumSize=new Dimension(Short.MaxValue,Short.MaxValue)
+		sideBarPanel.xLayoutAlignment=0d
+	  contents+=sideBarPanel
+	  //contents+=Swing.HGlue
+	  /*override def preferredSize=new Dimension(leftPanel.preferredSize.width+sideBarPanel.preferredSize.width,
+	  	leftPanel.preferredSize.height)*/		
+		minimumSize=new Dimension(0,0)
+		//override def maximumSize=new Dimension(Short.MaxValue,Short.MaxValue)
+	}
+	
+		
+	/** Checks what sidebar controllers can be active for this kind of data
+	 *
+	 */
+	def updateControllers:Unit = listLock.synchronized {
+		  currentSideBarController match {
+		  	case Some(contr) => {
+		  		contr.notifyRowsChanged
+		  	}
+		  	case None => {
+		  		shutDown
+		  		propMod.mainController.currentSidePanelController match {
+		  			case Some(oContr)=>{
+		  				println("oldContr:"+oContr+" "+sideControllerList.size)
+		  				for (c<-sideControllerList) {
+		  					println("C:"+c+ " "+propMod.mainController.ref+" " +c.parentsFits(this,propMod.mainController.ref))
+		  					if (c.parentsFits(this,propMod.mainController.ref)){
+		  						println("contr fits :"+c.getClass==oContr.getClass)
+		  						if(c.getClass==oContr.getClass) {
+		  							ClientQueryManager.runSw{openSideBarController(c.panelName)}
+		  							
+		  							return
+		  						}
+		  					}
+		  				}
+		  				//propMod.mainController.currentSidePanelController=None
+		  			}
+		  			case None => 
+		  		}		  		
+		  		showEmptyHeaderPanel		  		
+		  	}
+		}
+				
+		
+	}
+	
+	private def showEmptyHeaderPanel = {
+			sideBarPanel.contents.clear
+			emptyHeaderPanel.contents.clear()
+			println("showEmptyPanel :"+sideControllerList.size)
+			for (c<-sideControllerList;if (c.parentsFits(this,propMod.mainController.ref))) {			
+				val but=new Button(c.panelName)
+				emptyHeaderPanel.listenTo(but)
+				emptyHeaderPanel.contents+=but
+			}
+			emptyHeaderPanel.contents+=Swing.HGlue
+			sideBarPanel.contents+=emptyHeaderPanel
+	}
+	
+	/** is called by the emptyHeaderPanel when a Button is clicked
+	 * opens the custom panels in the sidebar
+	 * 
+	 * @param name name of the Controller choosen
+	 */
+	private def openSideBarController(name:String):Unit = {
+		currentSideBarController=None
+		for(contr <-sideControllerList.find(_.panelName==name)) {
+			currentSideBarController=Some(contr)			
+			sideBarPanel.contents.clear
+			val header=contr.headerComp
+			sideBarPanel.contents+=header			
+			sideBarPanel.contents+=contr.mainComp
+			println("cl:"+classLabel.preferredSize.height+" th:"+table.peer.getTableHeader.size.height)
+			header.preferredSize=new Dimension(1,classLabel.preferredSize.height+table.peer.getTableHeader.size.height)
+			header.maximumSize=new Dimension(Short.MaxValue,classLabel.preferredSize.height+table.peer.getTableHeader.size.height)			
+			contr.openPanel(propMod.mainController.ref, objClass,this)
+			propMod.mainController .currentSidePanelController =Some(contr)
+			propMod.mainController .currentSidePanelControllerWasUsed =true
+		}
+		sideBarPanel.peer.invalidate
+		scroller.peer.revalidate
+		scroller.peer.repaint()
+	}
+	
+	/** shuts down eventually open sidebar controllers 
+	 * 
+	 */
+	def shutDown = {
+		removeSideBar
+	}
+	
+	private def removeSideBar = {
+		for(c <- currentSideBarController)
+			c.closePanel
+		currentSideBarController=None
+		sideBarPanel.contents.clear
+	}
+	
+	/** is called from the sideBarController when it's close button was clicked
+	 * 
+	 */
+	def closeSideBar = {
+		removeSideBar		
+		sideBarPanel.contents+=emptyHeaderPanel
+		propMod .mainController.currentSidePanelController=None
+		scroller.repaint
+	}
+	
 	
 	def replaceKeyAction(keyCode:Int,func: (javax.swing.Action )=>javax.swing.Action)= {
 		val aName=table.peer.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).
@@ -269,6 +409,7 @@ class TypeTableModel(val typ:Int,val propMod:PropertyModel) extends AbstractTabl
 		val newAction= func(oldAction)
 		table.peer .getActionMap().put(aName,newAction)
 	}
+	
 	
 	def getParentRef=propMod.mainController.ref
 	def getPropField= propMod.ownerRef.ownerField 
@@ -281,6 +422,7 @@ class TypeTableModel(val typ:Int,val propMod:PropertyModel) extends AbstractTabl
    */
 	def setDataList(data:Seq[InstanceData],selectInstance:Option[Reference],onlyRefresh:Boolean) =  {
 		listLock.synchronized {
+			
 			clickedRow= -1
 		  clickedCol= -1
 			//System.out.println("tableMod set Data "+data.mkString)
@@ -291,7 +433,7 @@ class TypeTableModel(val typ:Int,val propMod:PropertyModel) extends AbstractTabl
 			selectedInstances.setFilter(Array())
 			if(wishSelection.isEmpty)
 				wishSelection=table.selection.rows.iterator.toSeq
-			fireTableDataChanged()			
+			fireTableDataChanged()		
 			selectInstance match {
 				case Some(ref) =>if(ref.typ == typ){
 					val ix= dataList.findIndexOf(_.ref==ref)
@@ -305,7 +447,11 @@ class TypeTableModel(val typ:Int,val propMod:PropertyModel) extends AbstractTabl
 					wishSelection.foreach(a => if(a<data.size) table.selection.rows+= a)
 				}
 			}
-			wishSelection=Seq.empty
+			wishSelection=Seq.empty			
+		}
+		Thread.`yield`()
+		listLock.synchronized{
+			updateControllers
 		}
 		//setupColumns()		
 	}
@@ -352,6 +498,7 @@ class TypeTableModel(val typ:Int,val propMod:PropertyModel) extends AbstractTabl
 		val newSize=dataList.size
 		
 		fireTableRowsInserted(newSize,newSize)
+		for(c <-currentSideBarController) c.notifyRowsChanged
 		calcSize()
 		//System.out.println(" add selfadded:"+selfAdded+" EditActionNotDone:"+editActionNotDone)
 		if(selfAdded){ 
@@ -375,6 +522,7 @@ class TypeTableModel(val typ:Int,val propMod:PropertyModel) extends AbstractTabl
 			selectedInstances.buf=dataList
 			calcSize
 			/*propMod.runSw*/fireTableRowsDeleted(pos,pos)
+			for(c <-currentSideBarController) c.notifyRowsChanged
 		}
 	}
 
@@ -406,12 +554,17 @@ class TypeTableModel(val typ:Int,val propMod:PropertyModel) extends AbstractTabl
 		}
 		else null
 	}
+	
+	def getRowReference(row:Int):Option[Reference] = listLock.synchronized {
+		if(dataList!=null&& row<dataList.size) Some(dataList(row).ref)
+		else None
+	}
 
 	override def setValueAt(aValue: Object, rowIndex: Int, columnIndex: Int): Unit =		
 		if(dataList!=null&& columnIndex >0)  listLock.synchronized {  
 			
 			val expr= if(objClass.enumFields.exists(_._1==columnIndex-1)) 
-				IntConstant(aValue.asInstanceOf[(String,Int)]._2) // enumeration 
+				IntConstant(if(aValue==null) 0 else aValue.asInstanceOf[(String,Int)]._2) // enumeration 
 				else parseValue(columnIndex,aValue) 		
 			if(rowIndex==dataList.size) { // create new
 				selfAdded=true
@@ -503,17 +656,15 @@ class TypeTableModel(val typ:Int,val propMod:PropertyModel) extends AbstractTabl
   	  border=if(clickedCol==0&&clickedRow==row)loweredBorder else raisedBorder
 		}
 	}
-  
-  class EnumRenderer extends Label {
+}
+
+class EnumRenderer extends Label {
   	override def revalidate= {}
   	def prepare(t:Table,isSelected:Boolean,o: Tuple2[String,Int],row:Int) {
   		horizontalAlignment=Alignment.Left
-      text = "· "+o._1 //or whatever
-      background=if(isSelected)  t.selectionBackground 
-  	  else  if (row % 2 == 0)InstanceRenderer.alternateColor 
-  	  			else Color.white
+  		text = "· "+o._1 //or whatever
+  		background=if(isSelected)  t.selectionBackground 
+  		else  if (row % 2 == 0)InstanceRenderer.alternateColor 
+  		else Color.white
+  	}
   }
-
-  }
-
-}

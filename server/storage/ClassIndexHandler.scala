@@ -115,7 +115,10 @@ class ClassIndexHandler(val theClass:ServerObjectClass)
 	}
 	
 	
-	
+	def foreachInstance(func:(Reference)=> Unit) = {
+		for(i <-1 to lastID; if(instanceExists(i))) 
+			func(Reference(theClass.id,i))
+	}
 	
 	
 	

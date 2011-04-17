@@ -32,7 +32,7 @@ trait ActionPanListener {
 
 class AbstractActionPanel extends BoxPanel(scala.swing.Orientation.Vertical)  {
 	//var actionList:Seq[AbstractAction]= _
-	val buttonList= new ArrayBuffer[ActionButton]()
+	//val buttonList= new ArrayBuffer[ActionButton]()
 	var usedButtons:Int= _
 	var lastClass:Int= _
 	var buttonSize=new Dimension(130,30)
@@ -53,14 +53,9 @@ class AbstractActionPanel extends BoxPanel(scala.swing.Orientation.Vertical)  {
 		usedButtons=0		
 	}	
 	
-	def getButton(theAction:AbstractAction,buttonLabel:String =""):ActionButton = {
-		val retButton= if(buttonList.size>usedButtons) buttonList(usedButtons)
-			 else {
-				 val newBut=new ActionButton
-				 buttonList.append(newBut)
-				 listenTo(newBut)
-				 newBut
-			 }
+	def getButton[T <: ButtonKind](theAction:AbstractAction,buttonLabel:String ="",fact: ()=>T = ()=>{new ConcreteButton}):T = {
+		val retButton= fact()				
+		listenTo(retButton)				 
 		retButton.newTypeID=0
 		if(buttonLabel!="") retButton.text=buttonLabel 
 		else retButton.text=theAction.name
@@ -73,17 +68,22 @@ class AbstractActionPanel extends BoxPanel(scala.swing.Orientation.Vertical)  {
 		listenerSet+=listener
 	}
  
-	class ActionButton extends Button {
+	
+}
+
+trait ButtonKind extends AbstractButton {
 		var newTypeID:Int=_
 		var propField:Byte = _
 		var theAction:AbstractAction=_	
-		preferredSize=buttonSize		
-		maximumSize=buttonSize
+		//preferredSize=AbstractActionPanel.buttonSize		
+		maximumSize=new Dimension(Short.MaxValue,30)
 		focusable=false
 		xLayoutAlignment=0.5d
 		margin=new Insets(0,0,0,0)
 	}  
-}
+	
+	class ConcreteButton extends Button with ButtonKind
+	class MenuButton extends MenuItem("") with ButtonKind
 
 class ActionPanel extends AbstractActionPanel with SelectListener {
 	var lastSender:SelectSender= _
@@ -113,7 +113,7 @@ class ActionPanel extends AbstractActionPanel with SelectListener {
 	}
 	
 	reactions += {
-		case ButtonClicked(e:ActionButton) => if(groupList!=null){			
+		case ButtonClicked(e:ButtonKind) => if(groupList!=null){			
 			if (e.theAction.question ==None ) {
 				//System.out.println("Execute action " +e.text)
 				//if(e.newTypeID>0) for(group<-groupList) ClientQueryManager.executeCreateAction(group.children,e.newTypeID,e.propField,e.theAction.name,Seq())

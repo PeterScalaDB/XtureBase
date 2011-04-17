@@ -78,7 +78,9 @@ object Expression
 {
 	def read(file:DataInput):Expression =
 	{
-		DataType(file.readByte()) match {
+		val code=file.readByte
+		if(code<0 || code>DataType.maxId) throw new IllegalArgumentException("Reading Expression: cant find Datatype for code: "+code)
+		DataType(code) match {
 			case DataType.IntTyp => new IntConstant(file.readInt)
 			case DataType.LongTyp => new LongConstant(file.readLong)
 			case DataType.DoubleTyp => new DoubleConstant(file.readDouble)
@@ -90,6 +92,7 @@ object Expression
 			case DataType.BoolTyp => new BoolConstant(file.readBoolean)
 			case DataType.VectorTyp => new VectorConstant(file.readDouble,file.readDouble,file.readDouble)
 			case DataType.CurrencyTyp => new CurrencyConstant(file.readLong)
+			case DataType.ParentRefTyp => ParentFieldRef(file)
 			case _ => EMPTY_EX
 		}		
 	}

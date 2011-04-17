@@ -36,7 +36,7 @@ object StorageManager {
   		shuttedDown=false
   	  ixHandlerList=ixHandlerList++( for (i <-classList.valuesIterator) yield (i.id -> new ClassIndexHandler(i)))
   	}
-  	FunctionManager.setManager(StorageFuncMan)
+  	FunctionManager.setManager(CommonFuncMan)
   }
   
   def getHandler(typ:Int) = try 

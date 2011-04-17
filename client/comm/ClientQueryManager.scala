@@ -12,6 +12,7 @@ import java.io._
 import scala.collection.immutable.IndexedSeq
 import javax.swing.SwingUtilities
 import client.dialog.DialogManager
+import runtime.function.CommonFuncMan
 
 /** manages Queries and Subscriptions
  * 
@@ -57,6 +58,8 @@ object ClientQueryManager {
 	private var afterSetupListeners=collection.mutable.HashSet[Function0[Unit]]()
 	private val storeSettingsListenerMap= collection.mutable.HashSet[Function0[Unit]]()
 	
+	FunctionManager.setManager(CommonFuncMan)
+	
 	def setClientSocket(newSock:ClientSocket) = {
 		sock=newSock
 		// register Handler
@@ -70,7 +73,12 @@ object ClientQueryManager {
 		sock.registerCommandHandler(ServerCommands.askEnquiry )(askEnquiry)
 	}
 		
-		
+	/** reads instances from the DataBase
+	 *  @param ref the parent Reference to be read
+	 *  @param propertyField if <0, only the parent Instance is send, if>=0, all children from the given property field are send
+	 *  @returns the parent instance or the children from the given property field
+	 * 	
+	 */
 	def queryInstance(ref:Reference,propertyField:Byte):IndexedSeq[InstanceData] = 	{		
 		sock.sendData(ClientCommands.queryInstance ) {out =>			
 			//System.out.println("Sending Query request "+ref + " "+Thread.currentThread)
@@ -245,6 +253,14 @@ object ClientQueryManager {
 		}
 	}
 	
+	
+	
+	/**
+	 * @param refList list of instances to use a second time
+	 * @param fromOwner current owner
+	 * @param toOwner owner where the instances should additinally be used
+	 * @param atPos position in the toOwner property list where they should be added
+	 */
 	def secondUseInstances(refList:Seq[Reference],fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int) = {
 		sock.sendData(ClientCommands.secondUseInstances  ) { out =>
 		  out.writeShort(refList.size)
@@ -426,7 +442,8 @@ object ClientQueryManager {
 						runInPool(factSubs.func(NotificationType.sendData,list))
 					}
 				}
-			}	
+			}
+			case a => println("HandleSubsNotification unknown SubscriberType "+a.getClass+" "+a)
 		}				
 	}	
 	

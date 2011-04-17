@@ -13,6 +13,10 @@ import javax.swing.{SwingUtilities,JList}
 import java.awt.Color
 import javax.swing.BorderFactory
 import javax.swing.border._
+import client.dialog.NewPanelArea
+import javax.swing.JPopupMenu
+import javax.swing.JComponent
+import client.dialog.MenuButton
 
 /** manages all data changes of a property field of a instance
  * the PropertyModels are specialized on a certain allowed class
@@ -63,6 +67,8 @@ class PropertyModel(val mainController:DataViewController) {
 	 */
 	def load(nallowedClass:Int,fieldToLoad:Byte,fieldName:String,selRef:Option[Reference],nfirstPropField:Boolean,onlyPropField:Boolean) = {
 		if(loaded) shutDown()
+		vGlue.addBut.visible= !mainController.mainClass.propFields(fieldToLoad).createChildDefs.isEmpty
+		
 		selectRef=selRef
 		allowedClass=nallowedClass
 		ownerRef=new OwnerReference(fieldToLoad,mainController.ref)		
@@ -180,7 +186,8 @@ class PropertyModel(val mainController:DataViewController) {
 		ClientQueryManager.pauseSubscription(subscriptionID)
 		tableArea.contents.clear
 		tableArea.contents+=vGlue
-		tableModMap.clear
+		tableModMap.valuesIterator.foreach(_.shutDown)
+		tableModMap.clear		
 		loaded=false
 	}
 	
@@ -201,19 +208,44 @@ class PropertyModel(val mainController:DataViewController) {
 			if(n.scroller.preferredSize.width>result)n.scroller.preferredSize.width else result }
 	}*/
 	
-	class ClickComp(propMod:PropertyModel) extends Component {
+	class PopupMenu extends Component
+	{		
+		override lazy val peer : JPopupMenu = new JPopupMenu		
+		peer.setBorder(BorderFactory.createTitledBorder("Erzeugen:"))
+		def add(item:MenuItem) : Unit = { peer.add(item.peer) }
+		def show(comp:JComponent) = peer.show(comp, 3, 3)
+		
+		def addButtons(cList:Seq[Component])= {
+			cList.foreach(_ match {
+				case e:MenuButton=> add(e)
+				case _ =>
+			})
+		}
+		
+		
+		//FormElement.validFormElements.map(a=> add(new MenuItem(a)))
+	}
+	
+	
+	class ClickComp(propMod:PropertyModel) extends BoxPanel(Orientation.Horizontal) {
+		val popup=new PopupMenu
 		val prefSiz=new Dimension(Short.MaxValue,Short.MaxValue)
 		val standBorder=BorderFactory.createLineBorder(Color.lightGray)
 		val selectBorder=BorderFactory.createLineBorder(Color.blue)
 		//opaque=true
 		//background=Color.yellow
 		focusable=true	
-		peer.setTransferHandler(new PropAreaTransferHandler(propMod))
+		peer.setTransferHandler(new PropAreaTransferHandler(propMod))		
+		val addBut=new Button("Tabelle erzeugen...")
+		addBut.peer.putClientProperty("JComponent.sizeVariant", "small");
+		addBut.peer.updateUI();
 		maximumSize=prefSiz
+		//addBut.maximumSize=addBut.preferredSize
+		contents+=addBut
 		
 		
 		//peer.setDropMode(DropMode.ON_OR_INSERT_ROWS)
-		listenTo(mouse.clicks,this)
+		listenTo(mouse.clicks,this,addBut)
 		reactions+= {			
 			case e:MouseReleased => {				
 				//System.out.println("mouseclick "+peer.isFocusOwner+" "+size)
@@ -222,7 +254,20 @@ class PropertyModel(val mainController:DataViewController) {
 			}
 			case e:FocusGained => border=selectBorder;repaint
 			case e:FocusLost =>border=standBorder;repaint
-		//preferredSize=prefSiz	
+			case e:ButtonClicked => showCreatePopup
+		//preferredSize=prefSiz
+			
+			def showCreatePopup = {
+				requestFocus
+				focusGained
+				ClientQueryManager.runSw{					
+					popup.peer.removeAll
+					
+					popup.addButtons(NewPanelArea.buttonList)
+					popup.show(addBut.peer)
+				}
+				println("Show "+NewPanelArea.contents.map(_ match {case e:Button => e.peer.getText;case _=>""}).mkString(","))
+			}
 	}
 }
 }

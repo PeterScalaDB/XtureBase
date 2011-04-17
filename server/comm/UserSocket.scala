@@ -278,7 +278,7 @@ private var userName=""
 		try {
 			val ret=TransactionManager.doTransaction (userEntry.info.id,ClientCommands.deleteInstance.id.toShort,
 				ref,false,0,{
-				if (!TransactionManager.tryDeleteInstance(ref,Some(fromOwner),None))
+				if (!TransactionManager.tryDeleteInstance(ref,if(fromOwner.ownerRef.typ==0) None else Some(fromOwner),None))
 					error=new CommandError("Unknown Issue",ClientCommands.writeField.id,0)
 			})
 			for(transError <-ret) error=new CommandError(transError.getMessage,ClientCommands.deleteInstance.id,0)

@@ -9,6 +9,7 @@ import definition.data._
 import definition.expression._
 import scala.collection.immutable.IndexedSeq
 import transaction.handling.TransactionManager
+import definition.typ.form.FormBox
 /**
  * 
  */
@@ -16,13 +17,15 @@ class ServerObjectClass (var name:String,var id:Int,var description:String="",va
 	  var ownFieldSettings:Seq[FieldSetting]=Seq.empty,
 	  var ownPropFields:Seq[PropertyFieldDefinition]=Seq.empty,protected val theActions:Seq[AbstractAction]=Seq.empty, 
 	 protected val theCreateActions:Seq[AbstractAction]=Seq.empty,var superClasses:Seq[Int]=Seq.empty,
-	 var moduleName:String="",var shortFormat:InstFormat=NOFORMAT,var longFormat:InstFormat=NOFORMAT,var resultFormat:InstFormat=NOFORMAT)
+	 var moduleName:String="",var shortFormat:InstFormat=NOFORMAT,var longFormat:InstFormat=NOFORMAT,var resultFormat:InstFormat=NOFORMAT,
+	 val formBox:Option[FormBox]=None)
 	 extends AbstractObjectClass {
 	
 	def ownActions = theActions.iterator
 	def ownCreateActions = theCreateActions.iterator
 	
-	def toXML() = 	{						
+	def toXML() = 	{			
+		//if(name=="NGewerk") println("toXML "+ownFieldSettings.mkString("\n"))
 		<ObjectClass name={name} id={id.toString} desc={description} superC={superClasses.mkString(",")} 
      shortForm={shortFormat.toString} longForm={longFormat.toString} resForm={resultFormat.toString} >
 		<Fields> 		{			ownFields.map(_.toXML)	}</Fields>
@@ -30,10 +33,12 @@ class ServerObjectClass (var name:String,var id:Int,var description:String="",va
 		<PropFields> 		{			ownPropFields.map(_.toXML)	}</PropFields>		
 		<Actions> {theActions.map(_.toXML)} </Actions>
     <CreateActions> {theCreateActions.map(_.toXML)} </CreateActions>
+    <Forms>{formBox match {case Some(b)=> b.toXML ;case _ => xml.Null} }</Forms>
 		</ObjectClass>
 	}	
 	
 	def saveToXML() = {
+		//if(name=="NGewerk") println("saveToXML "+ownFields.mkString("\n"))
 		<ObjectClass name={name} id={id.toString} desc={description} superC={superClasses.mkString(",")} 
      shortForm={shortFormat.toString} longForm={longFormat.toString} resForm={resultFormat.toString} moduleName={moduleName}>
 		<Fields> 		{			ownFields.map(_.toXML)	}</Fields>
@@ -41,15 +46,25 @@ class ServerObjectClass (var name:String,var id:Int,var description:String="",va
 		<PropFields> 		{			ownPropFields.map(_.toXML)	}</PropFields>		
 		<Actions> {theActions.map(_.toXML)} </Actions>
     <CreateActions> {theCreateActions.map(_.toXML)} </CreateActions>
+    <Forms>{formBox match {case Some(b)=> b.toXML ;case _ => xml.Null}}</Forms>
 		</ObjectClass>
 	}
 	
 	def makeClone= {
 		val theClone=new ServerObjectClass(name,id,description,ownFields,ownFieldSettings,ownPropFields,theActions,theCreateActions,
-		superClasses,moduleName,shortFormat,longFormat,resultFormat)
+		superClasses,moduleName,shortFormat,longFormat,resultFormat,formBox)
 		theClone.resolveSuperFields
 		theClone
 	}
+	
+	def setFormBox(newValue:Option[FormBox])= {
+		val theClone=new ServerObjectClass(name,id,description,ownFields,ownFieldSettings,ownPropFields,theActions,theCreateActions,
+		superClasses,moduleName,shortFormat,longFormat,resultFormat,newValue)
+		theClone.resolveSuperFields
+		theClone		
+	}
+	
+	
 	
 	
 	/** creates an emty Instance of this class
@@ -122,6 +137,12 @@ object ServerObjectClass
 		  actionList,createActionList,
 		  superClasses,
 		  moduleName,InstFormat.read(node \"@shortForm"),InstFormat.read(node \"@longForm"),
-		  InstFormat.read(node \"@resForm"))
+		  InstFormat.read(node \"@resForm"),readFormBox(node))
+	}
+	
+	def readFormBox(node:scala.xml.Node): Option[FormBox] = {
+		val elList=for(abox <-(node \\"FormBox")) yield FormBox(abox)
+		if(elList.isEmpty) None
+		else Some(elList.first)
 	}
 }

@@ -142,7 +142,7 @@ class ClassSubscriptionHandler(typID:Int) {
 			if(list.contains(s))
 				singleSubsMap.put(s.parentRef,list.filterNot(_ ==  s))
 		}
-		else System.out.println("Entry for "+s.parentRef+" not found")
+		else System.out.println("Remove SingleSubscription, Entry for "+s.parentRef+" not found")
 	}
 	
 	private def removePropS(s:PropSubscription) = {
@@ -151,7 +151,7 @@ class ClassSubscriptionHandler(typID:Int) {
 		val list=propSubsMap(s.parentRef)
 		if(list.contains(s))
 			propSubsMap.put(s.parentRef,list.filterNot(_ == s))
-		} else System.out.println("Entry for "+s.parentRef+" not found")
+		} else System.out.println("Remove PropertySubscription, Entry for "+s.parentRef+" not found")
 	}	
 	
 	def removePathS(s:PathSubscription) = {

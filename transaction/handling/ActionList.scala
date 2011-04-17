@@ -15,7 +15,8 @@ import server.comm.CommonSubscriptionHandler
  */
 object ActionList {
 	var theList=collection.mutable.LinkedHashMap[Reference,TransactionData]()
-
+  
+	val copiedInstances=collection.mutable.HashMap[Reference,Reference]()
   
 	def isEmpty=theList.isEmpty
 	
@@ -33,7 +34,16 @@ object ActionList {
 	reset()
 }
 
-def reset() = {theList.clear}
+def reset() = {
+		theList.clear
+		copiedInstances.clear
+	}
+
+def notifyInstanceCopied(oldRef:Reference,copyRef:Reference):Unit = copiedInstances(oldRef)=copyRef
+
+def isInstanceCopied(ref:Reference):Boolean= copiedInstances.contains(ref)
+
+def getCopyForRef(oldRef:Reference)=copiedInstances(oldRef)
 
 
 def commitAllData() = {

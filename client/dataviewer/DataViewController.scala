@@ -7,10 +7,10 @@ import client.model._
 import definition.data._
 import definition.typ._
 import client.dialog._
-
 import scala.swing._
 import java.awt.Color
 import java.awt.event.{MouseAdapter,MouseWheelListener,MouseWheelEvent}
+import client.dataviewer.sidePanel.SidePanelController
 
 /** controls the DataViewer
  *  manages the general loading of data
@@ -26,10 +26,13 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	var selGroup=new SelectGroup[InstanceData](null,Seq.empty)
 	var selGroupList=List(selGroup)
 	
-	var smallFont=new Font("Arial",0,10)
+	val smallFont=new Font("Arial",0,10)
 	
 	val propertyModels =scala.collection.mutable.ArrayBuffer[PropertyModel]()
 	var numUsedModels=0
+	
+	var currentSidePanelController:Option[SidePanelController]=None
+	var currentSidePanelControllerWasUsed:Boolean=false
 	
 	private var superScrollPane:ScrollPane=null
 	
@@ -86,6 +89,8 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	def openData(nparentRef:Reference,selectRef:Option[Reference]) = {
 		//System.out.println("open Data: "+nparentRef+" "+loaded)
 	  if(loaded) shutDown()
+	  if(!currentSidePanelControllerWasUsed)currentSidePanelController=None
+	  else currentSidePanelControllerWasUsed=false
 	  selectedInstance=null
 	  ref=nparentRef	  
 	  mainClass=AllClasses.get.getClassByID(ref.typ)

@@ -4,18 +4,24 @@
 package definition.data
 import java.io._
 
-
-case class ExtFieldRef(typ:Int,inst:Int,field:Byte){
+/**  reference to exernal target field
+ * @param typ type of target instance
+ * @param inst instance of target instance
+ * @param field # of the field where the external fieldReference to this instance is located
+ * @param isParentRef is it a parentRef or a fieldRef
+ * 
+ */
+case class ExtFieldRef(typ:Int,inst:Int,field:Byte,isParentRef:Boolean){
 	def write(file:DataOutput) = {
 		//System.out.println("Write  "+this)
-		file.writeInt(typ);file.writeInt(inst);file.writeByte(field)		
+		file.writeInt(typ);file.writeInt(inst);file.writeByte(field);file.writeBoolean(isParentRef)		
 	}
 	def getReference=new Reference(typ,inst)
 }
 
 object ExtFieldRef {
 	def read(file:DataInput) = {
-		val ret=new ExtFieldRef(file.readInt,file.readInt,file.readByte)
+		val ret=new ExtFieldRef(file.readInt,file.readInt,file.readByte,file.readBoolean)
 		//System.out.println(ret)
 		ret
 	}
@@ -25,7 +31,7 @@ object ExtFieldRef {
 /** Stores the external links to this instance
  * @param ref Reference of this instance
  * @param links Map that contains for each field all the external links to it
- * key = fildNr, value = list to references to external instances
+ * key = fieldNr, value = list to references from external instances
  */
 class ReferencingLinks(override val ref:Reference,val links:Map[Int,List[ExtFieldRef]] =Map())
   extends Referencable{
@@ -39,7 +45,7 @@ class ReferencingLinks(override val ref:Reference,val links:Map[Int,List[ExtFiel
   	 file.writeInt(links.size) 
   	 for((fnum,llist) <-links)
   	 {
-  		 print(" "+fnum+" -> "+llist.size)
+  		 //print(" "+fnum+" -> "+llist.size)
   		 file.writeInt(fnum)
   		 file.writeInt(llist.size)
   		 for(ref <-llist)

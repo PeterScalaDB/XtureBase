@@ -85,6 +85,7 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 		SystemSettings.settings=new ClientSystemSettings(in)
 		//System.out.println(xmlString)
 		AllClasses.set(new ClientClasses(scala.xml.XML.loadString(xmlString)))	
+		//println(AllClasses.get.getClassByName("NGewerk").get.fields .mkString)
 		//System.out.println(AllClasses.get.getClassByID(40).actions .mkString)
 		//System.out.println(AllClasses.get.getClassByID(40).createActions .mkString)
 		//System.out.println(AllClasses.get.classList.mkString)
@@ -93,12 +94,12 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 	
 	private def readUserSettings(in:DataInputStream) = {
 		val length=in.readInt
-		print(length +" ")
+		//print(length +" ")
 		val buffer=new Array[Byte](length)
 		if(length>0) in.read(buffer,0,length)
 		val s= new String(buffer)
 		UserSettings.parse(s)
-		System.out.println("reading user settings "+UserSettings.writeProperties)
+		//System.out.println("reading user settings "+UserSettings.writeProperties)
 		
 		
 		ClientQueryManager.notifySetupListeners

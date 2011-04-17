@@ -138,6 +138,29 @@ object BinOperator
   				case _ =>  throw new IllegalArgumentException( "Wrong Datatype "+left.getType+" for pow operation ")
   			} 			
 			}
+		}),
+		('=' -> new BinOperator('=',0){
+			def getValue(left:Constant,right:Constant)= {
+				Some(new BoolConstant(left.getValue==right.getValue))			
+			}
+		}),
+		('<' -> new BinOperator('<',0){
+			def getValue(left:Constant,right:Constant)= {				
+				left.getType match {
+				case DataType.StringTyp => Some(new BoolConstant(left.getValue.toString<right.getValue.toString))				
+				case DataType.DoubleTyp|DataType.CurrencyTyp  => Some(new BoolConstant(left.getValue.toDouble<right.getValue.toDouble))
+				case _ => Some(new BoolConstant(left.getValue.toInt<right.getValue.toInt))
+				}							
+			}
+		}),
+		('>' -> new BinOperator('>',0){
+			def getValue(left:Constant,right:Constant)= {				
+				left.getType match {
+				case DataType.StringTyp => Some(new BoolConstant(left.getValue.toString>right.getValue.toString))				
+				case DataType.DoubleTyp|DataType.CurrencyTyp  => Some(new BoolConstant(left.getValue.toDouble>right.getValue.toDouble))
+				case _ => Some(new BoolConstant(left.getValue.toInt>right.getValue.toInt))
+				}							
+			}
 		})
 	)
 }

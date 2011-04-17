@@ -10,6 +10,7 @@ import definition.expression.StringParser
 import server.storage._
 import transaction.handling._
 import definition.comm._
+import definition.expression._
 
 /** Table model for the Instance Field table
  * 
@@ -45,7 +46,7 @@ object InstFieldTableModel extends AbstractTableModel
   
 
   
-  def getColumnCount():Int = 3
+  def getColumnCount():Int = 4
   
   def getValueAt(row:Int,column:Int):java.lang.Object =
   {
@@ -67,10 +68,23 @@ object InstFieldTableModel extends AbstractTableModel
   		case 2 => if(instance==null || row<2) " " else { 
   			instance.fieldValue(row-2).toString
   		}
+  		case 3 => if(instance==null || row<2) " " else { 
+  			getTermTree(instance.fieldData(row-2))
+  		}
+  		
   		case _ => "bla"
+  	}    
+  }
+  
+  def getTermTree(ex:Expression):String= {
+  	ex match {
+  		case c:Constant=> c.getTerm
+  		case b:BinaryOperation=> "("+getTermTree(b.left)+" "+b.operator.opChar+" " +getTermTree(b.right)+")="+b.getValue
+  		case co:CollectingFuncCall=>co.getTerm+"="+co.getValue
+  		case r:FieldReference=>r.getTerm+"="+r.getValue
+  		case p:ParentFieldRef=>p.getTerm+"="+p.getValue
+  		case f:FunctionCall=>f.name+"("+f.params .map(getTermTree(_)).mkString(", ")+")="+f.getValue
   	}
-    
-    
   }
   
   override def setValueAt(obj:Object,row:Int,column:Int) =
@@ -92,6 +106,7 @@ object InstFieldTableModel extends AbstractTableModel
   		case 0 => "Field"
   		case 1 => "Term"
   		case 2 => "Value"
+  		case 3 => "TermTree"
   		case _ => "***"
   	}
   }
