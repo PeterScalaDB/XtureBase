@@ -107,8 +107,8 @@ object ViewTest extends SimpleSwingApplication {
 	
 	
 	
-	override def startup(args: Array[String]) = {		
-		if(args.length<4 ) { System.out.println("Usage: ViewTest host portnr name password"); quit() }		
+	override def startup(args: Array[String]):Unit = {		
+		if(args.length<4 ) { System.out.println("Usage: ViewTest host portnr name password [hide=1]"); quit() }		
 		top.title= "Table Test ["+args(2)+"]"
 		// connect components
 		
@@ -142,7 +142,11 @@ object ViewTest extends SimpleSwingApplication {
   	ClientQueryManager.setClientSocket(sock)
   	Thread.`yield`()  	
   	super.startup(args)
-  	
+  	if(args.size>4){
+  		val sel:Boolean=args(4).toInt>0
+  		if(sel)hideBut.selected=true
+  		setHide(sel)
+  	}
 	}
 	
 	def shutDown() = {
@@ -160,6 +164,10 @@ object ViewTest extends SimpleSwingApplication {
 	}
 	
 	def setHide(value:Boolean) = {
+		if(value){
+			hideBut.text="Hide"				
+		}
+		else hideBut.text="Show"
 		DataViewController.hideProperties=value
 	}
 	

@@ -37,17 +37,19 @@ object NewPanelArea extends AbstractActionPanel with ContainerFocusListener {
   	if(lastSuperInstRef==null || superInst.ref.typ!=lastSuperInstRef.typ||lastPropField!=propField||containerName!=lastContainer) {
   		shutDown
   		val theClass=AllClasses.get.getClassByID(superInst.ref.typ)
-  		val propF=theClass.propFields(propField)
-  		//System.out.println("setup class:"+theClass.name)
-  		if(!propF.createChildDefs.isEmpty) {			
-  			for(childDef <-propF.createChildDefs;if (childDef.editorName==containerName)) {
-  				val b = if(childDef.actionName =="*") getButton(dummyAction,childDef.childName,()=>{new MenuButton})//childDef.childClassName
-  				else getButton(childDef.action,"")
-  				//System.out.println("childDef:"+childDef)
-  				b.newTypeID=childDef.childClassID
-  				b.propField=propField.toByte
-  				if(b.isInstanceOf[MenuButton]) buttonList+=b.asInstanceOf[MenuButton]
-  				else contents+=b
+  		if(theClass.propFields .size>propField){
+  			val propF=theClass.propFields(propField)
+  			//System.out.println("setup class:"+theClass.name)
+  			if(!propF.createChildDefs.isEmpty) {			
+  				for(childDef <-propF.createChildDefs;if (childDef.editorName==containerName)) {
+  					val b = if(childDef.actionName =="*") getButton(dummyAction,childDef.childName,()=>{new MenuButton})//childDef.childClassName
+  					else getButton(childDef.action,"")
+  					//System.out.println("childDef:"+childDef)
+  					b.newTypeID=childDef.childClassID
+  					b.propField=propField.toByte
+  					if(b.isInstanceOf[MenuButton]) buttonList+=b.asInstanceOf[MenuButton]
+  					                                                          else contents+=b
+  				}
   			}
   		}
   		revalidate

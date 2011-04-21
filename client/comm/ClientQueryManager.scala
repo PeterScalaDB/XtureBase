@@ -89,6 +89,10 @@ object ClientQueryManager {
 	}
 	
 	/** creates a new subscription
+	 * @param parentRef the reference to the parent object of the seached object(s), 
+	 * or the seached object's reference when it's a single subscription
+	 * @param propertyField the number of the property field of the parent object, or -1 when only
+	 * a single instance should be queried. In that case parentRef is the reference to that single object
 	 * @param updateFunc a function to be called when values are updated
 	 * @return the subscriptionID
 	 * 	

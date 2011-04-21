@@ -28,7 +28,7 @@ class ServerSystemSettings(settingsRef:Reference)extends SystemSettings  {
 				val enum=EnumDefinition(StorageManager.getInstanceData(pField))) 
 					enums+= (enum.name ->enum)
 					enumByID=genIDMap
-					println("Enums:"+enums.mkString("\n"))
+					//println("Enums:"+enums.mkString("\n"))
 				propData
 			}
 			case None => throw new IllegalArgumentException("No Systemsettings found in "+settingsRef)

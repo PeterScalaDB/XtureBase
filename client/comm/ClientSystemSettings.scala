@@ -23,9 +23,9 @@ class ClientSystemSettings(in:DataInput) extends SystemSettings {
 	val clientSettingsMap:Map[String,String]=(for(i <-0 until in.readInt) 
 		yield (in.readUTF ->in.readUTF)).toMap
 	
-	println("system types:"+_systemTypes.mkString(","))
-	println("Enums:"+enums.mkString("| "))
-	println("ClientSettings:"+clientSettingsMap.mkString("| "))
+	//println("system types:"+_systemTypes.mkString(","))
+	//println("Enums:"+enums.mkString("| "))
+	//println("ClientSettings:"+clientSettingsMap.mkString("| "))
 	
 	def getCustomSettings(folderName:String):IndexedSeq[Reference]= IndexedSeq.empty
 	

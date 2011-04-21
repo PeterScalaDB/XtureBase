@@ -281,7 +281,7 @@ object TypeDefPanel extends ScrollPane {
 	def showFormDesigner = {
 		formEditDialog.setLocationRelativeTo(formatStringPan)
 		formEditDialog.title="Form-Designer for "+theClass.name
-		formEditDialog.showDialog(theClass.formBox )
+		formEditDialog.showDialog(theClass,theClass.formBox )
 		
 	}
 	

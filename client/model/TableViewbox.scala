@@ -76,7 +76,7 @@ class TableViewbox extends BorderPanel with ViewboxContent  {
   
   val tableScroller=new ScrollPane() /*with ScrollEventListener*/ {
   			//val mwls:Array[MouseWheelListener]=peer.getMouseWheelListeners()   			
-				viewportView=dataviewController.panel
+				viewportView=dataviewController.splitter
 				peer.setWheelScrollingEnabled(true)
 				//System.out.println("mwls:"+mwls.mkString(","))
 				/*def handleScrollEvent(e:MouseWheelEvent)= {
@@ -87,6 +87,10 @@ class TableViewbox extends BorderPanel with ViewboxContent  {
 					
 				}*/
 			}
+  
+  
+  
+  
   
 	add (tableScroller,BorderPanel.Position.Center)
 	//dataviewController.scrollEventListener =tableScroller	
