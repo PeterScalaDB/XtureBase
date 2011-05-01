@@ -21,7 +21,7 @@ class ChoseOutDefDialog(w:Window) extends Dialog(w) {
 		
   
 	
-	var outdefList:Seq[OutputDefinition]=Seq.empty
+	var outdefList:Seq[OutputDefinition]=Seq.empty	
 	//var formsList:Seq[FormDescription]=Seq.empty
 	val cancelBut=new Button("Abbruch")
 	val nextBut=new Button("Weiter ->")
@@ -29,6 +29,7 @@ class ChoseOutDefDialog(w:Window) extends Dialog(w) {
 	val createBut=new Button("Zusätzliche Definition Anlegen ...")
 	val changeBut=new Button("Gewählte Definition ändern ...")
 	val deleteBut=new Button("Gewählte Definition löschen")
+	val archiveBut=new Button("Archiv ansehen ...")
 	val outdefListView=new ListView[OutputDefinition](){
 		selection.intervalMode=ListView.IntervalMode.Single		
 	}
@@ -50,13 +51,13 @@ class ChoseOutDefDialog(w:Window) extends Dialog(w) {
 		
 		add(new BoxPanel(Orientation.Vertical){
 			contents += new BoxPanel(Orientation.Vertical) {
-				contents+=createBut+=changeBut+=deleteBut
+				contents+=createBut+=changeBut+=deleteBut+=archiveBut
 			} += new BoxPanel(Orientation.Horizontal) {
 				contents+=cancelBut+=Swing.HGlue+=nextBut
 			}
 				
 		},BorderPanel.Position.South)
-		listenTo(cancelBut,nextBut,createBut,changeBut,deleteBut)
+		listenTo(cancelBut,nextBut,createBut,changeBut,deleteBut,archiveBut)
 		
 		reactions+= {
 			case ButtonClicked(`cancelBut`)=>close
@@ -64,6 +65,7 @@ class ChoseOutDefDialog(w:Window) extends Dialog(w) {
 			case ButtonClicked(`createBut`)=>createOutdef
 			case ButtonClicked(`deleteBut`)=>deleteOutdef
 			case ButtonClicked(`nextBut`)=>choseOutdef
+			case ButtonClicked(`archiveBut`)=>showArchive
 		}
 	}
 	
@@ -80,7 +82,7 @@ class ChoseOutDefDialog(w:Window) extends Dialog(w) {
 	
 	def createOutdef = {
 		PrintQuestionHandler.newDialog.setLocationRelativeTo(createBut )
-		PrintQuestionHandler.newDialog.showDialog(whenNewoutputDefined)
+		PrintQuestionHandler.newDialog.showDialog("Neue Ausgabe definieren:",whenNewoutputDefined)
 	}
 	
 	def deleteOutdef = if(!outdefListView.selection.indices.isEmpty){
@@ -101,6 +103,14 @@ class ChoseOutDefDialog(w:Window) extends Dialog(w) {
 		close		
 	}
 	
+	def showArchive = if(!outdefListView.selection.indices.isEmpty){
+		val selOD=outdefListView.selection.items.first
+		PrintQuestionHandler.newDialog.loadOutDefSettings(selOD)
+		PrintQuestionHandler.newDialog.previewWindow .showArchive("Druck-Archiv", new Reference(OutputDefinition.odefType,selOD.odInst ))
+	}
+	
+	def getCurrentOutDef= outdefListView.selection.items.first
+	
 	
 	def loadOutdefs(newList:Seq[OutputDefinition])= {		
 		outdefList=newList
@@ -119,4 +129,5 @@ class ChoseOutDefDialog(w:Window) extends Dialog(w) {
   		("Printer",StringConstant(printer)),("PageSettings",StringConstant(pageSetting)),
   		("Portrait",BoolConstant(portrait)),("PageWidth",IntConstant(w)),("PageHeight",IntConstant(h)) ) ++ paramData)
 	}
+	
 }

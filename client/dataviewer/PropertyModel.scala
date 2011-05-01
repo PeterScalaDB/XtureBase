@@ -119,7 +119,7 @@ class PropertyModel(val mainController:DataViewController) {
 							mod.setDataList(data,selectRef,!isLoading)
 						}						
 						if(selectRef==None&&isFirstPropField&&firstTable!=null) {
-							println("select first table ")
+							//println("select first table ")
 							firstTable.requestFocusInWindow
 							firstTable.peer.setColumnSelectionInterval(1,1)
 							firstTable.peer.setRowSelectionInterval(0,0)							
@@ -133,6 +133,8 @@ class PropertyModel(val mainController:DataViewController) {
 					val mod = if(tableModMap.contains(typ)) tableModMap(typ)
 					else createTableModel(typ)					
 					mod.addInstance(data(0))
+					mainController.updateHeight
+					tableArea.revalidate
 				}
 				case NotificationType.FieldChanged => {
 					//System.out.println("field added:"+data)

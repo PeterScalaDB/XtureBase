@@ -341,7 +341,7 @@ class TypeTableModel(val typ:Int,val propMod:PropertyModel) extends AbstractTabl
 	private def showEmptyHeaderPanel = {
 			sideBarPanel.contents.clear
 			emptyHeaderPanel.contents.clear()
-			println("showEmptyPanel :"+sideControllerList.size)
+			//println("showEmptyPanel :"+sideControllerList.size)
 			for (c<-sideControllerList;if (c.parentsFits(this,propMod.mainController.ref))) {			
 				val but=new Button(c.panelName)
 				emptyHeaderPanel.listenTo(but)
@@ -364,7 +364,7 @@ class TypeTableModel(val typ:Int,val propMod:PropertyModel) extends AbstractTabl
 			val header=contr.headerComp
 			sideBarPanel.contents+=header			
 			sideBarPanel.contents+=contr.mainComp
-			println("cl:"+classLabel.preferredSize.height+" th:"+table.peer.getTableHeader.size.height)
+			//println("cl:"+classLabel.preferredSize.height+" th:"+table.peer.getTableHeader.size.height)
 			header.preferredSize=new Dimension(1,classLabel.preferredSize.height+table.peer.getTableHeader.size.height)
 			header.maximumSize=new Dimension(Short.MaxValue,classLabel.preferredSize.height+table.peer.getTableHeader.size.height)			
 			contr.openPanel(propMod.mainController.ref, objClass,this)

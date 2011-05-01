@@ -160,6 +160,21 @@ class PrintActionModule extends ActionModule {
 					})
 					
 				}
+				case "StorePrintData" => {
+					val odInst=returnData.first._2.toInt
+					val formNumber=returnData(1)._2.toInt
+					printForm=formsList(formNumber)
+					val printer=returnData(2)._2
+					val pageSettings=returnData(3)._2
+					val portrait=returnData(4)._2
+					val pageWidth=returnData(5)._2.toInt
+					val pageHeight=returnData(6)._2.toInt
+					val odRef=new Reference(outDefType,odInst)
+					var outDefInst=ActionList.getInstanceData(odRef)
+					 val paramList=returnData.drop(7)
+					val outDef=new OutputDefinition(odInst,printForm.inst,printer.toString,pageSettings.toString,portrait.toBoolean,paramList)
+					PrintGenerator.storePages(u,data.first,odRef,outDef,pageWidth,pageHeight,printForm)
+				}
 			}
 		}
 		true

@@ -60,17 +60,18 @@ class PathModel extends AbstractListModel {
 		}
 	}
 	
-	private [model] def addPathElement(newElement:Reference) = 
+	private [model] def addPathElement(newElement:Reference) ={
+		println("add PathElement "+newElement)
 		if(subsID> -1) {
 			ClientQueryManager.pathSubs_addPathElement(subsID,newElement)			
 		}
-			
+	}		
 		
 	
 	
 	private [model] def jumpUp(newPos:Int) = 
 		if(subsID> -1) { 
-			//System.out.println("Jumping to "+newPos)
+			System.out.println("Jumping to "+newPos)
 			dataList=Some(dataList.get.take(newPos+1))
 			ClientQueryManager.pathSubs_jumpUp(subsID,newPos)
 			fireContentsChanged(this,0,dataList.get.size)
@@ -79,7 +80,7 @@ class PathModel extends AbstractListModel {
 		
 		
   def getSize(): Int = { 
-  	for(list <-dataList) return list.size
+  	for(list <-dataList) return list.size-1
   	return 0
   }
 

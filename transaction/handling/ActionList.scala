@@ -5,7 +5,7 @@ package transaction.handling
 
 import definition.data._
 import server.storage._
-import server.test.SimpleProfiler
+//import server.test.SimpleProfiler
 import server.comm.CommonSubscriptionHandler
 //import scala.collection.immutable.ListMap
 

@@ -9,9 +9,8 @@ import java.awt.event.{WindowAdapter,WindowEvent}
 import javax.swing.{BorderFactory,DefaultComboBoxModel}
 import javax.swing.border.TitledBorder
 import client.dataviewer.{FieldColumnModel,MultilineEditor}
-import definition.expression.{Expression,Constant,EMPTY_EX}
+import definition.expression._
 import definition.data.{FormDescription,Reference,OutputDefinition}
-
 import javax.print._
 import javax.print.attribute._
 import javax.print.attribute.standard._
@@ -19,17 +18,23 @@ import javax.print.event._
 import sun.print.ServiceDialog
 import java.awt.print._
 import java.awt.{Graphics,Graphics2D}
+import client.testUI.ViewTest
+import client.dialog.DialogManager
 
 /**
  * 
  */
-class NewOutdefDialog (w:Window) extends Dialog(w) {	
+class NewOutdefDialog (w:Window,thePageable:MyPageable) extends Dialog(w) {	
 	
 	private var outputDefinedFunc:(Int,String,String,Boolean,Int,Int,Seq[(String,Constant)])=>Unit = _
-	
+	//private var pageable:MyPageable=_
+	val previewWindow=new PreviewWindow(ViewTest.top,this)
+	val printOutDialog=new PrintOutDialog(this)
   val emptyAttributeSet=new HashPrintRequestAttributeSet();
 	var pras:PrintRequestAttributeSet  = new HashPrintRequestAttributeSet();
+	var outputDefInst:Int=0
 	val printJob=PrinterJob.getPrinterJob
+	printJob.setPageable(thePageable)
 	val printServices=  PrintServiceLookup.lookupPrintServices( null,null);
 	if(printServices==null || printServices.size==0) System.err.println("no print services found !")
 	var printerName:String=null
@@ -66,60 +71,11 @@ class NewOutdefDialog (w:Window) extends Dialog(w) {
 		}
 	}
 	
-	val printTest=new PrintTest
 	
 	
-	setPrinterName(theService.getName)
+	val printTest=new PrintTest	
 	
-	/*def showDialog {
-    val filename = "";    
-    val flavor=DocFlavor.STRING.TEXT_PLAIN        
-    val defaultService = if(printerName==null) PrintServiceLookup.lookupDefaultPrintService() else
-    		printServices.find(_.getName==printerName) match{
-    	case Some(serv) =>serv
-    	case None => println(printerName + " not found "); PrintServiceLookup.lookupDefaultPrintService()
-    }
-    //val pj=defaultService.createPrintJob
-    /*printJob.printDialog
-    theService=printJob.getPrintService
-    val pageFormat=printJob.getPageFormat(null)
-    println("pageFormat "+pageFormat.getWidth+" x "+pageFormat.getHeight+" x:"+pageFormat.getImageableX+" y:"+pageFormat.getImageableY+" orient:"+
-    pageFormat.getOrientation)*/
-    
-    
-    theService = ServiceUI.printDialog(null, 200, 200, printServices, defaultService, null, pras);
-    if (theService != null) {
-    	printerName=theService.getName
-    	println("choosen service:"+theService.getName)
-    	println("categories: \n"+theService.getSupportedAttributeCategories.mkString("\n"))
-    	//println("flavors: "+theService.getSupportedDocFlavors.mkString("\n"))  
-    	println("attributes:"+pras.toArray.map(ps=>ps.getClass+"| "+ps.getName+"| "+ps.toString).mkString("\n"))
-    	println("allowedMediaSize:" + theService.getSupportedAttributeValues(classOf[javax.print.attribute.standard.MediaPrintableArea],
-    		null,pras).asInstanceOf[Array[_]].mkString(", "))
-    	
-    	printTest.printString(pras, theService)
-      /*val job = theService.createPrintJob()
-      val listener = new PrintJobAdapter() {
-        override def printDataTransferCompleted(e:PrintJobEvent ) = {
-          println("Print done")
-        }
-      }
-    	
-      job.addPrintJobListener(listener);*/
-      //FileInputStream fis = new FileInputStream(filename);
-      val das = new HashDocAttributeSet();
-      //val doc = new SimpleDoc("HELLO", flavor, das);
-      //job.print(doc, pras);
-      //Thread.sleep(10000);
-    }
-  }*/
-  /*def pageDialog= {
-  	if(theService==null) theService=PrintServiceLookup.lookupDefaultPrintService()
-  	val dialog= new ServiceDialog(null,200,200,theService, null, pras, null.asInstanceOf[java.awt.Dialog])
-  	dialog.setVisible(true)
-	}*/
-	
-	
+	setPrinterName(theService.getName)		
 	
 	title="Neue Ausgabe definieren:"
 	var formList:Seq[FormDescription]=Seq.empty	
@@ -205,7 +161,8 @@ class NewOutdefDialog (w:Window) extends Dialog(w) {
 				outputDefinedFunc(formListView.selection.indices.first,theService.getName,paperSettings,portraitBut.selected,
 				 lastSelectedMedia.width.toInt,lastSelectedMedia.height.toInt,	paramTabMod.getParams)
 			}
-				
+			
+							
 			case ButtonClicked(`cancelBut`)=>close
 			case ListSelectionChanged(_,_ , isAdjusting)=> if(!isAdjusting&& !formListView.selection.indices.isEmpty){
 				val ix=formListView.selection.indices.first				
@@ -220,6 +177,17 @@ class NewOutdefDialog (w:Window) extends Dialog(w) {
 		}
 	}	
 	contents=mainPanel	
+	
+	def storePrintData()= {
+	  close
+	  val paperSettings=lastSelectedMedia.mn.toString+(if(trayModel.getSize>0)"|"+trayCombo.selection.item.mt.toString else "")
+	  DialogManager.processCustomEnquiry(IndexedSeq(("StorePrintData",
+	  		IntConstant(outputDefInst)),("Form",IntConstant(formListView.selection.indices.first)),
+  		("Printer",StringConstant(theService.getName)),("PageSettings",StringConstant(paperSettings)),
+  		("Portrait",BoolConstant(portraitBut.selected)),("PageWidth",IntConstant(lastSelectedMedia.width.toInt)),
+  		("PageHeight",IntConstant(lastSelectedMedia.height.toInt)) ) ++ paramTabMod.getParams)
+	}
+	
 	
 	def setPrinterName(newName:String)= {
 		var defaultTrayIx= -1
@@ -278,10 +246,17 @@ class NewOutdefDialog (w:Window) extends Dialog(w) {
 		printJob.getPageFormat(pras)		
 	}
 	
-	def print(title:String)= {
-		printJob.setJobName(title)
-		printJob.print(pras)
+	def print(ntitle:String,odefInt:Int)= {
+		outputDefInst=odefInt
+		printJob.setJobName(ntitle)
+		thePageable.form=getCurrentForm
+		println("newout print "+thePageable.form)
+		println("pageFormat "+thePageable.pageFormat)
+		println("pageWidth "+thePageable.pageWidth)
+		previewWindow.showPreview(ntitle,thePageable)		
 	}
+	
+	
 	
 	def setMediaWrapper(newWrapper:MediaSizeWrapper)= {
 		pras.remove(classOf[MediaPrintableArea])
@@ -291,20 +266,18 @@ class NewOutdefDialog (w:Window) extends Dialog(w) {
 		println("pras:" +pras.toArray.mkString("\n"))
 		//println("service:"+theService)
 		lastSelectedMedia=newWrapper
-		//checkPrintableArea
-		/*if(allowedSizes!=null && allowedSizes.size>0) {
-			pras.add(allowedSizes.last)
-		}*/
+		
 	}
 	
-	def showDialog (noutputDefinedFunc:(Int,String,String,Boolean,Int,Int,Seq[(String,Constant)])=>Unit) = {
-		outputDefinedFunc=noutputDefinedFunc
+	def showDialog (newTitle:String,noutputDefinedFunc:(Int,String,String,Boolean,Int,Int,Seq[(String,Constant)])=>Unit) = {
+		title=newTitle
+		outputDefinedFunc=noutputDefinedFunc		
 		visible=true
 	}
 	
 	def showEditDialog(noutputDefinedFunc:(Int,String,String,Boolean,Int,Int,Seq[(String,Constant)])=>Unit,odef:OutputDefinition) = {
-		loadOutDefSettings(odef)
-		showDialog(noutputDefinedFunc)
+		loadOutDefSettings(odef)		
+		showDialog("Ausgabedefinition ändern",noutputDefinedFunc)
 	}
 	
 	def loadForms(newList:Seq[FormDescription])= {		

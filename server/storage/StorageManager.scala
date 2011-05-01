@@ -9,7 +9,7 @@ import java.util.NoSuchElementException
 import java.io.{DataInput,DataOutput}
 import runtime.function._
 import definition.expression.FunctionManager
-import server.test.SimpleProfiler
+//import server.test.SimpleProfiler
 
 
 /** manages all file io operations
@@ -78,6 +78,28 @@ object StorageManager {
   		}
   		case None=> Seq.empty
   	}
+  
+  
+  def getNextParentOfType(childRef:Reference,parentType:Int):Option[Reference]= {
+  	println("getNextParent:"+childRef)
+  	val inst=getInstanceData(childRef)
+  	if(inst.owners.isEmpty) return None
+  	for(owner <-inst.owners) {
+  		if(owner.ownerRef.typ ==parentType)return Some(owner.ownerRef)
+  		else {
+  			val ret =getNextParentOfType(owner.ownerRef,parentType)
+  			if(ret.isDefined) return ret
+  		}
+  	}
+  	for(owner <-inst.secondUseOwners ) {
+  		if(owner.ownerRef.typ ==parentType)return Some(owner.ownerRef)
+  		else {
+  			val ret =getNextParentOfType(owner.ownerRef,parentType)
+  			if(ret.isDefined) return ret
+  		}
+  	}
+  	None
+  }
   
   /** loads an instance from the data file. When that instance is deleted, tries to find the old state
    * 

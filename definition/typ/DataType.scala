@@ -26,6 +26,7 @@ object DataType extends Enumeration
 	val VectorTyp=Value("Vector")
 	val EnumTyp=Value("Enum")
 	val ParentRefTyp=Value("ParentRef")
+	val BlobTyp=Value("Blob")
 	
 	def isCompatible(one:Value,other:Value):Boolean ={		
 		if(one.id>other.id) return isCompatible(other,one)

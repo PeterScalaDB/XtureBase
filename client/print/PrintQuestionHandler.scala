@@ -15,13 +15,13 @@ import java.io.DataInput
  * 
  */
 object PrintQuestionHandler extends CustomQuestionHandler with GenDataReceiver{
-  val newDialog= new NewOutdefDialog(ViewTest.top)
+	val myPageable=new MyPageable
+  val newDialog= new NewOutdefDialog(ViewTest.top,myPageable)
   val outdefDialog=new ChoseOutDefDialog(ViewTest.top)
   var forms:Seq[FormDescription]=Seq.empty
   var outDefs:Seq[OutputDefinition]=Seq.empty
   
-  val myPageable=new MyPageable
-  newDialog.printJob .setPageable(myPageable)
+  
   
   var choosenOutDef:OutputDefinition= _
   
@@ -48,7 +48,7 @@ object PrintQuestionHandler extends CustomQuestionHandler with GenDataReceiver{
   	if(outDefs.isEmpty) {
   		
   		newDialog.setLocationRelativeTo(ViewTest.actionPan )
-  		newDialog.showDialog(outputDefined)
+  		newDialog.showDialog("Neue Ausgabedefinition anlegen",outputDefined)
   	}
   	else {
   		outdefDialog.loadOutdefs(outDefs)
@@ -63,14 +63,15 @@ object PrintQuestionHandler extends CustomQuestionHandler with GenDataReceiver{
   		("Portrait",BoolConstant(portrait)),("PageWidth",IntConstant(w)),("PageHeight",IntConstant(h))) ++ paramData)
   }
   
-  def showPreviewWindow(xmlData:Seq[scala.xml.Node],usedOutDef:Int,pageData:Seq[PageData]) = {
+  /*def showPreviewWindow(xmlData:Seq[scala.xml.Node],usedOutDef:Int,pageData:Seq[PageData]) = {
   	readInXML(xmlData)
-  }
+  }*/
   
   def receiveData(in:DataInput)= {
   	val form=newDialog.getCurrentForm
   	println(form.fonts.list .mkString(","))  	
   	val jobTitle=in.readUTF
+  	val oInst=in.readInt
   	val pagesList=for( i <-0 until in.readInt) yield PageData(in)  	
   	val printableArea=newDialog.getPrintableArea
   	val pageFormat=newDialog.getPageFormat  	
@@ -81,7 +82,7 @@ object PrintQuestionHandler extends CustomQuestionHandler with GenDataReceiver{
   	MyContext.fontStyleList=form.fonts
   	
   	myPageable.setData(pageFormat,pagesList)  	
-  	newDialog.print(jobTitle)
+  	newDialog.print(jobTitle, oInst)
   }
 
 }

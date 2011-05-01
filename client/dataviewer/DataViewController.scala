@@ -14,6 +14,8 @@ import java.awt.event.{MouseAdapter,MouseWheelListener,MouseWheelEvent}
 import client.dataviewer.sidePanel.SidePanelController
 import javax.swing.BorderFactory
 import scala.swing.event.ButtonClicked
+import client.comm.ClientQueryManager
+//import server.test.SimpleProfiler
 
 /** controls the DataViewer
  *  manages the general loading of data
@@ -22,6 +24,7 @@ import scala.swing.event.ButtonClicked
 
 
 class DataViewController  extends PathControllable with SelectSender with Referencable  {
+	//SimpleProfiler.dprint =true
 	private var loaded=false
 	var ref:Reference= _
 	var mainClass:AbstractObjectClass = _
@@ -37,139 +40,98 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	var currentSidePanelController:Option[SidePanelController]=None
 	var currentSidePanelControllerWasUsed:Boolean=false
 	
-	private var superScrollPane:Option[ScrollPane]=None
+	//private var superScrollPane:Option[ScrollPane]=None
 	
-	val formModel=new FormModel
-	
-	//val formColor=new Color(210,210,215)
-	
-	private var formPanel= new BorderPanel(){
+	val formModel=new FormModel	
 		
-		val subBorder=BorderFactory.createMatteBorder(4,2,4,2,Color.lightGray)
-		//add(new Label("Test"),BorderPanel.Position.Center)
-		
-		val closeBut=new Button("^")
-		val leftBut=new Button("<")
-		val rightBut=new Button(">")
-		leftBut.peer.putClientProperty("JComponent.sizeVariant", "small");
-		leftBut.peer.updateUI();
-		rightBut.peer.putClientProperty("JComponent.sizeVariant", "small");
-		rightBut.peer.updateUI();
-		leftBut.focusable=false
-		rightBut.focusable=false
-		closeBut.focusable=false
-		
-		val leftPanel=new BoxPanel(Orientation.Vertical){
-			contents +=leftBut+=rightBut+=Swing.VGlue+=closeBut
-			preferredSize=new Dimension(34,30)
-		}
-		
-		add(leftPanel,BorderPanel.Position.West)
-		listenTo(closeBut)
-		
-		reactions += {
-			case ButtonClicked(`closeBut`)=>splitter.dividerLocation=0
-		}
-		
-		var forms:Option[FormBox]=None
-		
-		def setForms(nf:Option[FormBox]):Unit = {
-			forms=nf
-			nf match {
-				case Some(fb )=> {
-					visible=true
-					val fheight=fb.preferredSize.height
-					leftBut.visible=fheight>90
-					rightBut.visible=fheight>60
-					closeBut.visible=fheight>40
-					//fb.background=formColor
-					fb.border=subBorder
-					add(fb,BorderPanel.Position.Center)
-					peer.setSize(preferredSize)
-					
-					splitter.revalidate
-					repaint
-				}
-				case None => visible=false
-			}
-		}
-	}
-	
 	val tablePanel=new BoxPanel(Orientation.Vertical)  {		
 		override lazy val peer = new javax.swing.JPanel with SuperMixin with javax.swing.Scrollable {       
 			val l = new javax.swing.BoxLayout(this, Orientation.Vertical.id)
-			setLayout(l)
-			val mSize=new Dimension(Short.MaxValue,Short.MaxValue)
-			def getPreferredScrollableViewportSize: Dimension=getPreferredSize 
-			override def getPreferredSize:Dimension = { 
-				val ps=super.getPreferredSize    	
+			setLayout(l)			
+			def getPreferredScrollableViewportSize: Dimension=getPreferredSize
+		  val mSize=new Dimension(Short.MaxValue,Short.MaxValue)
+			/*override def getPreferredSize:Dimension = { 
+				val ps=super.preferredSize    	
 				for (sc <-superScrollPane) {
 					val scSize:Dimension=(sc.peer).getVerticalScrollBar.getSize
 					val scrollbarWidth=scSize.width+8
 					val hAmount=(if(sc.peer.getVerticalScrollBar.isVisible)scrollbarWidth else 8)
 					val vAmount=(if(sc.peer.getHorizontalScrollBar.isVisible)scrollbarWidth else 8)
-					//System.out.println("dataView prefSize:"+ps+ " super:"+superScrollPane.size+" scrollWidth:"+scrollbarWidth)
-					/*return new Dimension(
+					return new  Dimension(
 						if( ps.width<sc.size.width-hAmount) sc.size.width-hAmount else ps.width ,
-						if( ps.height<sc.size.height-vAmount) sc.size.height-vAmount else ps.height )
-					*/
-					return ps
+						if( ps.height<sc.size.height-vAmount) sc.size.height-vAmount else ps.height ) 
+				//return ps
 				}
 
 				return ps
-			}
-
+			}*/
 			override def getMaximumSize=mSize
 			override def getMinimumSize=getPreferredSize
-
-
 			def getScrollableTracksViewportHeight: Boolean =false
 			def getScrollableTracksViewportWidth: Boolean=false
-
 			def getScrollableBlockIncrement(visibleRect: Rectangle, orientation: Int, direction: Int): Int = 200  
 			def getScrollableUnitIncrement(visibleRect: Rectangle, orientation: Int, direction: Int): Int= 10    
 		}		
 	}
-	val splitter:SplitPane=new SplitPane(Orientation.Horizontal ,formPanel,tablePanel){
+	
+	val formPanel= new ParentPanel()
+	
+	/*val splitter:SplitPane=new SplitPane(Orientation.Horizontal ,formPanel,tablePanel){
 		oneTouchExpandable=true
 		//resizeWeight=1
-		dividerSize=22
+		dividerSize=12
+	}*/
+	val tableScroller=new ScrollPane()  {  			   			
+  	viewportView=tablePanel
+  	peer.setWheelScrollingEnabled(true)				
+  }  
+	
+	
+	val splitter= new SplitPane(Orientation.Horizontal ,formPanel,tableScroller) {
+		/*override lazy val peer = new javax.swing.JSplitPane(Orientation.Horizontal.id, formPanel.peer, 
+			tablePanel.peer) with SuperMixin with javax.swing.Scrollable {
+			def getPreferredScrollableViewportSize: Dimension=getPreferredSize
+			def getScrollableTracksViewportHeight: Boolean =false
+			def getScrollableTracksViewportWidth: Boolean=false
+			def getScrollableBlockIncrement(visibleRect: Rectangle, orientation: Int, direction: Int): Int = 200  
+			def getScrollableUnitIncrement(visibleRect: Rectangle, orientation: Int, direction: Int): Int= 10
+		}*/
+		maximumSize=new Dimension(Short.MaxValue,Short.MaxValue)
+		oneTouchExpandable=true
+		dividerSize=12
 	}
 	
-	var selectedInstance: InstanceData= _ // to be deleted
+	formPanel.splitter=splitter
 	
+	var selectedInstance: InstanceData= _ // to be deleted	
 	var openChildCallBack:(Reference)=> Unit = _
-	var selectListener= collection.mutable.HashSet[SelectListener]()
+	var selectListener= collection.mutable.HashSet[SelectListener]()	
+	var containerFocusListener= collection.mutable.HashSet[ContainerFocusListener]()	
 	
-	var containerFocusListener= collection.mutable.HashSet[ContainerFocusListener]()
-	
-	//var scrollEventListener:ScrollEventListener=null
-	
-	
-	//val vGlue=Swing.VGlue
 	/** is called by PathModel when another instance should be loaded
 	 *  @param parentRef the new Instance to be loaded
 	 *  @param selectRef reference of an instance that should be selected
 	 */
-	def openData(nparentRef:Reference,selectRef:Option[Reference]) = {
-		//System.out.println("open Data: "+nparentRef+" "+loaded)
+	def openData(nparentRef:Reference,selectRef:Option[Reference],indent:Int) = {
+		System.out.println("open Data: "+nparentRef+" "+loaded+" indent:"+indent)
+		//SimpleProfiler.startMeasure("Open DataView "+nparentRef)
 	  if(loaded) shutDown()
 	  if(!currentSidePanelControllerWasUsed)currentSidePanelController=None
 	  else currentSidePanelControllerWasUsed=false
 	  selectedInstance=null
 	  ref=nparentRef	  
+	  //SimpleProfiler.measure("clone")
 	  mainClass=AllClasses.get.getClassByID(ref.typ)	  
 	  val newForm=mainClass.formBox match {
-	  	case Some(f)=>Some(f.clone)
+	  	case Some(f)=>Some(f.makeCopy)
 	  	case _=> None
 	  }	  
-	  formPanel.setForms(newForm)
+		//SimpleProfiler.measure("load")
+	  formPanel.setForms(newForm,indent,nparentRef)
 	  formModel.setForms(mainClass,newForm)
 	  formModel.loadData(nparentRef)
 	  val hiddenFields=mainClass.getNum_FirstHiddenPropFields
-	  //println("class:"+mainClass.name+" hiddenFields:"+hiddenFields)
-	  
-	  
+	  	  
 	  for(i <- 0 until mainClass.propFields.size) {
 	  	val propFieldInfo=mainClass.propFields(i)
 	  	if(!(propFieldInfo.hidden && DataViewController.hideProperties)) {
@@ -178,15 +140,17 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	  		mod.load(propFieldInfo.allowedClass,i.toByte,propFieldInfo.name,selectRef,i==hiddenFields,mainClass.propFields.size==1)	  	
 	  	}	  	
 	  }
+		//SimpleProfiler.measure("loaded send")
 	  //panel.contents+=vGlue
-	  updateHeight()
+	  //updateHeight()
 	  if(!selectRef.isDefined) selectListener foreach(_.selectionChanged(this,EMPTY_GROUP.list ))
+	  //SimpleProfiler.measure("selectListener send")
 	  loaded =true
 	}
 	
-	def setSuperScrollPane(sc:ScrollPane)= {
+	/*def setSuperScrollPane(sc:ScrollPane)= {
 		superScrollPane=Some(sc)		
-	}
+	}*/
 	
 	def registerOpenChildCallBack(callBack: (Reference)=> Unit) = {
 		openChildCallBack=callBack
@@ -202,6 +166,7 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	
 	
 	def updateHeight() = {
+		//SimpleProfiler.measure("update Height")
 		javax.swing.SwingUtilities.invokeLater(new Runnable(){
 			def run= {
 			  //panel.preferredSize=new Dimension(getWidth,getHeight)		
@@ -212,11 +177,7 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 		})	
 	}
 	
-	/*def getHeight=propertyModels.take(numUsedModels).foldRight(0){(n,result)=> result+n.getHeight}
-	
-	def getWidth=propertyModels.take(numUsedModels).foldRight(0){(n,result)=> if(n.getWidth>result) n.getWidth else result}*/
-	
-	
+		
 	def getPropModel = {
 		numUsedModels  += 1
 		if(propertyModels.size>=numUsedModels) propertyModels(numUsedModels-1)		
@@ -267,16 +228,10 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 		if(openChildCallBack!=null) openChildCallBack(ref)
 	}	
 	
-	/*def handleScrollEvent(e:MouseWheelEvent )= {
-		if(scrollEventListener!=null) scrollEventListener.handleScrollEvent(e)
-	}*/
-
+	def setParentLineHeight(nheight:Int)= formPanel.setParentHeight(nheight)
+	
 }
 
 object DataViewController {
 	var hideProperties:Boolean=false
 }
-
-/*trait ScrollEventListener {
-	def handleScrollEvent(e:MouseWheelEvent)
-}*/

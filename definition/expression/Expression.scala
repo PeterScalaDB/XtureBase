@@ -5,6 +5,7 @@ package definition.expression
 
 import java.io.{DataInput,DataOutput}
 import definition.typ.DataType
+import java.util.Date
 /** base type for all expression classes
  * 
  */
@@ -93,6 +94,8 @@ object Expression
 			case DataType.VectorTyp => new VectorConstant(file.readDouble,file.readDouble,file.readDouble)
 			case DataType.CurrencyTyp => new CurrencyConstant(file.readLong)
 			case DataType.ParentRefTyp => ParentFieldRef(file)
+			case DataType.BlobTyp =>BlobConstant(file) 
+			case DataType.DateTyp =>DateConstant(file)
 			case _ => EMPTY_EX
 		}		
 	}
@@ -107,6 +110,8 @@ object Expression
 	    case DataType.BoolTyp => new BoolConstant(file.readBoolean)
 	    case DataType.VectorTyp => new VectorConstant(file.readDouble,file.readDouble,file.readDouble)
 	    case DataType.CurrencyTyp => new CurrencyConstant(file.readLong)
+	    case DataType.BlobTyp =>BlobConstant(file)
+	    case DataType.DateTyp =>DateConstant(file)
 			case _ => EMPTY_EX
 		}		
 	}
@@ -118,6 +123,8 @@ object Expression
 	lazy val NullBOOL=new BoolConstant(false) with NullConstant
 	lazy val NullVECTOR=new VectorConstant(0,0,0) with NullConstant
 	lazy val NullCURRENCY=new CurrencyConstant(0) with NullConstant
+	lazy val NullBLOB=new BlobConstant(new Array[Byte](0)) with NullConstant
+	lazy val NullDATE=new DateConstant(new Date(0))
 	
 	def generateNullConstant(typ:DataType.Value)= {
 		typ match {
@@ -130,6 +137,8 @@ object Expression
 	    case DataType.CurrencyTyp => NullCURRENCY
 	    case DataType.undefined => EMPTY_EX
 	    case DataType.EnumTyp => NullINT
+	    case DataType.DateTyp => NullDATE
+	    case DataType.BlobTyp  => NullBLOB
 		}
 	}
 }

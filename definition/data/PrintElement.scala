@@ -39,57 +39,83 @@ trait RenderContext {
 }
 
 
-case class TextPrintElement(nbounds:Rectangle2D.Float,text:String,fontStyle:String) extends PrintElement(nbounds) {
+abstract class ATextPrintElement(nbounds:Rectangle2D.Float,fontStyle:String) extends PrintElement(nbounds) {
 	//println("TXPE:"+text+" - "+fontStyle)
+	
+	def text:String
 	override def write(out:DataOutput)= {
 		super.write(out)
 		out.writeUTF(text)
-		out.writeUTF(fontStyle)
+		out.writeUTF(fontStyle)		
 	}
 	def getElementType= PrintElType.TextField	
+	
 	def print(g:Graphics2D,ctx:RenderContext) = {		
-		val fStyle=ctx.fontStyleList.getStyle(fontStyle)
+		val fStyle=ctx.fontStyleList.getStyle(fontStyle)		
 		val offset=fStyle.lineMetrics.getAscent
 		val x=ctx.toUnit(bounds.x)
-		val y=ctx.toUnit(bounds.y)+offset
+		val y=ctx.toUnit(bounds.y)+offset		
 		g.setFont(fStyle.font)
+		g.setColor(fStyle.color)
 		g.drawString(text, x,y)
-		val sbounds=fStyle.getStringBounds(text)	
-		//println("sbounds:"+sbounds+" "+text)
-		val newBonds=new Rectangle2D.Double((sbounds.getX+x),(sbounds.getY+y),sbounds.getWidth,sbounds.getHeight)
-		//g.draw(newBonds)
-		val baseLine=new Line2D.Double(x,y,sbounds.getWidth+x,y)
-		//g.draw(baseLine)
-		//g.drawRect((sbounds.getX+x).toInt,(sbounds.getY+y).toInt,sbounds.getWidth.toInt,sbounds.getHeight.toInt)
-		//g.drawRect((x).toInt,(y).toInt,sbounds.getWidth.toInt,0)
+		//val sbounds=fStyle.getStringBounds(text)		
+		//val newBonds=new Rectangle2D.Double((sbounds.getX+x),(sbounds.getY+y),sbounds.getWidth,sbounds.getHeight)				
 	}
 }
 
-case class RectPrintElement(nbounds:Rectangle2D.Float,thick:Float) extends PrintElement(nbounds) {
+
+class TextPrintElement(nbounds:Rectangle2D.Float,val text:String,fontStyle:String) extends ATextPrintElement(nbounds,fontStyle) {	
+}
+
+
+class PlaceHolderElement(nbounds:Rectangle2D.Float,val name:String,fontStyle:String) extends ATextPrintElement(nbounds,fontStyle) {
+	println("new PlaceHolder:"+name)
+	
+	var value:String=""
+	def text=value
+}
+
+
+case class RectPrintElement(nbounds:Rectangle2D.Float,thick:Float,lineStyle:Byte,borderColor:Color) extends PrintElement(nbounds) {
 	override def write(out:DataOutput)= {
 		super.write(out)
 		out.writeFloat(thick)
+		out.writeByte(lineStyle)
+		out.writeInt(borderColor.getRGB)
 	}
 	def getElementType= PrintElType.Rect 	
 	def print(g:Graphics2D,ctx:RenderContext) = {
 	  PrintElement.printRect.setRect(ctx.toUnit(bounds.x),ctx.toUnit(bounds.y),ctx.toUnit(bounds.width),ctx.toUnit(bounds.height))
-	  thick match {
-	  	case 0.4f => g.setColor(Color.blue)
-	  	case 0.6f => g.setColor(Color.green)
-	  	case _ =>
-	  }
+	  g.setColor(borderColor)
 	  g.setStroke(PrintElement.strokeMap(thick))
 		g.draw(PrintElement.printRect)		
-		g.setColor(Color.black)
+	}
+}
+
+case class LinePrintElement(nbounds:Rectangle2D.Float,thick:Float,lineStyle:Byte,lineColor:Color) extends PrintElement(nbounds) {
+	override def write(out:DataOutput)= {
+		super.write(out)
+		out.writeFloat(thick)
+		out.writeByte(lineStyle)
+		out.writeInt(lineColor.getRGB)
+	}
+	def getElementType= PrintElType.Line 	
+	def print(g:Graphics2D,ctx:RenderContext) = if(thick!=0){
+	  PrintElement.printLine.setLine(ctx.toUnit(bounds.x),ctx.toUnit(bounds.y),ctx.toUnit(bounds.x+bounds.width),ctx.toUnit(bounds.y+bounds.height))
+	  g.setColor(lineColor)
+	  g.setStroke(PrintElement.strokeMap(thick))	  
+		g.draw(PrintElement.printLine)		
 	}
 }
 
 object PrintElement {
 	val printRect=new Rectangle2D.Float
+	val printLine=new Line2D.Float
 	def apply(in:DataInput) = {		
 		PrintElType(in.readByte) match {
-			case PrintElType.TextField => TextPrintElement(readBounds(in),in.readUTF,in.readUTF)
-			case PrintElType.Rect => RectPrintElement(readBounds(in),in.readFloat)
+			case PrintElType.TextField => new TextPrintElement(readBounds(in),in.readUTF,in.readUTF)
+			case PrintElType.Rect => RectPrintElement(readBounds(in),in.readFloat,in.readByte,new Color(in.readInt))
+			case PrintElType.Line => LinePrintElement(readBounds(in),in.readFloat,in.readByte,new Color(in.readInt))
 			case other => throw new IllegalArgumentException("Unknown PrintElement-Type:"+other)
 		}
 		

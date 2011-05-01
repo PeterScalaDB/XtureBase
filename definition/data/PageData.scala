@@ -8,7 +8,7 @@ import java.io.{DataInput,DataOutput}
 /**
  * 
  */
-case class PageData(pageNr:Int,elementList:Seq[PrintElement]) {
+case class PageData(val pageNr:Int,val elementList:Seq[PrintElement]) {
 	
   def write(out:DataOutput) = {
   	out.writeInt(pageNr)

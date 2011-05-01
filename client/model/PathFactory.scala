@@ -23,7 +23,7 @@ object PathFactory {
   	val num=UserSettings.getIntProperty("TablePaths","num",0)
   	for(i <- 0 until num)
   		pathList += new Entry(false,UserSettings.getListProperty[Reference]("TablePaths",i.toString,collection.immutable.Seq.empty))
-  	val sr=UserSettings.getStringProperty("TablePath","standard","(5,1)")
+  	val sr=UserSettings.getStringProperty("TablePath","standard","(110,1)")
   	val sr1=sr.substring(1,sr.length-1).split(',')
   	standardRef=new Reference(sr1(0).toInt,sr1(1).toInt)
   }

@@ -21,40 +21,45 @@ class TableViewbox extends BorderPanel with ViewboxContent  {
 	val dataviewController=new DataViewController()
 	
 	val pathMod=new PathModel()
-	val pathView=new ListView[InstanceData]()
-	var viewbox:Viewbox=null
-	val openPathListener = new PathControllable {
-		def openData(parentRef:Reference,selectRef:Option[Reference])= 
-			viewbox.setTitle( pathMod.getTitleText)
-		def registerOpenChildCallBack(callBack: (Reference)=> Unit) = {}
+	val pathView=new ListView[InstanceData](){
+		preferredSize=new Dimension(200,200)
+				def callback(nsize:Int):Unit= {
+					//System.out.println(size+" "+pathView.peer.getFixedCellHeight())
+					preferredSize=new Dimension(400,(nsize)*pathController.lineHeight+2 )
+					maximumSize=preferredSize
+					TableViewbox.this.revalidate
+					TableViewbox.this.peer.invalidate
+				}				
 	}
-	val pathController=new PathController(pathMod,pathView,List(dataviewController,openPathListener))
+	
+	var viewbox:Viewbox=null
+	
+	val openPathListener = new PathControllable {
+		def openData(parentRef:Reference,selectRef:Option[Reference],ident:Int)= 
+			viewbox.setTitle( pathMod.getTitleText)
+		
+			def registerOpenChildCallBack(callBack: (Reference)=> Unit) = {}		
+	}
+	
+	val pathController:PathController=new PathController(pathMod,pathView,List(dataviewController))
+	pathController.registerSizeChangeListener(pathView.callback)
+	pathController.registerSizeChangeListener((a) => viewbox.setTitle(pathMod.getTitleText))
 	var pathFactoryIndex= -1
 	var pathBoxOpen=true
 	val emptyBox=Swing.HStrut(0)
 	
-	//val pathLabel=new Label()
+	dataviewController.setParentLineHeight(pathController.lineHeight)	
 	
 	border=BorderFactory.createEtchedBorder(EtchedBorder.LOWERED);
-  val pathScroller =new ScrollPane()  {
-  	   peer.setWheelScrollingEnabled(true)
-				viewportView= pathView				
-				preferredSize=new Dimension(200,200)
-				def callback(nsize:Int):Unit= {
-					//System.out.println(size+" "+pathView.peer.getFixedCellHeight())
-					preferredSize=new Dimension(400,(nsize+1)*pathController.lineHeight )
-					maximumSize=preferredSize
-					TableViewbox.this.revalidate
-					TableViewbox.this.peer.invalidate
-				}
-				pathController.registerSizeChangeListener(callback)
-				
-			}
+  
   val switchPathButton=new Button("\u02c4")
+  switchPathButton.peer.putClientProperty("JComponent.sizeVariant", "small");
+	switchPathButton.peer.updateUI()
 	
-	val pathBox=new BorderPanel{
-		add(pathScroller,BorderPanel.Position.Center)
+	val pathBox=new BorderPanel{  	
+		add(/*pathScroller*/pathView,BorderPanel.Position.Center)
 		add(new BoxPanel(Orientation.Vertical) {
+			preferredSize=new Dimension(36,20)
 			contents+= Swing.VGlue += switchPathButton
 		},BorderPanel.Position.West)
 		listenTo(switchPathButton)
@@ -71,30 +76,12 @@ class TableViewbox extends BorderPanel with ViewboxContent  {
   //preferredSize=new Dimension(400,pathController.lineHeight )
   dataviewController.registerSelectListener(SelectEventDispatcher)
   dataviewController.registerContainerFocusListener(NewPanelArea)
-  add (pathBox,BorderPanel.Position.North)
-  
-  
-  val tableScroller=new ScrollPane() /*with ScrollEventListener*/ {
-  			//val mwls:Array[MouseWheelListener]=peer.getMouseWheelListeners()   			
-				viewportView=dataviewController.splitter
-				peer.setWheelScrollingEnabled(true)
-				//System.out.println("mwls:"+mwls.mkString(","))
-				/*def handleScrollEvent(e:MouseWheelEvent)= {
-					if(mwls.size>0){
-						System.out.println(mwls(0).getClass)
-						mwls(0).mouseWheelMoved( e)
-					}
-					
-				}*/
-			}
+  add (pathBox,BorderPanel.Position.North)  
   
   
   
-  
-  
-	add (tableScroller,BorderPanel.Position.Center)
-	//dataviewController.scrollEventListener =tableScroller	
-	dataviewController.setSuperScrollPane(tableScroller)
+	add (dataviewController.splitter,BorderPanel.Position.Center)		
+	//dataviewController.setSuperScrollPane(tableScroller)
   preferredSize=new Dimension(100,100)
 			
 	def open(): Unit = {  	
@@ -122,18 +109,13 @@ class TableViewbox extends BorderPanel with ViewboxContent  {
   def setViewbox(newbox:Viewbox)= viewbox=newbox
   
   def switchPathBox():Unit = {
-  	if(pathBoxOpen) { // close
-  		//switchPathButton .text="+"  		
+  	if(pathBoxOpen) { // close  		  		
   		add(emptyBox,BorderPanel.Position.North)
   		viewbox.setTitle(	pathMod.getTitleText)//(pathMod.dataList.get.last,pathMod.dataList.get.size-1)else "empty")
-  		viewbox.minimizeHeaderPanel(switchPathBox)
-  		//pathBox.setCenterComp(pathLabel)
+  		viewbox.minimizeHeaderPanel(switchPathBox)  		
   		revalidate
-  	}else {
-  		//switchPathButton .text="-" // open
-  		add (pathBox,BorderPanel.Position.North)
-  		//revalidate
-  	}
+  	} 
+  	else add (pathBox,BorderPanel.Position.North)  	
   	pathBoxOpen= !pathBoxOpen
   }
   

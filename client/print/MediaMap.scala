@@ -32,7 +32,7 @@ case class MediaSizeWrapper(val mn:MediaSizeName){
 	lazy val width=mediaSize.getX(MediaMap.mmUnit)
 	lazy val height=mediaSize.getY(MediaMap.mmUnit)
 	
-	override def toString=name+" ("+Math.round(width)+" x "+Math.round(height)+")"+mn.getValue
+	override def toString=name+" ("+Math.round(width)+" x "+Math.round(height)+") mm"
 	
 	def cutString(st:String,len:Int)= {
 		if(st.length>len) st.substring(0,len)

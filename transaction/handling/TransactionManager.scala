@@ -9,7 +9,7 @@ import definition.typ._
 import definition.data._
 import definition.expression._
 import server.comm._
-import server.test.SimpleProfiler
+//import server.test.SimpleProfiler
 
 
 /** manages Transaction handling

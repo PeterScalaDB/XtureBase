@@ -52,7 +52,7 @@ object TableHeaderMap {
 		// is there a stored TableSetup for this type ?
 		val settings=UserSettings.getListProperty[Tuple2[Int,Int]]("TableColumns",typ.toString,Nil)
 		if(!settings.isEmpty) {
-			System.out.println("settings for Typ:"+typ+" "+settings+" ")
+			//System.out.println("settings for Typ:"+typ+" "+settings+" ")
 			for(cs <-settings){				
 				val newCol=new TableColumn(cs._1)
 				try {

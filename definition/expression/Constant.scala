@@ -5,6 +5,7 @@ package definition.expression
 
 import definition.typ.DataType
 import java.io.{DataInput,DataOutput}
+import java.util.Date
 
 /** base type of all Constant classes
  * 
@@ -13,7 +14,7 @@ trait Constant extends Expression {
 
   def getChildCount(): Int = { 0 }
 
-  def getChildNr(ix: Int): Expression = { throw new IllegalArgumentException("Constants don't have any children, access to child nr:"+ix) }
+  def getChildNr(ix: Int): Expression = { println("Constants don't have any children, access to child nr:"+ix);this }
 
   def isConstant(): Boolean = { true }
   
@@ -37,6 +38,8 @@ trait Constant extends Expression {
   
   def getNative:Any
   
+  def toDate=new Date(toLong)
+  
   def isNumberConstant=false  
 }
 
@@ -58,7 +61,9 @@ object Constant
 		case DataType.BoolTyp => new BoolConstant(value.toBoolean)
 		case DataType.CurrencyTyp => value.toCurrency
 		case DataType.VectorTyp =>val nv=value.toVector;new VectorConstant(nv.x,nv.y,nv.z)
-		case _ => throw new IllegalArgumentException("Conversion to type "+toType+" is not supported yet")
+		case DataType.DateTyp => new DateConstant(new Date(value.toLong))
+		case DataType.BlobTyp =>Expression.NullBLOB 
+		case _ => throw new IllegalArgumentException("Conversion of "+value+"  to type "+toType+" is not supported yet")
 		}
 		//System.out.println("create conversion "+value+":"+value.getType+" toType:"+toType+" "+res)
 		res
@@ -72,6 +77,8 @@ object Constant
 		case DataType.BoolTyp => false
 		case DataType.VectorTyp =>NULLVECTOR
 		case DataType.CurrencyTyp =>ImBroke
+		case DataType.BlobTyp => Array[Byte]()
+		case DataType.DateTyp => DateConstant.nativeNull
 		case _=> ""
 	}
 			
@@ -104,5 +111,7 @@ object EMPTY_EX extends Constant
 	override def toString = ""
 		
   override def isNullConstant=true
+  
+  override def toDate=DateConstant.nativeNull
 	
 }

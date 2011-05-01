@@ -10,7 +10,8 @@ import java.io.DataOutput
 /**
  * 
  */
-class PrintVariable(name:String) extends Expression {
+class PrintVariable(val name:String) extends Expression {
+	println("New PrintVariable:"+name)
 	var value:Constant=EMPTY_EX
 	
 	def getType:DataType.Value=value.getType
@@ -39,3 +40,5 @@ class PrintVariable(name:String) extends Expression {
 	}
 
 }
+
+class PlaceHolderPrintVariable(nname:String) extends PrintVariable(nname)
