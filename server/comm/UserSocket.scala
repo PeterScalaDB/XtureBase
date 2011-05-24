@@ -148,9 +148,20 @@ private var userName=""
 
 	private def sendTypes() = 	{
 		System.out.println("Sending Types to "+userName)
+		val outString=AllClasses.get.asInstanceOf[ServerClassList].toXML().toString()		 
+		//println("outString length:"+outString.length)
 		sendData(ServerCommands.sendTypes) {out=>
-		out.writeUTF(AllClasses.get.asInstanceOf[ServerClassList].toXML().toString())
+		val bytes=outString.getBytes
+		out.writeInt(bytes.size)
+		println("bytes:"+bytes.size)
+		out.write(bytes)
+		
+		//out.writeInt(numBlocks+1)
+		//for(i<- 0 until numBlocks) out.writeUTF(outString.substring(x$1))
+		//out.writeUTF(outString)
+		println("sending settings:")
 		SystemSettings().asInstanceOf[ServerSystemSettings].write(out)
+		println("ready sending")
 		}
 	}
 

@@ -28,7 +28,8 @@ object DataType extends Enumeration
 	val ParentRefTyp=Value("ParentRef")
 	val BlobTyp=Value("Blob")
 	
-	def isCompatible(one:Value,other:Value):Boolean ={		
+	def isCompatible(one:Value,other:Value):Boolean ={
+		if(one==undefined || other==undefined) return true
 		if(one.id>other.id) return isCompatible(other,one)
 		if(one.id==other.id) return true
 		
@@ -37,19 +38,27 @@ object DataType extends Enumeration
 				case LongTyp =>true
 				case DoubleTyp => true
 				case CurrencyTyp => true
+				case ParentRefTyp => true
+				case FieldRefTyp => true
 				case _ => false
 			}
 			case LongTyp => other match {
 				case DoubleTyp | CurrencyTyp => true
+				case ParentRefTyp => true
+				case FieldRefTyp => true
 				case _ => false
 			}
 			case DoubleTyp => other match {
 				case CurrencyTyp => true
-				
+				case ParentRefTyp => true
+				case FieldRefTyp => true
+				case _ => false
 			}
 			case StringTyp => true
 			case BoolTyp => other match {
 				case IntTyp | LongTyp | BoolTyp => true
+				case ParentRefTyp => true
+				case FieldRefTyp => true
 				case _ => false 
 			}
 			case _ => false

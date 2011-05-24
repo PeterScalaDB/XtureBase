@@ -84,7 +84,7 @@ class StringParser extends JavaTokenParsers {
                                          }
   def vector: Parser[Expression] = 
   	( ("""[Vv][\[]""".r~> doubleNumber <~";") ~ (doubleNumber <~";") ~ (doubleNumber <~"]")  ) ^^ {
-  																					case x ~ y ~ z  => VectorConstant(x.toDouble,y.toDouble,z.toDouble) 		
+  																					case x ~ y ~ z  => new VectorConstant(x.toDouble,y.toDouble,z.toDouble) 		
   																			 }	
 }
 

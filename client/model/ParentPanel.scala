@@ -12,6 +12,7 @@ import scala.swing.Swing
 import scala.swing.event.ButtonClicked
 import definition.data.Reference
 import definition.typ.form.FormBox
+import definition.typ.CustomInstanceEditor
 import javax.swing.BorderFactory
 import scala.swing.SplitPane
 import java.awt.Color
@@ -57,7 +58,24 @@ class ParentPanel() extends BorderPanel {
 		
 		var forms:Option[FormBox]=None		
 		
+		var customEditor:Option[CustomInstanceEditor]=None
+		
+		def setCustomEditor(edit:CustomInstanceEditor) = {
+			forms=None
+			customEditor=Some(edit)
+			val comp=edit.getComponent
+			val fheight=comp.preferredSize.height
+			leftBut.visible=fheight>90
+			rightBut.visible=fheight>60
+			closeBut.visible=false//fheight>40					
+			comp.border=subBorder					
+			add(comp,BorderPanel.Position.Center)					
+			repaint			
+		}
+			
+		
 		def setForms(nf:Option[FormBox],indent:Int,nparentRef:Reference):Unit = {
+			customEditor=None
 			forms=nf
 			parentRef=nparentRef
 			

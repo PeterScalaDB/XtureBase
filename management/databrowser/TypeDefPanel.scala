@@ -41,6 +41,7 @@ object TypeDefPanel extends ScrollPane {
 	val disableComps=List(idEdit,addSuperClassBut,removeSuperClassBut)	
 	val saveBut=new Button("Save changes")
 	val formEditBut=new Button("Form-Designer")
+	val autoCreateChildBut=new Button("Auto create children...")
 	val inheritedFieldMod=new FieldDefTableModel(false)
 	val ownFieldMod=new FieldDefTableModel(true)
 	val typeVect=new java.util.Vector[DTWrap](DataType.wrappedValues)  	
@@ -51,6 +52,7 @@ object TypeDefPanel extends ScrollPane {
 	val enumCombo=new JComboBox(enumVect)
 	val enumEditor=new ComboBoxEditor(enumCombo)
 	val formEditDialog=new FormDesignerDialog(management.databrowser.MainWindow.top)
+	val autoCreateDialog=new AutoCreateDialog(management.databrowser.MainWindow.top)
 	
 	val fieldColMod=new FieldColumnModel{
     	createColumn(0,"Name",110)
@@ -123,6 +125,9 @@ object TypeDefPanel extends ScrollPane {
 		new FormatLine(100,"Long Format",()=>theClass.longFormat.toString,(s)=>theClass.longFormat =InstFormat.fromString(s)),
 		new FormatLine(100,"Result Format",()=>theClass.resultFormat.toString,(s)=>theClass.resultFormat =InstFormat.fromString(s))	)
 	val moduleLine=new FormatLine(100,"ActionModule",()=>theClass.moduleName,(s)=>theClass.moduleName=s)
+	val instanceEditorLine=new FormatLine(100,"InstanceEditor",
+		()=>theClass.customInstanceEditor match {case Some(n)=>n;case _=> ""},(s)=>theClass.customInstanceEditor=Some(s))
+	
 	
 	
 	val basicsPan = new BoxPanel(Orientation.Horizontal ) {						
@@ -254,8 +259,8 @@ object TypeDefPanel extends ScrollPane {
 	val actionPan=new BoxPanel(Orientation.Horizontal) {
 		border=BorderFactory.createEmptyBorder(10,5,10,5)
 		val checkBut=new Button("Check out")
-		contents+=saveBut+=checkBut+=formEditBut+=Swing.HGlue
-		listenTo(saveBut,checkBut,formEditBut)
+		contents+=saveBut+=checkBut+=formEditBut+=autoCreateChildBut+=Swing.HGlue
+		listenTo(saveBut,checkBut,formEditBut,autoCreateChildBut)
 		reactions+= {
 			case ButtonClicked(`saveBut`) => safeClass
 			case ButtonClicked(`checkBut`) => {
@@ -263,6 +268,7 @@ object TypeDefPanel extends ScrollPane {
 				System.out.println(theClass.saveToXML.mkString("\n"))
 			}
 			case ButtonClicked(`formEditBut`)=> showFormDesigner
+			case ButtonClicked(`autoCreateChildBut`)=> showAutoCreateDialog
 		}
 	}
 	
@@ -281,8 +287,13 @@ object TypeDefPanel extends ScrollPane {
 	def showFormDesigner = {
 		formEditDialog.setLocationRelativeTo(formatStringPan)
 		formEditDialog.title="Form-Designer for "+theClass.name
-		formEditDialog.showDialog(theClass,theClass.formBox )
-		
+		formEditDialog.showDialog(theClass,theClass.formBox )		
+	}
+	
+	def showAutoCreateDialog = {
+		autoCreateDialog.setLocationRelativeTo(formatStringPan)
+		autoCreateDialog.title="Define auto create entries for "+theClass.name
+		autoCreateDialog.showDialog(theClass)
 	}
 	
 	
@@ -290,7 +301,7 @@ object TypeDefPanel extends ScrollPane {
 		val belowTopBorder = BorderFactory.createTitledBorder("General Info");
 		belowTopBorder.setTitlePosition(TitledBorder.BELOW_TOP);
 		border=belowTopBorder
-		contents+=basicsPan+=superClassesPan+=Swing.VStrut(10)+=moduleLine
+		contents+=basicsPan+=superClassesPan+=Swing.VStrut(10)+=moduleLine+=instanceEditorLine
 	}
 	
 	def checkID (comp:Component):Boolean = {
@@ -327,6 +338,7 @@ object TypeDefPanel extends ScrollPane {
 		classesListview.listData=MainWindow.shortClassList		
 		formatStringLines.foreach( _.update)		
 		moduleLine.update
+		instanceEditorLine.update
 		setInheritedFields
 	} 
   
@@ -355,9 +367,10 @@ object TypeDefPanel extends ScrollPane {
 		val wheelListeners=peer.getMouseWheelListeners
 			for(l <-wheelListeners) peer.removeMouseWheelListener(l)
 			peer.setWheelScrollingEnabled(false)
-	}	
-  
-  class ClassNameRenderer extends JLabel with TableCellRenderer {
+	} 
+}
+
+class ClassNameRenderer extends JLabel with TableCellRenderer {
   	override def invalidate = {}
   	override def revalidate = {}
   	def getTableCellRendererComponent(table:JTable, a:Object, isSelected: Boolean, focused: Boolean,  row: Int,col:Int):java.awt.Component = {
@@ -370,9 +383,9 @@ object TypeDefPanel extends ScrollPane {
   		})
   		this
 		}
-	}
-  
-  class ClassNameEditor(box:JComboBox) extends DefaultCellEditor(box) with ClassListListener {
+	}  
+
+class ClassNameEditor(box:JComboBox) extends DefaultCellEditor(box) with ClassListListener {
   	var classList:Seq[Int]=Seq.empty
   	var classNameList=Array[AnyRef]()
   	def classListChanged(list:Seq[(Int,String)])= {
@@ -390,10 +403,8 @@ object TypeDefPanel extends ScrollPane {
   	override def getCellEditorValue():java.lang.Object =
   	{
   		val ix =getComponent().asInstanceOf[JComboBox].getSelectedIndex();
-  		System.out.println("getValue "+ix)
+  		//System.out.println("getValue "+ix)
   		if(ix<0) new Integer(-1)
   		else classList(ix).asInstanceOf[AnyRef]
   	}
   }
-  
-}

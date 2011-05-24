@@ -107,6 +107,7 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	var openChildCallBack:(Reference)=> Unit = _
 	var selectListener= collection.mutable.HashSet[SelectListener]()	
 	var containerFocusListener= collection.mutable.HashSet[ContainerFocusListener]()	
+	var runningEditor:Option[CustomInstanceEditor]=None
 	
 	/** is called by PathModel when another instance should be loaded
 	 *  @param parentRef the new Instance to be loaded
@@ -121,15 +122,26 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	  selectedInstance=null
 	  ref=nparentRef	  
 	  //SimpleProfiler.measure("clone")
-	  mainClass=AllClasses.get.getClassByID(ref.typ)	  
-	  val newForm=mainClass.formBox match {
-	  	case Some(f)=>Some(f.makeCopy)
-	  	case _=> None
-	  }	  
-		//SimpleProfiler.measure("load")
-	  formPanel.setForms(newForm,indent,nparentRef)
-	  formModel.setForms(mainClass,newForm)
-	  formModel.loadData(nparentRef)
+	  mainClass=AllClasses.get.getClassByID(ref.typ)
+	  mainClass.customInstanceEditor match {
+	  	case Some(editorName) => {
+	  		val ed=Class.forName(editorName).newInstance.asInstanceOf[CustomInstanceEditor]
+	  		runningEditor=Some(ed)
+	  		ed.load(nparentRef)
+	  		formPanel.setCustomEditor(ed)
+	  	}
+	  	case None => { // no editor, load FormBox
+	  		val newForm=mainClass.formBox match {
+	  			case Some(f)=>Some(f.makeCopy)
+	  			case _=> None
+	  		}	  
+	  		//SimpleProfiler.measure("load")
+	  		formPanel.setForms(newForm,indent,nparentRef)
+	  		formModel.setForms(mainClass,newForm)
+	  		formModel.loadData(nparentRef)
+	  	}
+	  }
+	  
 	  val hiddenFields=mainClass.getNum_FirstHiddenPropFields
 	  	  
 	  for(i <- 0 until mainClass.propFields.size) {
@@ -190,7 +202,11 @@ class DataViewController  extends PathControllable with SelectSender with Refere
 	
 	
 	def shutDown() = {
-		formModel.shutDown
+		runningEditor match {
+			case Some(editor)=> editor.shutDown
+			case None => formModel.shutDown 
+		}
+		
 		tablePanel.contents.clear
 		updateHeight()
 		for(i <-0 until numUsedModels) propertyModels(i).shutDown()

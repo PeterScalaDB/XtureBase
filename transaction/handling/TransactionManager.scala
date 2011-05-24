@@ -91,7 +91,8 @@ object TransactionManager {
 	 * @param notifyRefandColl should referencing links and collFuncs be notified about the new instance
 	 * @param notifySubs notify subscribers of the parent inst that the new instance was added
 	 */
-	def tryCreateInstance(typ:Int,owners:Array[OwnerReference],notifyRefandColl:Boolean,pos:Int= -1,notifySubs:Boolean=true,withStartValues:Boolean=true) =	{	
+	def tryCreateInstance(typ:Int,owners:Array[OwnerReference],notifyRefandColl:Boolean,pos:Int= -1,
+	                      notifySubs:Boolean=true,withStartValues:Boolean=true):InstanceData =	{	
 		if(!canModify ) throw new IllegalArgumentException("No transaction defined ")
 		//TODO: Check if the child type is allowed in the owner property fields
 		
@@ -114,17 +115,9 @@ object TransactionManager {
 				// check new links
 				val newRefList:Seq[FieldReference]=expr.getElementList[FieldReference](DataType.FieldRefTyp,Nil)
 				for(nr<-newRefList)	{
-					if(nr.remInst!=None)
-					//val sourceInstRef = resolveLinkRef(newInst.ref,nr)
-					/*if(newInst.ref!=sourceInstRef)*/ throw new IllegalArgumentException("Start value cant link to external instances "+nr)
-					/*val sourceValue=(
-							if(sourceInstRef==newInst.ref) newInst 
-							else  ActionList.getInstanceData(sourceInstRef)	).fieldValue(nr.remField )*/					
+					if(nr.remInst!=None)									
 					nr.cachedValue =newInst.fieldValue(nr.remField)	//side effect !!! should be changed !
-					fieldsChanged=true
-							//addLinkRef(newInst.ref,i.toByte,nr)				
-					/*if(nr.remInst!=None) // only check circular when it's a reference to an external instance
-					  checkCircularRef(newInst.ref,i.toByte,List(nr qualifyWith newInst.ref))*/		
+					fieldsChanged=true									
 					if(newLinkDataForThis==null)newLinkDataForThis=		new ReferencingLinks(newInst.ref,Map())
 					newLinkDataForThis=newLinkDataForThis.addTargetLink(ExtFieldRef(newInst.ref.typ,newInst.ref.instance ,i.toByte,false),nr.remField)
 				}
@@ -145,13 +138,21 @@ object TransactionManager {
 			if(newLinkDataForThis==null)None else Some(newLinkDataForThis),collData,copyInfo))		
 		// notify owners
 		for(owner <-owners)
-		{
 			internAddPropertyToOwner(newInst,owner,pos,!notifySubs)
-		}		
+				
 		if(notifyRefandColl)
 			for(i <- 0 until newInst.fieldData.size;if (!newInst.fieldData(i).isNullConstant))
 				passOnChangedValue(newInst,i.toByte,EMPTY_EX,newInst.fieldData(i).getValue,false)
 		//SimpleProfiler.measure("notif owner")
+		if(withStartValues){ // create AutoCreate children
+			val theClass=AllClasses.get.getClassByID(typ)
+			for (ac <-theClass.autoCreateInfos ) {
+				val childInst=tryCreateInstance(ac.childType ,Array(new OwnerReference(ac.propField,newInst.ref )),true,-1,false,false)
+				for(sv<-ac.startValues ) // write start Values in child instance
+					tryWriteInstanceField(childInst.ref,sv._1,sv._2)
+			}
+				
+		}
 		newInst
 	}
 	

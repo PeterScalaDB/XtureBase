@@ -81,10 +81,16 @@ class ClientSocket(serverAddress: InetAddress,port:Int,name:String,password:Stri
 	}
 		
 	private def readInTypes(in: DataInputStream) = {
-		val xmlString=in.readUTF()
+		val numBytes=in.readInt
+		println("bytes:"+numBytes)
+		val buffer=new Array[Byte](numBytes)
+		val readBytes=in.readFully(buffer)
+		println("readBytes:"+readBytes)
+		//val xmlString=in.readUTF()
 		SystemSettings.settings=new ClientSystemSettings(in)
+		println("settings got")
 		//System.out.println(xmlString)
-		AllClasses.set(new ClientClasses(scala.xml.XML.loadString(xmlString)))	
+		AllClasses.set(new ClientClasses(xml.XML.loadString(new String(buffer))))	
 		//println(AllClasses.get.getClassByName("NGewerk").get.fields .mkString)
 		//System.out.println(AllClasses.get.getClassByID(40).actions .mkString)
 		//System.out.println(AllClasses.get.getClassByID(40).createActions .mkString)

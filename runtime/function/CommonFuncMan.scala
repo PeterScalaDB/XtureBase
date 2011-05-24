@@ -25,22 +25,25 @@ object CommonFuncMan extends FunctionManager {
 	
 	val funcList= Map[String,FEntry] (
 			("sin" -> FEntry(List(ParDes(DataType.DoubleTyp)),x => 
-					new DoubleConstant(math.sin(x.head.toDouble))						
-				)),
+			new DoubleConstant(math.sin(x.head.toDouble))						
+			)),
 			("cos" -> FEntry(List(ParDes(DataType.DoubleTyp)),x => 
-					new DoubleConstant(math.cos(x.head.toDouble))						
-				)),
+			new DoubleConstant(math.cos(x.head.toDouble))						
+			)),
 			("max" -> FEntry(List(ParDes(DataType.DoubleTyp),ParDes(DataType.DoubleTyp)),x => {
-			    val v1=x(0).toDouble
-					val v2=x(1).toDouble
-					System.out.println("call max "+x)
-					new DoubleConstant( if(v1<v2) v2 else v1 )	}							
-				)),
-				("if" -> FEntry(List(ParDes(DataType.BoolTyp),ParDes(DataType.undefined),ParDes(DataType.undefined)),x=> {
-					if(x(0).toBoolean) x(1).getValue
-					else x(2).getValue
-				}))
-			)	
+				val v1=x(0).toDouble
+				val v2=x(1).toDouble
+				System.out.println("call max "+x)
+				new DoubleConstant( if(v1<v2) v2 else v1 )	}							
+			)),
+			("if" -> FEntry(List(ParDes(DataType.BoolTyp),ParDes(DataType.undefined),ParDes(DataType.undefined)),x=> {
+				if(x(0).toBoolean) x(1).getValue
+				else x(2).getValue
+			})),
+			("v" -> FEntry(List(ParDes(DataType.DoubleTyp),ParDes(DataType.DoubleTyp),ParDes(DataType.DoubleTyp)),x=> {
+				new VectorConstant(x(0).toDouble,x(1).toDouble,x(2).toDouble)
+			}))
+	)	
 	
 	
 	def getFunctionValue(module:Option[String],funcName:String,paramValues:List[Constant]) = {
@@ -50,7 +53,8 @@ object CommonFuncMan extends FunctionManager {
 		{
 			val entry =funcList(uname)
 			val error=checkParameters(paramValues,entry.params)
-			if(error!=null)throw new IllegalArgumentException(error+" in function "+funcName)
+			if(error!=null)throw new IllegalArgumentException(error+" in function "+funcName+"\n params:"+
+				paramValues.mkString(",")+"\n types:" +paramValues.map(_.getClass.toString).mkString(","))
 			entry.func(paramValues)			
 		}		  
 		else throw new IllegalArgumentException("Function "+uname+" not found")		

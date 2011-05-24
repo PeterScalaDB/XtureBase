@@ -65,9 +65,9 @@ class FormDesignerDialog(w:Window) extends Dialog(w) with DesignerListener {
 		propTableMod.listener =Some(FormDesignerDialog.this)
 		
 		override def editor(row: Int, column: Int)= {
-			println(" is "+(column==1&&propTableMod.isFieldField(row)))
+			//println(" is "+(column==1&&propTableMod.isFieldField(row)))
 			if(column==1&&propTableMod.isFieldField(row)&&fieldComboEditor!=null){
-				println("hit !")
+				//println("hit !")
 				fieldComboEditor
 			}
 			else super.editor(row, column)

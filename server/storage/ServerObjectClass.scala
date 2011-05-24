@@ -18,7 +18,8 @@ class ServerObjectClass (var name:String,var id:Int,var description:String="",va
 	  var ownPropFields:Seq[PropertyFieldDefinition]=Seq.empty,protected val theActions:Seq[AbstractAction]=Seq.empty, 
 	 protected val theCreateActions:Seq[AbstractAction]=Seq.empty,var superClasses:Seq[Int]=Seq.empty,
 	 var moduleName:String="",var shortFormat:InstFormat=NOFORMAT,var longFormat:InstFormat=NOFORMAT,var resultFormat:InstFormat=NOFORMAT,
-	 val formBox:Option[FormBox]=None)
+	 val formBox:Option[FormBox]=None,var customInstanceEditor:Option[String]=None,
+	 val ownAutoCreateInfos:Seq[AutoCreateInfo]=Seq.empty)
 	 extends AbstractObjectClass {
 	
 	def ownActions = theActions.iterator
@@ -26,42 +27,53 @@ class ServerObjectClass (var name:String,var id:Int,var description:String="",va
 	
 	def toXML() = 	{			
 		//if(name=="NGewerk") println("toXML "+ownFieldSettings.mkString("\n"))
-		<ObjectClass name={name} id={id.toString} desc={description} superC={superClasses.mkString(",")} 
-     shortForm={shortFormat.toString} longForm={longFormat.toString} resForm={resultFormat.toString} >
+		<ObjectClass name={name} id={id.toString} desc={description} superC={superClasses.mkString(",")} edit={
+			customInstanceEditor match {case Some(e)=>e;case _=>""}}  shortForm={shortFormat.toString} 
+			longForm={longFormat.toString} resForm={resultFormat.toString} >
 		<Fields> 		{			ownFields.map(_.toXML)	}</Fields>
     <FieldSettings>{ownFieldSettings.map(_.toXML)}</FieldSettings>
 		<PropFields> 		{			ownPropFields.map(_.toXML)	}</PropFields>		
 		<Actions> {theActions.map(_.toXML)} </Actions>
     <CreateActions> {theCreateActions.map(_.toXML)} </CreateActions>
     <Forms>{formBox match {case Some(b)=> b.toXML ;case _ => xml.Null} }</Forms>
+    <AC> {ownAutoCreateInfos.map(_.toXML)}</AC>
 		</ObjectClass>
 	}	
 	
 	def saveToXML() = {
 		//if(name=="NGewerk") println("saveToXML "+ownFields.mkString("\n"))
-		<ObjectClass name={name} id={id.toString} desc={description} superC={superClasses.mkString(",")} 
-     shortForm={shortFormat.toString} longForm={longFormat.toString} resForm={resultFormat.toString} moduleName={moduleName}>
+		<ObjectClass name={name} id={id.toString} desc={description} superC={superClasses.mkString(",")} edit={
+			customInstanceEditor match {case Some(e)=>e;case _=>""}}     shortForm={shortFormat.toString} 
+			longForm={longFormat.toString} resForm={resultFormat.toString} moduleName={moduleName}>
 		<Fields> 		{			ownFields.map(_.toXML)	}</Fields>
     <FieldSettings>{ownFieldSettings.map(_.toXML)}</FieldSettings>
 		<PropFields> 		{			ownPropFields.map(_.toXML)	}</PropFields>		
 		<Actions> {theActions.map(_.toXML)} </Actions>
     <CreateActions> {theCreateActions.map(_.toXML)} </CreateActions>
     <Forms>{formBox match {case Some(b)=> b.toXML ;case _ => xml.Null}}</Forms>
+    <AC> {ownAutoCreateInfos.map(_.toXML)}</AC>
 		</ObjectClass>
 	}
 	
 	def makeClone= {
 		val theClone=new ServerObjectClass(name,id,description,ownFields,ownFieldSettings,ownPropFields,theActions,theCreateActions,
-		superClasses,moduleName,shortFormat,longFormat,resultFormat,formBox)
+		superClasses,moduleName,shortFormat,longFormat,resultFormat,formBox,customInstanceEditor,ownAutoCreateInfos)
 		theClone.resolveSuperFields
 		theClone
 	}
 	
 	def setFormBox(newValue:Option[FormBox])= {
 		val theClone=new ServerObjectClass(name,id,description,ownFields,ownFieldSettings,ownPropFields,theActions,theCreateActions,
-		superClasses,moduleName,shortFormat,longFormat,resultFormat,newValue)
+		superClasses,moduleName,shortFormat,longFormat,resultFormat,newValue,customInstanceEditor,ownAutoCreateInfos)
 		theClone.resolveSuperFields
 		theClone		
+	}
+	
+	def setAutoCreateInfo(aci:Seq[AutoCreateInfo])= {
+		val theClone=new ServerObjectClass(name,id,description,ownFields,ownFieldSettings,ownPropFields,theActions,theCreateActions,
+		superClasses,moduleName,shortFormat,longFormat,resultFormat,formBox,customInstanceEditor,aci)
+		theClone.resolveSuperFields
+		theClone
 	}
 	
 	
@@ -120,6 +132,7 @@ object ServerObjectClass
 		var actionList:Seq[AbstractAction]= null
 		var createActionList:Seq[AbstractAction]= null
 		val superClasses=ClientObjectClass.stringToIntList((node \"@superC").text)
+		val instEditorName=(node \"@edit").text
 		if(moduleName==""){
 		  actionList=IndexedSeq.empty
 		  createActionList=IndexedSeq.empty
@@ -137,7 +150,9 @@ object ServerObjectClass
 		  actionList,createActionList,
 		  superClasses,
 		  moduleName,InstFormat.read(node \"@shortForm"),InstFormat.read(node \"@longForm"),
-		  InstFormat.read(node \"@resForm"),readFormBox(node))
+		  InstFormat.read(node \"@resForm"),readFormBox(node),
+		  if(instEditorName.size==0)None else Some(instEditorName),
+		  for(afield <-(node \\"AutoCreate")) yield AutoCreateInfo.fromXML(afield) )
 	}
 	
 	def readFormBox(node:scala.xml.Node): Option[FormBox] = {

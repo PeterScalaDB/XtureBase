@@ -23,6 +23,7 @@ trait AbstractObjectClass {
 	protected def ownCreateActions:Iterator[AbstractAction]
 	protected def superClasses:Seq[Int]	
 	protected def ownFieldSettings:Seq[FieldSetting]
+	protected def ownAutoCreateInfos:Seq[AutoCreateInfo]
 	
 	private var hasResolved=false	
 	val fields=new ArrayBuffer[FieldDefinition]() // list of inherited fields from the super class
@@ -31,19 +32,21 @@ trait AbstractObjectClass {
 	val actions=LinkedHashMap[String,AbstractAction]()
 	val createActions=LinkedHashMap[String,AbstractAction]()
 	val fieldEditors=LinkedHashSet[String]()
+	val autoCreateInfos=new ArrayBuffer[AutoCreateInfo]()
 	protected val fieldSettingSet=LinkedHashMap[Int,FieldSetting]()
 	def shortFormat:InstFormat
 	def longFormat:InstFormat
 	def resultFormat:InstFormat
 	
 	def formBox:Option[FormBox]
+	def customInstanceEditor:Option[String]
+	
 	
 	lazy val propFieldIndices=propFields.indices.map(x=>(propFields(x).name -> x )).toMap
 		
+	
 	def inheritsFrom(otherClassID:Int):Boolean =
-  {
-  	//System.out.println( name +" "+id+"InheritsFrom: "+ otherClassID)
-  	//println(superClassIDs.mkString(","))
+  {  	
   	superClassIDs.contains(otherClassID)
   }
 	
@@ -60,6 +63,7 @@ trait AbstractObjectClass {
 				actions ++=superClass.actions
 				createActions ++=superClass.createActions
 				fieldEditors ++=superClass.fieldEditors
+				autoCreateInfos++=superClass.autoCreateInfos
 			}	
 			superClassIDs += id	
 			// add own fields
@@ -78,7 +82,7 @@ trait AbstractObjectClass {
 			propFields ++=ownPropFields
 			ownActions.foreach(a => actions(a.name)=a)	
 			ownCreateActions.foreach(a => createActions(a.name)=a)
-			
+			autoCreateInfos++=ownAutoCreateInfos
 		  hasResolved=true
 		}
 		//Console.System.out.println("Resolve "+versNr+" "+superClasses+" "+vsuperFields)  

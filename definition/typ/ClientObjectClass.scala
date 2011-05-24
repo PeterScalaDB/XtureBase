@@ -16,7 +16,8 @@ class ClientObjectClass (val name:String,val id:Int,val description:String,prote
 	protected val ownFieldSettings:Seq[FieldSetting],
 	 protected val ownPropFields:Seq[PropertyFieldDefinition],protected val theActions:Seq[ActionDescription], 
 	 protected val theCreateActions:Seq[ActionDescription],protected val superClasses:Seq[Int],
-	 val shortFormat:InstFormat,val longFormat:InstFormat,val resultFormat:InstFormat,val formBox:Option[FormBox])
+	 val shortFormat:InstFormat,val longFormat:InstFormat,val resultFormat:InstFormat,val formBox:Option[FormBox],
+	 val customInstanceEditor:Option[String], val ownAutoCreateInfos:Seq[AutoCreateInfo]=Seq.empty)
 	 extends AbstractObjectClass
 {  
    //System.out.println("Class "+name+" actions:"+actions.mkString(","))
@@ -54,6 +55,7 @@ object ClientObjectClass
 		val actionsNode=node \"Actions"
 		val createActionsNode=node \"CreateActions"
 		val superClasses=stringToIntList ((node \"@superC").text)
+		val instEditorName=(node \"@edit").text
 		var shortForm:InstFormat=null
 		//if(name=="NGewerk") println((node \\"FieldSetting").mkString("\n"))
 		new ClientObjectClass(name,id ,  (node \"@desc").text,
@@ -69,8 +71,11 @@ object ClientObjectClass
 		  ,{
 		  	val lf=InstFormat.read(node \"@longForm")
 		  	if(lf==NOFORMAT) shortForm else lf
-		  },InstFormat.read(node \"@resForm")
-		  ,readFormBox(node))
+		  },InstFormat.read(node \"@resForm"),
+		  readFormBox(node),
+		  if(instEditorName.size==0)None else Some(instEditorName),
+		  for(afield <-(node \\"AutoCreate")) yield AutoCreateInfo.fromXML(afield)
+		  )
 		}
 	
 	def readFormBox(node:scala.xml.Node): Option[FormBox] = {
