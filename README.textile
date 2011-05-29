@@ -18,7 +18,7 @@ At the moment the development is about the spatial description of the building s
 
 * current state: A simple 3D editor for planes and volumes is finished. 
 
-The long term objective is to create a tool for "Building Information Modelling":http://en.wikipedia.org/wiki/Building_Information_Modeling, where all graphical and textual information about a building can be managed in one multifunctional database.
+The long term objective is to create an architectural tool for "Building Information Modelling":http://en.wikipedia.org/wiki/Building_Information_Modeling (BIM), where all graphical and textual information about a building can be managed in one multifunctional database.
 
 The database is written in the language "Scala":http://www.scala-lang.org/
 
@@ -26,4 +26,5 @@ Read more:
 
 "Database specification":http://wiki.github.com/PeterScalaDB/AtectBase/database-specification
 
-You can find a pre-alpha binary test version of the system in the "download area":http://github.com/PeterScalaDB/XtureBase/archives/master
+"Screenshots of the current state":https://github.com/PeterScalaDB/XtureBase/tree/master/screenshots
+(click on "Raw" for full view)
