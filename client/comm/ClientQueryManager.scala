@@ -265,7 +265,7 @@ object ClientQueryManager {
 	 * @param toOwner owner where the instances should additinally be used
 	 * @param atPos position in the toOwner property list where they should be added
 	 */
-	def secondUseInstances(refList:Seq[Reference],fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int) = {
+	def secondUseInstances(refList:Seq[Reference],fromOwner:OwnerReference,toOwner:OwnerReference,atPos:Int):Unit = {
 		sock.sendData(ClientCommands.secondUseInstances  ) { out =>
 		  out.writeShort(refList.size)
 		  for(ref <-refList) ref.write(out)
@@ -274,8 +274,8 @@ object ClientQueryManager {
 			out.writeInt(atPos)
 		}
 		commandResultQueue.take() match {			
-			case Some(const) =>const.toInt
-			case None => throw new IllegalArgumentException("no instance ID returned when copying instances "+refList.mkString)
+			case Some(const) =>println("SecondUse result returned:"+const)
+			case None => 
 		}
 	}
 	

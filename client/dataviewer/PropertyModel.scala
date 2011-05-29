@@ -65,7 +65,8 @@ class PropertyModel(val mainController:DataViewController) {
 	 * @Param nfirstPropField is this the first property field
 	 * @param onlyPropField is this the only property field
 	 */
-	def load(nallowedClass:Int,fieldToLoad:Byte,fieldName:String,selRef:Option[Reference],nfirstPropField:Boolean,onlyPropField:Boolean) = {
+	def load(nallowedClass:Int,fieldToLoad:Byte,fieldName:String,selRef:Option[Reference],nfirstPropField:Boolean,onlyPropField:Boolean) = 
+	  listLock.synchronized{
 		if(loaded) shutDown()
 		vGlue.addBut.visible= !mainController.mainClass.propFields(fieldToLoad).createChildDefs.isEmpty
 		
@@ -94,7 +95,7 @@ class PropertyModel(val mainController:DataViewController) {
 	}
 	
 	def callBack(notType:NotificationType.Value,data: IndexedSeq[InstanceData]) = 
-		ClientQueryManager.runSw  { listLock.synchronized{		
+		ClientQueryManager.runInPool  { listLock.synchronized{		
 		//System.out.println("Proberty modification :"+notType+ " "+(if(data.isEmpty)" [Empty] "else   data.first.ref)+", ... "+	
 		//		 "subsID:"+subscriptionID+ " ** "+ Thread.currentThread.getName)
 		//System.out.println()				
@@ -111,7 +112,7 @@ class PropertyModel(val mainController:DataViewController) {
 					}
 					else {
 						vGlue.preferredSize=vGlueMinSize
-						val grouped:Map[Int,Seq[InstanceData]]=data.view.groupBy(_.ref.typ)
+						val grouped:Map[Int,Seq[InstanceData]]=data./*view.*/groupBy(_.ref.typ)
 						var firstTable:Table=null
 						for((i,data) <-grouped.iterator) {
 							val mod=if(tableModMap.contains(i)) tableModMap(i) else createTableModel(i)
@@ -180,7 +181,7 @@ class PropertyModel(val mainController:DataViewController) {
 		
 	}
 	
-	def getOwnerRef = new OwnerReference(ownerRef.ownerField ,mainController.ref)
+	def getOwnerRef = listLock.synchronized( new OwnerReference(ownerRef.ownerField ,mainController.ref))
 	
 	def focusGained = mainController.containerFocused(ownerRef.ownerField )
 	

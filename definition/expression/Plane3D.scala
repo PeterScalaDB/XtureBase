@@ -5,6 +5,10 @@ package definition.expression
 
 //import java.io._
 
+
+
+
+
 /** a plane in3D Space
  * @param pos the Position of the plane in 3D Space
  * @param dir the norm vector for the direction of the plane 
@@ -12,6 +16,11 @@ package definition.expression
 class Plane3D(val pos:VectorConstant,val dir:VectorConstant) {
   lazy val dirUnit=dir.unit
 	
+  //import Plane3D._ 
+  
+  
+  //implicit def builder[A <:Plane3D]:PlaneBuilder[A]=SimpleBuilder
+  
 	def isLinearyDependentFrom(other:Plane3D)= dir.isLinearyDependentFrom(other.dir)
 	
 	def isLinearyDependentFrom(line:Line3D)= (dir*line.dir) == 0
@@ -26,7 +35,7 @@ class Plane3D(val pos:VectorConstant,val dir:VectorConstant) {
 	
 	def orthProjection(point:VectorConstant)=	(point-pos)-(dirUnit*getDistanceTo(point))
 	
-	def orthogonalThrough(point:VectorConstant)= point-orthProjection(point)
+	def orthogonalThrough(point:VectorConstant)= dirUnit*getDistanceTo(point)
 	
 	def angleBetween(otherDir:VectorConstant)= {
 		val ret=90-dir.angleBetween(otherDir)
@@ -53,6 +62,12 @@ class Plane3D(val pos:VectorConstant,val dir:VectorConstant) {
 		new Line3D(startPoint,dir cross other.dir)
 	}
 	
+	def createClone(newPos:VectorConstant,newDir:VectorConstant) = new Plane3D(newPos,newDir)
+	
+	//def cop(t:VectorConstant,o:Double)= createOffsetPlane(t,o)
+	
+	
+	
 	def canEqual(other: Any): Boolean = other.isInstanceOf[Plane3D]
 	
 	override def equals(other: Any): Boolean =
@@ -64,14 +79,12 @@ class Plane3D(val pos:VectorConstant,val dir:VectorConstant) {
 	
 	override def hashCode= pos.hashCode+dir.hashCode*3
 	
-	/*def write(out:DataOutput)= {
-		pos.write(out)
-		dir.write(out)
-	}
+  
 }
 
-object Plane3D {
-	def apply(in:DataInput)= {
-		
+/*object Plane3D {
+	  implicit def builder[A<:Plane3D] : PlaneBuilder[A]=myBuilder
+		 val myBuilder=new PlaneBuilder[Plane3D]{ 
+			def createClone(oldv:Plane3D,newPos:VectorConstant,newDir:VectorConstant)= new Plane3D(newPos,newDir)
+		}
 	}*/
-}

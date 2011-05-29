@@ -20,7 +20,7 @@ case class MatchingPoints(hitBoth:Option[VectorConstant],hitX:Option[VectorConst
 
 case class MatchingScreenPoints(hitBoth:Option[Point],hitX:Option[Point],hitY:Option[Point])
 
-class GraphViewController {
+class GraphViewController extends AbstractViewController {
 	
 	//val newPanel=new GraphicsNewPanel(this)
 	
@@ -31,6 +31,7 @@ class GraphViewController {
   val layerModel=new LayerTableModel(this)
 	
 	var pointListener:PointClickListener=_
+	var objSelectListener:ObjectSelectListener=_
 	var lastSelectedPoint:VectorConstant=new VectorConstant(0,0,0)	
 	var bracketMode:Boolean = false
   
@@ -320,11 +321,16 @@ class GraphViewController {
 	}
 	
 	def askForLineTo(plistener:PointClickListener,
-	                 lineToFactory:(VectorConstant,VectorConstant)=>GraphElem) = {
-		currLineToFactory=lineToFactory
+	                 constraints:String) = {
+		currLineToFactory=getLineToFactory(constraints)
 		pointListener=plistener		
 		changeViewportState(ViewportState.LineTo)
 		System.out.println("askforLineTo")
+	}
+	
+	def askForObjectSelection(listener:ObjectSelectListener,constraints:String)={
+		objSelectListener=listener
+		
 	}
 	
 	def getNearestPoint(clickPosX:Double,clickPosY:Double):MatchingPoints = {
@@ -397,11 +403,28 @@ class GraphViewController {
 		canvas.repaint
 	}
 	
-	def addDelta(dx:Double,dy:Double) = {
-		internSetPoint(lastSelectedPoint +(dx,dy,0))
+	def addDelta(dx:Double,dy:Double,dz:Double) = {
+		internSetPoint(lastSelectedPoint +(dx,dy,dz))
 	}
 	
-	def setCoordinate(dx:Double,dy:Double) = {
-		internSetPoint(new VectorConstant(dx,dy,0))
+	def setCoordinate(dx:Double,dy:Double,dz:Double) = {
+		internSetPoint(new VectorConstant(dx,dy,dz))
 	}
+	
+	def getLineToFactory(factoryName:String) = {
+		factoryName match {
+  				case "Line" => lineFactoryFunc _
+  				case a => throw new IllegalArgumentException("Wrong LineTo Constraint '"+a+"' in answerDesc ")
+  			}
+	}
+	
+	 def lineFactoryFunc (p1:VectorConstant,p2:VectorConstant):GraphElem = {
+  	System.out.println("processing factory "+p1+" "+p2)
+  	new LineElement(null,0,10,0,p1,p2) 
+  }
+	 
+	 def deselect():Unit = {
+		 selectModel.deselect(false)
+	 }
+		
 }

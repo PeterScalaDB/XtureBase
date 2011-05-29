@@ -12,7 +12,9 @@ import javax.vecmath._
 /** a 3D Vector
  * 
  */
-case class VectorConstant(jvector:Vector3d=new Vector3d) extends Constant {
+case class VectorConstant(jvector:Tuple3d=new Vector3d) extends Constant {
+	
+	val tolerance=0.000001f
 	
 	def this(nx:Double,ny:Double,nz:Double) = {
 		this(new Vector3d(nx,ny,nz))
@@ -36,7 +38,7 @@ case class VectorConstant(jvector:Vector3d=new Vector3d) extends Constant {
   
   def toInt =  toDouble.toInt
   
-  def toDouble = jvector.length
+  def toDouble = Math.sqrt(jvector.x*jvector.x+jvector.y*jvector.y+jvector.z*jvector.z)
   
   def toLong = toDouble.toLong
   
@@ -58,11 +60,21 @@ case class VectorConstant(jvector:Vector3d=new Vector3d) extends Constant {
   
   //******************************* Vector routines  ************************************************
   
+  def toPoint=new Point3d(jvector)
+  
   def +(other:VectorConstant)= new VectorConstant(x+other.x,y+other.y,z+other.z)
   
   def +(ox:Double,oy:Double,oz:Double)=new VectorConstant(x+ox,y+oy,z+oz)
   
   def -(other:VectorConstant)= new VectorConstant(x-other.x,y-other.y,z-other.z)
+  
+  def -(other:Vector3d)=new Vector3d(x-other.x,y-other.y,z-other.z)
+  
+  def +(other:Vector3d)=new Vector3d(x+other.x,y+other.y,z+other.z)
+  
+  def -(other:Point3d)=new Point3d(x-other.x,y-other.y,z-other.z)
+  
+  def +(other:Point3d)=new Point3d(x+other.x,y+other.y,z+other.z)
   
   //  scale
   def *(scale:Double)= new VectorConstant(x*scale,y*scale,z*scale)
@@ -124,7 +136,45 @@ case class VectorConstant(jvector:Vector3d=new Vector3d) extends Constant {
   def isLinearyDependentFrom(other:VectorConstant) =    	
   	det2D(other.x,other.y,x,y)==0 && det2D(other.x,other.z,x,z)==0 && det2D(other.y,other.z,y,z)==0
   
+  	
+  /** gets the scale value, so that scale*other=this
+   * for lineary depended vectors
+   * 	
+   * @param other other Vector
+   */
+  def getScaleTo(other:VectorConstant):Double= {
+  	if(Math.abs(other.x)>tolerance) x/other.x
+  	else if(Math.abs(other.y)>tolerance) y/other.y
+  	else if(Math.abs(other.z)>tolerance) z/other.z
+  	/*if(other.x!=0) x/other.x
+  	else if(other.y!=0) y/other.y
+  	else if(other.z!=0) z/other.z*/
+  	else 0d
+  }
   
+  /** gets the proportional scale of this point in the segment from p1 to p2
+   * when this point is on the line from p1 to p2
+   * 
+   * @param p1 first point of segment
+   * @param p2 second point of segment
+   * @return the scale value, so that (this-p1)=scale * (p2-this)
+   */
+  def dividesSegment(p1:VectorConstant,p2:VectorConstant):Double={  	
+  	(this-p1).getScaleTo(p2-this)
+  }
+  
+  /** checks if this point is in the segment between p1 and p2
+   * when this point is on the line from p1 to p2
+   * 
+   * @param p1
+   * @param p2
+   * @return
+   */
+  def isInSegment(p1:VectorConstant,p2:VectorConstant):Boolean = {
+  	val scale=dividesSegment(p1,p2)
+  	return scale>=0d //&& scale <= 1d
+  }
+  	
 }
 
 /**

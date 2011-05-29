@@ -27,12 +27,23 @@ object NewPanelArea extends AbstractActionPanel with ContainerFocusListener {
 	private var selGroup=new SelectGroup[Referencable](null,Seq[Referencable]())
 	val buttonList=new ArrayBuffer[MenuButton]()
 	
+	//override val alsoDeselect=true
+	
 	def containerFocused(superInst:Referencable, propField:Int,containerName:String=""):Unit = {  	
   	//System.out.println("lastContainer:"+lastContainer+" lastSuperInst:"+lastSuperInstRef+")
+  	System.out.println("Container focused  superInstRef:"+superInst+" propField:"+propField+" lastSuperInst:"+lastSuperInstRef+" "+containerName)
+  	if(superInst==null ) {
+			lastSuperInstRef==null
+			lastContainer=null
+			lastPropField= -1
+			shutDown
+			return
+		}
+  	
   	if(containerName==lastContainer&&superInst.ref==lastSuperInstRef&&propField==lastPropField) return  	
-  	//System.out.println("Container focused  superInstRef:"+superInst.ref+" propField:"+propField+" lastSuperInst:"+lastSuperInstRef)		
+  			
 		// Create Action set changed:		
-		//if(superInst==null )
+		
 		//System.out.println("loading")
   	if(lastSuperInstRef==null || superInst.ref.typ!=lastSuperInstRef.typ||lastPropField!=propField||containerName!=lastContainer) {
   		shutDown
@@ -42,13 +53,16 @@ object NewPanelArea extends AbstractActionPanel with ContainerFocusListener {
   			//System.out.println("setup class:"+theClass.name)
   			if(!propF.createChildDefs.isEmpty) {			
   				for(childDef <-propF.createChildDefs;if (childDef.editorName==containerName)) {
-  					val b = if(childDef.actionName =="*") getButton(dummyAction,childDef.childName,()=>{new MenuButton})//childDef.childClassName
-  					else getButton(childDef.action,"")
+  					val b = if(childDef.actionName =="*") // generic add actions will be added to the Menu button list
+  						getButton(dummyAction,childDef.childName,()=>{new MenuButton})//create a Menu button
+  					else getButton(childDef.action,"") // create a general button
   					//System.out.println("childDef:"+childDef)
   					b.newTypeID=childDef.childClassID
   					b.propField=propField.toByte
-  					if(b.isInstanceOf[MenuButton]) buttonList+=b.asInstanceOf[MenuButton]
-  					                                                          else contents+=b
+  					b match {
+  						case m:MenuButton => buttonList+=m // generic actions to menu list
+  						case _=> contents+=b // other actions here in the box
+  					} 					
   				}
   			}
   		}

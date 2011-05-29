@@ -129,6 +129,7 @@ object ViewTest extends SimpleSwingApplication {
 		SelectEventDispatcher.registerSelectListener(DialogManager)		
 		
 		DialogManager.answerArea.registerCustomPanel[PointAnswerPanel](DataType.VectorTyp)
+		DialogManager.answerArea.registerCustomPanel[ReferenceAnswerPanel](DataType.ObjectRefTyp)
 		ClientQueryManager.registerStepListReader(undoDialog)
 		//System.out.println(top.title)
 		val serverName=	if(args(0).toLowerCase=="[own]"){

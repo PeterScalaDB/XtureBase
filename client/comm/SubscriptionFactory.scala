@@ -21,14 +21,14 @@ abstract class SubscriptionFactory [T <: Referencable] {
   
   
   
-  def loadFields (in:DataInput,numFields:Byte):Seq[Expression] = {
+  def loadFields (in:DataInput,numFields:Byte):(Array[OwnerReference],Array[OwnerReference],Seq[Expression]) = {
 		val nfields=in.readByte
 		if(nfields!=numFields) throw new IllegalArgumentException("wrong number of fields "+nfields+" ")
 		val retList=for(i <- 0 until nfields) yield Expression.read(in)		
 		val owners=InstanceData.readOwners(in)
-		InstanceData.readSecondUseOwners(in)		
+		val suOwners=InstanceData.readSecondUseOwners(in)		
 		in.readBoolean	
-		retList
+		(owners,suOwners,retList)
 	}
 }
 

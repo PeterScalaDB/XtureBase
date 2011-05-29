@@ -96,6 +96,7 @@ object Expression
 			case DataType.ParentRefTyp => ParentFieldRef(file)
 			case DataType.BlobTyp =>BlobConstant(file) 
 			case DataType.DateTyp =>DateConstant(file)
+			case DataType.ObjectRefTyp => ObjectReference(file)
 			case _ => EMPTY_EX
 		}		
 	}
@@ -112,6 +113,7 @@ object Expression
 	    case DataType.CurrencyTyp => new CurrencyConstant(file.readLong)
 	    case DataType.BlobTyp =>BlobConstant(file)
 	    case DataType.DateTyp =>DateConstant(file)
+	    case DataType.ObjectRefTyp => ObjectReference(file)
 			case _ => EMPTY_EX
 		}		
 	}
@@ -125,6 +127,7 @@ object Expression
 	lazy val NullCURRENCY=new CurrencyConstant(0) with NullConstant
 	lazy val NullBLOB=new BlobConstant(new Array[Byte](0)) with NullConstant
 	lazy val NullDATE=new DateConstant(new Date(0))
+	lazy val NULLOBJREF=new ObjectReference(0,0)
 	
 	def generateNullConstant(typ:DataType.Value)= {
 		typ match {
@@ -139,6 +142,7 @@ object Expression
 	    case DataType.EnumTyp => NullINT
 	    case DataType.DateTyp => NullDATE
 	    case DataType.BlobTyp  => NullBLOB
+	    case DataType.ObjectRefTyp => NULLOBJREF
 		}
 	}
 }

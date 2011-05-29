@@ -125,7 +125,7 @@ object MainWindow extends SimpleSwingApplication
 		add (new ScrollPane()  
 		{
 			viewportView= classTable
-			preferredSize=new Dimension(280,200)								
+			preferredSize=new Dimension(380,200)								
 		},BorderPanel.Position.Center)      
 
 		add (new GridPanel(1,3)
@@ -174,7 +174,7 @@ object MainWindow extends SimpleSwingApplication
 		//SessionManager.init
 		title = "Database Management"
 		contents = mainPanel
-		bounds=new Rectangle(100,200,1100,900)
+		bounds=new Rectangle(100,200,1150,900)
 		peer.addWindowListener(new WindowAdapter()	{
 			override def windowClosing(e:java.awt.event.WindowEvent ):Unit= 		{
 									if(hidden)removeTray();

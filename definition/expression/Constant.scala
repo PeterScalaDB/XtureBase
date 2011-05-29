@@ -6,6 +6,8 @@ package definition.expression
 import definition.typ.DataType
 import java.io.{DataInput,DataOutput}
 import java.util.Date
+import definition.data.Reference
+import definition.data.EMPTY_REFERENCE
 
 /** base type of all Constant classes
  * 
@@ -40,7 +42,8 @@ trait Constant extends Expression {
   
   def toDate=new Date(toLong)
   
-  def isNumberConstant=false  
+  def isNumberConstant=false 
+  def toObjectReference:Reference=EMPTY_REFERENCE
 }
 
 object Constant
@@ -79,6 +82,7 @@ object Constant
 		case DataType.CurrencyTyp =>ImBroke
 		case DataType.BlobTyp => Array[Byte]()
 		case DataType.DateTyp => DateConstant.nativeNull
+		case DataType.ObjectRefTyp => new ObjectReference(0,0)
 		case _=> ""
 	}
 			

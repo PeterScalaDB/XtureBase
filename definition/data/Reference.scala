@@ -5,6 +5,8 @@ package definition.data
 
 import java.io.{DataInput,DataOutput,Serializable}
 import definition.typ.AllClasses
+import definition.expression.Constant
+import definition.typ.DataType
 
 /** a reference to an instance
  * 
@@ -51,8 +53,9 @@ case class SerialReference extends Serializable {
 	def canEqual(other: Any): Boolean = other.isInstanceOf[SerialReference] ||
 			other.isInstanceOf[Reference]
 	
-	override def hashCode: Int =  41 * ( 41 + typ ) + instance	
+	override def hashCode: Int =  41 * ( 41 + typ ) + instance
 	
+  
 }
 
 object Reference
@@ -67,4 +70,6 @@ object Reference
 		new Reference(intSeq(0).toInt,intSeq(1).toInt)
 	}
 }
+
+object EMPTY_REFERENCE extends Reference(0,0)
 
