@@ -12,13 +12,13 @@ The aim of this project is to create a *database* that:
 * automatically notifies clients about commited data changes, so there are live updates
 * provides an easy programming model to build vertical applications on top
 
-My short term goal is to create a simple 2d graphical editor, to test the database and UI concept.
-* current state: with the sample data structure it is possible to read in 2D DXF files and 
-store lines and arcs as database elements. The drawings can be displayed on screen and distributed 
-over network. Yeah !
-- Next step to do is managing the UNDO journal and database reorganisation
+The short term goal  to create the basic database function is archived.
 
-The long term objective is to create a multifunctional database to describe a building in a graphical and textual way and store all related data in one place
+At the moment the development is about the spatial description of the building structure.
+
+* current state: A simple 3D editor for planes and volumes is finished. 
+
+The long term objective is to create a tool for "Building Information Modelling":http://en.wikipedia.org/wiki/Building_Information_Modeling, where all graphical and textual information about a building can be managed in one multifunctional database.
 
 The database is written in the language "Scala":http://www.scala-lang.org/
 

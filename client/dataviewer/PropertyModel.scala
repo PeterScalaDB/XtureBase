@@ -65,26 +65,28 @@ class PropertyModel(val mainController:DataViewController) {
 	 * @Param nfirstPropField is this the first property field
 	 * @param onlyPropField is this the only property field
 	 */
-	def load(nallowedClass:Int,fieldToLoad:Byte,fieldName:String,selRef:Option[Reference],nfirstPropField:Boolean,onlyPropField:Boolean) = 
-	  listLock.synchronized{
-		if(loaded) shutDown()
-		vGlue.addBut.visible= !mainController.mainClass.propFields(fieldToLoad).createChildDefs.isEmpty
-		
-		selectRef=selRef
-		allowedClass=nallowedClass
-		ownerRef=new OwnerReference(fieldToLoad,mainController.ref)		
-		isFirstPropField=nfirstPropField
-		titleLabel.text=" ("+fieldToLoad+") "+fieldName+(if(allowedClass==0) "" else  " erlaubt:"+ 
-		AllClasses.get.getClassByID(allowedClass).name)
-		titleLabel.visible= !onlyPropField
-		titleLabel.horizontalAlignment=Alignment.Left
-		if(subscriptionID<0)
-			subscriptionID=ClientQueryManager.createSubscription(mainController.ref,fieldToLoad)(callBack) 
-		else { // subscription already there
-			ClientQueryManager.changeSubscription(subscriptionID,mainController.ref,fieldToLoad)
-		}		
-		loaded=true
-	}
+	def load(nallowedClass:Int,fieldToLoad:Byte,fieldName:String,selRef:Option[Reference],nfirstPropField:Boolean,onlyPropField:Boolean):Unit = 
+		ClientQueryManager.runSw{
+			listLock.synchronized{
+				if(loaded) shutDown()
+				vGlue.addBut.visible= !mainController.mainClass.propFields(fieldToLoad).createChildDefs.isEmpty
+
+				selectRef=selRef
+				allowedClass=nallowedClass
+				ownerRef=new OwnerReference(fieldToLoad,mainController.ref)		
+				isFirstPropField=nfirstPropField
+				titleLabel.text=" ("+fieldToLoad+") "+fieldName+(if(allowedClass==0) "" else  " erlaubt:"+ 
+						AllClasses.get.getClassByID(allowedClass).name)
+						titleLabel.visible= !onlyPropField
+						titleLabel.horizontalAlignment=Alignment.Left
+						if(subscriptionID<0)
+							subscriptionID=ClientQueryManager.createSubscription(mainController.ref,fieldToLoad)(callBack) 
+							else { // subscription already there
+								ClientQueryManager.changeSubscription(subscriptionID,mainController.ref,fieldToLoad)
+							}		
+				loaded=true
+			}
+		}
 	
 	def getPropFieldDefinition= mainController.mainClass.propFields (ownerRef.ownerField )
 	
@@ -95,7 +97,7 @@ class PropertyModel(val mainController:DataViewController) {
 	}
 	
 	def callBack(notType:NotificationType.Value,data: IndexedSeq[InstanceData]) = 
-		ClientQueryManager.runInPool  { listLock.synchronized{		
+		 ClientQueryManager.runSw  {listLock.synchronized {		
 		//System.out.println("Proberty modification :"+notType+ " "+(if(data.isEmpty)" [Empty] "else   data.first.ref)+", ... "+	
 		//		 "subsID:"+subscriptionID+ " ** "+ Thread.currentThread.getName)
 		//System.out.println()				
